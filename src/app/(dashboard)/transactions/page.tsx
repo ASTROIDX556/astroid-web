@@ -13,6 +13,8 @@ import { transactionStatus } from '@/lib/status';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { PageTransition } from '@/components/ui/motion';
+import { FeeOptimizationPanel } from '@/features/transactions/FeeOptimizationPanel';
+import { TransactionAuditToolbar } from '@/features/transactions/TransactionAuditToolbar';
 
 const columns: Column<Transaction>[] = [
   {
@@ -109,12 +111,33 @@ export default function TransactionsPage() {
         }
       >
         {(data) => (
-          <DataTable<Transaction>
-            columns={columns}
-            rows={data}
-            rowKey={(t) => t.id}
-            rowHref={(t) => `/transactions/${t.id}`}
-          />
+          <div className="space-y-8">
+            <FeeOptimizationPanel />
+
+            <div className="space-y-4 pt-4 border-t border-border">
+              <TransactionAuditToolbar
+                totalRecordsCount={data.length}
+                filteredRecordsCount={data.length}
+                onExportCSV={() => {
+                  const headers = ['ID', 'Counterparty', 'Purpose', 'Agent', 'Amount', 'Asset', 'Status'];
+                  const rows = data.map((t) => [t.id, `"${t.counterparty}"`, `"${t.purpose}"`, `"${t.agentName || ''}"`, t.amount, t.asset, t.status]);
+                  const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `agent-transactions-${Date.now()}.csv`;
+                  a.click();
+                }}
+              />
+              <DataTable<Transaction>
+                columns={columns}
+                rows={data}
+                rowKey={(t) => t.id}
+                rowHref={(t) => `/transactions/${t.id}`}
+              />
+            </div>
+          </div>
         )}
       </QueryBoundary>
     </PageTransition>
