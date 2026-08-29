@@ -14,7 +14,10 @@ import { PolicyShieldIllustration } from '@/components/illustrations';
 import { useBudgets } from '@/hooks/use-queries';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
 import { BudgetMatrix } from '@/features/budgets/BudgetMatrix';
+
+
 
 export default function BudgetsPage() {
   const budgets = useBudgets();
