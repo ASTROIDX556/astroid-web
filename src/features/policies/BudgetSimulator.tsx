@@ -323,3 +323,6 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
     </Card>
   );
 }
+
+export default BudgetSimulator;
+

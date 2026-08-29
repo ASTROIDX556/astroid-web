@@ -321,3 +321,6 @@ export function BudgetAllocationChart({
     </Card>
   );
 }
+
+export default BudgetAllocationChart;
+

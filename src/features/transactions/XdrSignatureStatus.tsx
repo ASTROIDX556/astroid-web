@@ -441,3 +441,6 @@ export function XdrSignatureStatus({
     </Card>
   );
 }
+
+export default XdrSignatureStatus;
+

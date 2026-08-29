@@ -453,3 +453,6 @@ export function AgentTimeline({
     </Card>
   );
 }
+
+export default AgentTimeline;
+
