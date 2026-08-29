@@ -15,6 +15,7 @@ import { useAgents } from '@/hooks/use-queries';
 import { agentStatus } from '@/lib/status';
 import { formatCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { AgentTimeline } from '@/features/agents/components/AgentTimeline';
 
 export default function AgentsPage() {
   const agents = useAgents();
@@ -26,6 +27,8 @@ export default function AgentsPage() {
         title="Agents"
         description="Every autonomous operator, the budget it controls, and how close it is to its ceiling."
       />
+
+      <AgentTimeline />
 
       <QueryBoundary
         query={agents}
