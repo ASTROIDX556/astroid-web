@@ -11,6 +11,7 @@ import { useMemoryRecords } from '@/hooks/use-queries';
 import { formatCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
 import type { MemoryRecord } from '@/types/domain';
 import { PageTransition } from '@/components/ui/motion';
+import { AuditTimeline } from '@/features/audit/AuditTimeline';
 
 const columns: Column<MemoryRecord>[] = [
   {
@@ -87,12 +88,18 @@ export default function AuditPage() {
         }
       >
         {(data) => (
-          <DataTable<MemoryRecord>
-            columns={columns}
-            rows={data}
-            rowKey={(r) => r.id}
-            rowHref={(r) => `/audit/${r.id}`}
-          />
+          <div className="space-y-8">
+            <DataTable<MemoryRecord>
+              columns={columns}
+              rows={data}
+              rowKey={(r) => r.id}
+              rowHref={(r) => `/audit/${r.id}`}
+            />
+            <div className="pt-6 border-t border-border space-y-4">
+              <h3 className="font-display text-lg font-semibold tracking-tight">Organization Audit Log Stream Timeline</h3>
+              <AuditTimeline />
+            </div>
+          </div>
         )}
       </QueryBoundary>
     </PageTransition>

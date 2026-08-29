@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { useOrganizations, useCurrentUser, useNotifications } from '@/hooks/use-queries';
 import { usePreferencesStore } from '@/stores/preferences-store';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
+import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
 
 interface TopbarProps {
   /** Opens the mobile navigation drawer. */
@@ -97,6 +98,9 @@ export function Topbar({ onOpenNav }: TopbarProps) {
             ⌘K
           </kbd>
         </button>
+
+        {/* Stellar Network Health & RPC Latency Widget */}
+        <NetworkHealthWidget />
 
         {/* Assistant */}
         <button

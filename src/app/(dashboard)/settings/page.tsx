@@ -13,6 +13,8 @@ import { useCurrentUser, useOrganizations, useTeam } from '@/hooks/use-queries';
 import { formatDate, formatRelativeTime } from '@/lib/format';
 import type { OrgPlan, User, UserRole } from '@/types/domain';
 import { PageTransition } from '@/components/ui/motion';
+import { CredentialVault } from '@/features/vault/CredentialVault';
+import { RBACManagementView } from '@/features/settings/RBACManagementView';
 
 type BadgeVariant = NonNullable<BadgeProps['variant']>;
 
@@ -217,6 +219,14 @@ export default function SettingsPage() {
             <DataTable<User> columns={teamColumns} rows={data} rowKey={(u) => u.id} />
           )}
         </QueryBoundary>
+      </div>
+
+      <div className="pt-6 border-t border-border space-y-4">
+        <RBACManagementView />
+      </div>
+
+      <div className="pt-6 border-t border-border space-y-4">
+        <CredentialVault />
       </div>
     </PageTransition>
   );
