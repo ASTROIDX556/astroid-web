@@ -13,8 +13,10 @@ import { transactionStatus } from '@/lib/status';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { PageTransition } from '@/components/ui/motion';
+import { XdrSignatureStatus } from '@/features/transactions/XdrSignatureStatus';
 import { FeeOptimizationPanel } from '@/features/transactions/FeeOptimizationPanel';
 import { TransactionAuditToolbar } from '@/features/transactions/TransactionAuditToolbar';
+
 
 const columns: Column<Transaction>[] = [
   {
@@ -97,6 +99,8 @@ export default function TransactionsPage() {
         title="Transactions"
         description="Every value movement your agents have proposed, approved and settled on Stellar."
       />
+
+      <XdrSignatureStatus />
 
       <QueryBoundary
         query={transactions}
