@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { fontVariables } from '@/lib/fonts';
 import { AppProviders } from '@/providers';
 import { CursorProvider } from '@/components/effects/user-cursor';
+import { THEME_COOKIE, readThemeCookie, resolveThemeValue } from '@/lib/theme-cookie';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
@@ -40,30 +42,27 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const themeMode = readThemeCookie(cookies().get(THEME_COOKIE)?.value ?? null);
+  const resolvedTheme = resolveThemeValue(themeMode);
+
   return (
-    <html lang="en" className={fontVariables} suppressHydrationWarning>
+    <html lang="en" className={fontVariables} data-theme={resolvedTheme} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var theme = localStorage.getItem('astroid-theme-v2');
-                  var resolved = 'light';
-                  if (theme) {
-                    var parsed = JSON.parse(theme);
-                    if (parsed && parsed.state && parsed.state.mode) {
-                      resolved = parsed.state.mode;
-                    }
-                  }
-                  if (resolved === 'system') {
+                  var match = document.cookie.match(/(?:^|; )${encodeURIComponent(THEME_COOKIE)}=([^;]*)/);
+                  var mode = match ? decodeURIComponent(match[1]) : 'light';
+                  if (mode === 'system') {
                     var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    resolved = prefersDark ? 'dark' : 'light';
+                    mode = prefersDark ? 'dark' : 'light';
                   }
-                  document.documentElement.setAttribute('data-theme', resolved);
+                  document.documentElement.setAttribute('data-theme', mode);
                 } catch (e) {}
               })()
-            `,
+            `.replace(/\$\{encodeURIComponent\(THEME_COOKIE\)\}/g, encodeURIComponent(THEME_COOKIE)),
           }}
         />
       </head>

@@ -14,8 +14,10 @@ import { PolicyShieldIllustration } from '@/components/illustrations';
 import { useBudgets } from '@/hooks/use-queries';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
 import { BudgetMatrix } from '@/features/budgets/BudgetMatrix';
+import { BudgetMeterCard } from '@/features/budgets/BudgetMeters';
 
 
 
@@ -141,6 +143,17 @@ export default function BudgetsPage() {
                     </Card>
                   );
                 })}
+              </div>
+
+              <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
+                <div className="space-y-4">
+                  <SectionLabel>Live budget consumption</SectionLabel>
+                  <BudgetMeterCard />
+                </div>
+                <div className="space-y-4">
+                  <SectionLabel>Alert configuration</SectionLabel>
+                  <BudgetAlertSettings />
+                </div>
               </div>
 
               <div className="pt-4 border-t border-border space-y-4">

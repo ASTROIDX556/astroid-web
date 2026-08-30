@@ -16,6 +16,7 @@ import { proposalStatus } from '@/lib/status';
 import { formatCurrency, formatDateTime, formatRelativeTime } from '@/lib/format';
 import type { ApprovalDecision } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
+import { XdrSigner } from '@/features/approvals/XdrSigner';
 
 const decisionMeta: Record<ApprovalDecision['decision'], { label: string; className: string }> = {
   approved: { label: 'Approved', className: 'text-success' },
@@ -177,6 +178,7 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                 {/* Detail rail */}
                 <div className="space-y-4">
                   <SectionLabel>Details</SectionLabel>
+                  <XdrSigner xdr="AAAA..." label="Review pending XDR" />
                   <Card className="p-5">
                     <dl className="grid gap-4">
                       <KeyValue label="Proposed by">{data.agentName}</KeyValue>
