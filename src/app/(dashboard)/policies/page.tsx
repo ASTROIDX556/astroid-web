@@ -13,6 +13,7 @@ import { PolicyShieldIllustration } from '@/components/illustrations';
 import { usePolicies } from '@/hooks/use-queries';
 import { formatNumber } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { PolicyRulesBuilder } from '@/features/policies/PolicyRulesBuilder';
 import { BudgetSimulator } from '@/features/policies/BudgetSimulator';
 
 const titleCase = (value: string): string =>
@@ -51,6 +52,9 @@ export default function PoliciesPage() {
       >
         {(data) => (
           <div className="space-y-6">
+            <SectionLabel>Spending rule designer</SectionLabel>
+            <PolicyRulesBuilder />
+
             <SectionLabel>{data.length} policies</SectionLabel>
             <div className="grid gap-4 lg:grid-cols-2">
               {data.map((policy) => (
