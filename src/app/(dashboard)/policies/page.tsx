@@ -13,6 +13,7 @@ import { PolicyShieldIllustration } from '@/components/illustrations';
 import { usePolicies } from '@/hooks/use-queries';
 import { formatNumber } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { SpendingPolicyBuilder } from '@/features/policies/SpendingPolicyBuilder';
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -48,6 +49,7 @@ export default function PoliciesPage() {
       >
         {(data) => (
           <div className="space-y-6">
+            <SpendingPolicyBuilder />
             <SectionLabel>{data.length} policies</SectionLabel>
             <div className="grid gap-4 lg:grid-cols-2">
               {data.map((policy) => (
