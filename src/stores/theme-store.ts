@@ -1,7 +1,10 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-export type ThemeMode = 'light' | 'dark' | 'system';
+import {
+  getDocumentThemeCookie,
+  readThemeCookie,
+  setThemeCookie,
+  type ThemeMode,
+} from '@/lib/theme-cookie';
 
 interface ThemeState {
   mode: ThemeMode;
@@ -12,16 +15,20 @@ interface ThemeState {
   toggleReducedMotion: () => void;
 }
 
-export const useThemeStore = create<ThemeState>()(
-  persist(
-    (set) => ({
-      mode: 'light',
-      highContrast: false,
-      reducedMotion: false,
-      setMode: (mode) => set({ mode }),
-      toggleContrast: () => set((s) => ({ highContrast: !s.highContrast })),
-      toggleReducedMotion: () => set((s) => ({ reducedMotion: !s.reducedMotion })),
-    }),
-    { name: 'astroid-theme-v2' },
-  ),
+const initialThemeMode = readThemeCookie(
+  typeof document !== 'undefined' ? getDocumentThemeCookie() : 'light',
 );
+
+export const useThemeStore = create<ThemeState>((set) => ({
+  mode: initialThemeMode,
+  highContrast: false,
+  reducedMotion: false,
+  setMode: (mode) => {
+    set({ mode });
+    setThemeCookie(mode);
+  },
+  toggleContrast: () => set((s) => ({ highContrast: !s.highContrast })),
+  toggleReducedMotion: () => set((s) => ({ reducedMotion: !s.reducedMotion })),
+}));
+
+export type { ThemeMode };

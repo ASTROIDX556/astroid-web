@@ -15,6 +15,7 @@ import { usePolicy, usePolicySimulation } from '@/hooks/use-queries';
 import { formatCurrency, formatNumber, formatDateTime } from '@/lib/format';
 import type { PolicySimulationResult } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
+import { TransactionSimulator } from '@/features/policies/TransactionSimulator';
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -151,6 +152,8 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                     )}
                   </CardContent>
                 </Card>
+
+                <TransactionSimulator />
               </div>
             </div>
           );
