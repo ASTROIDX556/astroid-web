@@ -13,6 +13,7 @@ import { PolicyShieldIllustration } from '@/components/illustrations';
 import { usePolicies } from '@/hooks/use-queries';
 import { formatNumber } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { BudgetSimulator } from '@/features/policies/BudgetSimulator';
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -27,6 +28,8 @@ export default function PoliciesPage() {
         title="Policies"
         description="The guardrails every agent operates within — spend ceilings, allow-lists, approval rules and locks."
       />
+
+      <BudgetSimulator />
 
       <QueryBoundary
         query={policies}

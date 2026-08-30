@@ -16,6 +16,7 @@ import { agentStatus } from '@/lib/status';
 import { formatCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { AgentWizard } from '@/features/agents/AgentWizard';
+import { AgentTimeline } from '@/features/agents/components/AgentTimeline';
 
 export default function AgentsPage() {
   const agents = useAgents();
@@ -29,6 +30,7 @@ export default function AgentsPage() {
       />
 
       <AgentWizard />
+      <AgentTimeline />
 
       <QueryBoundary
         query={agents}
