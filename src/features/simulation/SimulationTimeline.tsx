@@ -263,7 +263,7 @@ export function SimulationTimeline({ simulation, className = '' }: SimulationTim
               <BarChart data={chartData} margin={{ top: 4, right: 0, bottom: 0, left: -20 }}>
                 <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: 'currentColor' }} />
                 <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: 'currentColor' }} />
-                <Tooltip formatter={(value: number) => `${value.toLocaleString()} stroops`} cursor={{ fill: 'transparent' }} />
+                <Tooltip formatter={(value) => `${Number(value).toLocaleString()} stroops`} cursor={{ fill: 'transparent' }} />
                 <Bar dataKey="value" fill="currentColor" className="fill-gold" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
