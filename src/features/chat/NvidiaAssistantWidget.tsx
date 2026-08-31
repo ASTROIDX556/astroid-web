@@ -9,8 +9,9 @@ import {
   Maximize2,
   Minimize2,
   Send,
+  X,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +71,7 @@ export function NvidiaAssistantWidget() {
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new messages
@@ -139,10 +141,15 @@ export function NvidiaAssistantWidget() {
   };
 
   return (
+    <>
+      <AnimatePresence>
+        {isOpen && (
     <MotionCard
-      className="flex flex-col border border-border bg-surface"
-      initial={{ height: 500, opacity: 0, x: 20 }}
-      animate={{ height: isExpanded ? 650 : 500, opacity: 1, x: 0 }}
+      id="nvidia-chat-panel"
+      className="fixed bottom-24 right-6 z-50 flex max-h-[calc(100vh-8rem)] w-[calc(100vw-2rem)] max-w-sm flex-col border border-border bg-surface shadow-2xl"
+      initial={{ opacity: 0, x: 20, y: 20, height: 500 }}
+      animate={{ opacity: 1, x: 0, y: 0, height: isExpanded ? 650 : 500 }}
+      exit={{ opacity: 0, x: 20, y: 20, height: isExpanded ? 650 : 500 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       {/* Header */}
@@ -167,6 +174,15 @@ export function NvidiaAssistantWidget() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="grid h-7 w-7 place-items-center rounded-button text-foreground-muted transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+            aria-label="Close chat panel"
+            title="Close chat panel"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
@@ -323,5 +339,19 @@ export function NvidiaAssistantWidget() {
         </div>
       </div>
     </MotionCard>
+        )}
+      </AnimatePresence>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="fixed bottom-6 right-6 z-50 grid h-12 w-12 place-items-center rounded-full bg-gold text-surface-dark shadow-gold transition-colors hover:bg-gold-strong focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+        aria-label={isOpen ? 'Close chat panel' : 'Open chat panel'}
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? 'nvidia-chat-panel' : undefined}
+        title={isOpen ? 'Close chat panel' : 'Open chat panel'}
+      >
+        {isOpen ? <X className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
+      </button>
+    </>
   );
 }
