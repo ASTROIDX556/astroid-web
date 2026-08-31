@@ -3,17 +3,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles,
-  Send,
   Bot,
   User,
   Zap,
   Maximize2,
   Minimize2,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import type { ChatMessage, QuickPromptChip } from './types';
+
+const MotionCard = motion(Card);
 
 const PRESET_CHIPS: QuickPromptChip[] = [
   {
@@ -135,7 +138,12 @@ export function NvidiaAssistantWidget() {
   };
 
   return (
-    <Card className={`flex flex-col border border-border bg-surface transition-all ${isExpanded ? 'h-[650px]' : 'h-[500px]'}`}>
+    <MotionCard
+      className="flex flex-col border border-border bg-surface"
+      initial={{ height: 500, opacity: 0, x: 20 }}
+      animate={{ height: isExpanded ? 650 : 500, opacity: 1, x: 0 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border p-4 bg-surface-secondary/50">
         <div className="flex items-center gap-2.5">
@@ -176,7 +184,7 @@ export function NvidiaAssistantWidget() {
           <button
             key={chip.id}
             type="button"
-            onClick={() => handleSendMessage(chip.promptText)}
+            onClick={() => setInputText(chip.promptText)}
             disabled={isStreaming}
             className="flex items-center gap-1.5 rounded-button border border-border bg-surface-secondary px-2.5 py-1 text-2xs text-foreground-secondary hover:border-gold hover:text-foreground transition-colors disabled:opacity-50"
           >
@@ -196,8 +204,11 @@ export function NvidiaAssistantWidget() {
           const isAssistant = msg.role === 'assistant';
 
           return (
-            <div
+            <motion.div
               key={msg.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
               className={`flex items-start gap-3 ${isAssistant ? 'justify-start' : 'justify-end'}`}
             >
               {isAssistant && (
@@ -214,7 +225,9 @@ export function NvidiaAssistantWidget() {
                       : 'bg-gold text-surface-dark font-medium'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <div className="whitespace-pre-wrap markdown-body">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
 
                   {/* Structured Briefing Widget */}
                   {msg.structuredBriefing && (
@@ -265,7 +278,7 @@ export function NvidiaAssistantWidget() {
                   <User className="h-4 w-4" />
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
 
@@ -302,6 +315,6 @@ export function NvidiaAssistantWidget() {
           </button>
         </div>
       </div>
-    </Card>
+    </MotionCard>
   );
 }
