@@ -9,6 +9,7 @@ import { useOrganizations, useCurrentUser } from '@/hooks/use-queries';
 import { usePreferencesStore } from '@/stores/preferences-store';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
 import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
+import { CircuitBreakerControl } from '@/features/security';
 
 interface TopbarProps {
   /** Opens the mobile navigation drawer. */
@@ -100,6 +101,9 @@ export function Topbar({ onOpenNav }: TopbarProps) {
 
         {/* Stellar Network Health & RPC Latency Widget */}
         <NetworkHealthWidget />
+
+        {/* Emergency Circuit Breaker */}
+        <CircuitBreakerControl currentUser={user?.name ?? 'operator'} />
 
         {/* Assistant */}
         <button
