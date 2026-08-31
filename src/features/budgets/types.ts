@@ -1,4 +1,4 @@
-export type AssetCode = 'XLM' | 'USDC' | 'EURC' | 'ASTRO';
+export type AssetCode = 'XLM' | 'USDC' | 'EURC' | 'ASTRO'';
 
 export interface LedgerEntry {
   id: string;
@@ -58,4 +58,10 @@ export interface BudgetAlert {
 export interface BudgetAlertSettings {
   thresholds: BudgetThresholds;
   enabled: boolean;
+}
+
+export interface BudgetAlertSettingsStore extends BudgetAlertSettings {
+  setWarningThreshold: (warningThreshold: number) => void;
+  setCriticalThreshold: (criticalThreshold: number) => void;
+  setEnabled: (enabled: boolean) => void;
 }
