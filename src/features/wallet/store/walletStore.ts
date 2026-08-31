@@ -1,0 +1,1 @@
+export { useFreighterStore as useWalletStore } from '../../../stores/freighter-store';
