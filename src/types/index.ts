@@ -1,3 +1,3 @@
 export * from './api';
 export * from './domain';
-export * from './ai';
+export { ChatMessage as AiChatMessage, SendMessagePayloadSchema, SendMessagePayload } from './ai';
