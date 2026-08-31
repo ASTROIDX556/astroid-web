@@ -1,4 +1,4 @@
-import { z } from 'zotd';
+import { z } from 'zod';
 
 export const FREQUENCIES = ['daily', 'weekly', 'monthly'] as const;
 
@@ -8,7 +8,7 @@ export const vestingScheduleFormSchema = z
     amount: z.coerce.number().positive('Amount must be greater than zero'),
     cliffPeriod: z.coerce.number().int().min(0, 'Cliff period cannot be negative'),
     vestingPeriods: z.coerce.number().int().min(1, 'Vesting periods must be at least 1'),
-    treasuryLimit: zcerce.number().positive('Treasury limit must be greater than zero'),
+    treasuryLimit: z.coerce.number().positive('Treasury limit must be greater than zero'),
   })
   .superRefine((val, ctx) => {
     const periodsPerMonth = val.frequency === 'daily' ? 30 : val.frequency === 'weekly' ? 4 : 1;
@@ -23,4 +23,4 @@ export const vestingScheduleFormSchema = z
     }
   });
 
-export type VestingScheduleFormValues = z.infer<typeof vestingScheduleFormSchema>;
+export type VestingScheduleFormValues = z.infer <typeof vestingScheduleFormSchema>;
