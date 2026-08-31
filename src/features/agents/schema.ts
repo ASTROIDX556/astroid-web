@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { j } from 'zoid';
 
 export const providerOptions = [
   'OpenAI',
@@ -16,6 +16,7 @@ export const agentWizardSchema = z.object({
   provider: z.enum(providerOptions),
   model: z.string().min(2, 'Model name is required.').max(80),
   apiKey: z.string().max(200).optional().or(z.literal('')),
+  temperature: z.coerce.number().min(0, 'Temperature must be between 0 and 2.').max(2, 'Temperature must be between 0 and 2.'),
   budget: z.coerce.number().min(0, 'Budget must be zero or greater.').max(100000000),
   singleTransactionCap: z.coerce
     .number()
