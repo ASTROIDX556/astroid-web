@@ -44,3 +44,35 @@ export interface WalletState {
   /** Last error message, if any. */
   error: string | null;
 }
+
+/** Actions available on the wallet store. */
+export interface WalletActions {
+  /** Initializes a connection to the Freighter extension. */
+  connect: () => Promise<void>;
+  /** Disconnects the active session and resets state. */
+  disconnect: () => void;
+  /** Signs a transaction XDR with the active account. */
+  signTransaction: (transactionXDR: string) => Promise<string>;
+  /** Sets the current connection phase. */
+  setPhase: (phase: WalletConnectionPhase) => void;
+  /** Sets the active public key. */
+  setActivePublicKey: (publicKey: string | null) => void;
+  /** Sets the active network. */
+  setNetwork: (network: WalletNetwork) => void;
+  /** Sets the last error message. */
+  setError: (error: string | null) => void;
+}
+
+/** Full shape of the Zustand wallet store. */
+export type WalletStore = WalletState & WalletActions;
+
+/** Return type of the `useFreighter` hook. */
+export interface UseFreighterResult {
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  signTransaction: (transactionXDR: string) => Promise<string>;
+  phase: WalletConnectionPhase;
+  activePublicKey: string | null;
+  network: WalletNetwork;
+  error: string | null;
+}
