@@ -7,6 +7,8 @@ import { useAssistantSeed, useBriefing } from '@/hooks/use-queries';
 import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/cn';
 import { env, isMockMode } from '@/lib/env';
+import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '@/types/domain';
 
 const defaultSuggestions = [
@@ -122,14 +124,15 @@ export function AssistantDrawer() {
   );
 
   return (
-    <>
-      {/* Floating Bottom-Right AI Widget */}
-      <div
-        className={cn(
-          'fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 flex flex-col items-end justify-end transition-all duration-base ease-astroid',
-          open ? 'opacity-100 scale-100 pointer-events-auto origin-bottom-right' : 'opacity-0 scale-95 pointer-events-none origin-bottom-right',
-        )}
-      >
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 24, scale: 0.95 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 flex flex-col items-end justify-end"
+        >
         <div
           role="dialog"
           aria-label="AI Executive Command Terminal"
@@ -149,7 +152,7 @@ export function AssistantDrawer() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground"
+              className="grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
               aria-label="Close assistant"
             >
               <X className="h-4 w-4" aria-hidden />
@@ -183,7 +186,11 @@ export function AssistantDrawer() {
                       : 'border border-border bg-surface-secondary/60 text-foreground',
                   )}
                 >
-                  {msg.content}
+                  {msg.role === 'assistant' ? (
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </div>
             ))}
@@ -198,8 +205,8 @@ export function AssistantDrawer() {
                     <button
                       key={s.label}
                       type="button"
-                      onClick={() => send(s.prompt)}
-                      className="group flex items-center justify-between gap-2 rounded-button border border-border bg-surface p-3 text-left text-xs text-foreground-secondary transition-all duration-fast hover:border-gold hover:text-foreground"
+                      onClick={() => setDraft(s.prompt)}
+                      className="group flex items-center justify-between gap-2 rounded-button border border-border bg-surface p-3 text-left text-xs text-foreground-secondary transition-all duration-fast hover:border-gold hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
                     >
                       <span className="truncate">{s.label}</span>
                       <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
@@ -219,6 +226,7 @@ export function AssistantDrawer() {
           >
             <div className="flex items-end gap-2 rounded-button border border-border bg-surface px-3 py-2 focus-within:border-gold focus-within:ring-1 focus-within:ring-gold transition-colors">
               <textarea
+                aria-label="Chat message"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
@@ -234,7 +242,7 @@ export function AssistantDrawer() {
               <button
                 type="submit"
                 disabled={!draft.trim()}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-button bg-accent-gradient text-background-secondary font-semibold transition-opacity duration-fast disabled:opacity-40"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-button bg-accent-gradient text-background-secondary font-semibold transition-opacity duration-fast disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
                 aria-label="Send message"
               >
                 <Send className="h-4 w-4" aria-hidden />
@@ -242,7 +250,8 @@ export function AssistantDrawer() {
             </div>
           </form>
         </div>
-      </div>
-    </>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
