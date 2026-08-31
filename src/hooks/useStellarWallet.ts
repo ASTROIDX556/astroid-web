@@ -51,7 +51,7 @@ export type AccountBalance = {
 };
 
 export function useStellarWallet() {
-  const [status, setStatus] = useState<StellarWalletStatus=('checking');
+  const [status, setStatus] = useState<StellarWalletStatus>('checking');
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,10 +73,13 @@ export function useStellarWallet() {
         const nextKey = typeof address === 'string' ? address : address?.address ?? null;
         setPublicKey(nextKey);
         setError(null);
+      } else {
+        setPublicKey(null);
       }
       return Boolean(connected);
     } catch (err) {
       setStatus('error');
+      setPublicKey(null);
       setError(err instanceof Error ? err.message : 'Could not connect to the Freighter wallet.');
       return false;
     }
@@ -102,7 +105,7 @@ export function useStellarWallet() {
       const isAllowed =
         typeof allowed === 'boolean'
           ? allowed
-          : (allowed as { isAllowed?: boolean } | null)?.isAllowed ?> false;
+          : (allowed as { isAllowed?: boolean } | null)?.isAllowed ?? false;
 
       if (!isAllowed) {
         throw new Error('Freighter approval was rejected. Please approve the connection in the browser extension.');
@@ -248,7 +251,8 @@ export function useStellarWallet() {
         const signedXdr = await signTransaction(xdr);
         if (!signedXdr) return null;
 
-        return signedXdr;
+        const result = await server.submitTransaction(signedXdr);
+        return result.hash;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create trustline.');
         return null;
