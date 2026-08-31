@@ -100,3 +100,41 @@ export const chatMessagesContainerVariants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.04 } },
 };
+
+// Chat panel component (drawer)
+export function ChatPanel({ children, className }: { children: ReactNode, className?: string }) {
+  return (
+    <motion.div
+      variants={chatPanelVariants}
+      initial="hidden"
+      animate="show"
+      exit="exit"
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// Chat message item
+export function ChatMessage({ children, className }: { children: ReactNode, className?: string }) {
+  return (
+    <motion.div variants={chatMessageVariants} className={className}>
+      {children}
+    </motion.div>
+  );
+}
+
+// Container for chat messages with stagger
+export function ChatMessagesContainer({ children, className }: { children: ReactNode, className?: string }) {
+  return (
+    <motion.div
+      variants={chatMessagesContainerVariants}
+      initial="hidden"
+      animate="show"
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
