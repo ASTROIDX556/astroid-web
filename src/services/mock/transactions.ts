@@ -1,5 +1,33 @@
 import type { Proposal, Transaction } from '@/types/domain';
 
+export type TransactionFilterStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface TransactionQuery {
+  search?: string;
+  asset?: string;
+  status?: TransactionFilterStatus;
+  department?: string;
+  agentId?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface TransactionPage {
+  items: Transaction[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+const DEPARTMENT_BY_WALLET: Record<string, string> = {
+  wal_finance: 'Finance',
+  wal_ops: 'Operations',
+  wal_treasury: 'Treasury',
+  wal_research: 'Research',
+  wal_procure: 'Procurement',
+};
+
 export const transactions: Transaction[] = [
   {
     id: 'txn_9f21',
@@ -283,3 +311,103 @@ export const proposals: Proposal[] = [
     createdAt: '2026-07-31T07:30:00.000Z',
   },
 ];
+
+export function getTransactionDepartment(transaction: Transaction): string {
+  return transaction.walletId ? DEPARTMENT_BY_WALLET[transaction.walletId] ?? 'Other' : 'Other';
+}
+
+export const transactionDepartments = Array.from(
+  new Set(transactions.map(getTransactionDepartment)),
+).sort();
+
+export function getTransactionFilterStatus(transaction: Transaction): TransactionFilterStatus {
+  switch (transaction.status) {
+    case 'completed':
+    case 'confirmed':
+    case 'approved':
+      return 'Approved';
+    case 'failed':
+    case 'rejected':
+      return 'Rejected';
+    case 'pending':
+    case 'draft':
+      return 'Pending';
+    default:
+      return 'Pending';
+  }
+}
+
+function matchesTransactionQuery(transaction: Transaction, query: TransactionQuery): boolean {
+  const search = query.search?.trim().toLowerCase();
+  if (search) {
+    const haystack = [
+      transaction.asset,
+      transaction.counterpartyAddress,
+      transaction.counterparty,
+      transaction.agentName,
+      transaction.memo,
+      transaction.purpose,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    if (!haystack.includes(search)) {
+      return false;
+    }
+  }
+
+  if (query.asset && transaction.asset.toLowerCase() !== query.asset.toLowerCase()) {
+    return false;
+  }
+
+  if (query.status && getTransactionFilterStatus(transaction) !== query.status) {
+    return false;
+  }
+
+  if (query.department && getTransactionDepartment(transaction) !== query.department) {
+    return false;
+  }
+
+  if (query.agentId && transaction.agentId !== query.agentId) {
+    return false;
+  }
+
+  return true;
+}
+
+export function queryTransactions(query: TransactionQuery = {}): TransactionPage {
+  const page = Math.max(1, query.page ?? 1);
+  const pageSize = Math.max(1, query.pageSize ?? 10);
+  const filtered = transactions.filter((transaction) => matchesTransactionQuery(transaction, query));
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const normalizedPage = Math.min(page, totalPages);
+  const start = (normalizedPage - 1) * pageSize;
+
+  return {
+    items: filtered.slice(start, start + pageSize),
+    total,
+    page: normalizedPage,
+    pageSize,
+    totalPages,
+  };
+}
+
+const transactionQueryCache = new Map<string, TransactionPage>();
+
+export function queryTransactionsCached(query: TransactionQuery = {}): TransactionPage {
+  const page = Math.max(1, query.page ?? 1);
+  const pageSize = Math.max(1, query.pageSize ?? 10);
+  const cacheKey = JSON.stringify({ ...query, page, pageSize });
+  const cached = transactionQueryCache.get(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  const result = queryTransactions({ ...query, page, pageSize });
+  transactionQueryCache.set(cacheKey, result);
+
+  return result;
+}
