@@ -1,5 +1,7 @@
 export type MessageRole = 'user' | 'assistant' | 'system';
 
+export type IconName = 'sparkles' | 'chart' | 'wallet' | 'activity' | 'settings';
+
 export interface ChatMessage {
   id: string;
   role: MessageRole;
@@ -19,5 +21,5 @@ export interface QuickPromptChip {
   id: string;
   label: string;
   promptText: string;
-  iconName: string;
+  iconName: IconName;
 }
