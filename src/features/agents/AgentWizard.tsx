@@ -25,15 +25,16 @@ const stepFields: Record<number, (keyof AgentWizardValues)[]> = {
 };
 
 const stepVariants = {
-  initial: { opacity: 0, x: 24 },
+  initial: (direction: number) => ({ opacity: 0, x: direction >= 0 ? 24 : -24 }),
   animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -24 },
+  exit: (direction: number) => ({ opacity: 0, x: direction >= 0 ? -24 : 24 }),
 };
 
 const transition = { duration: 0.2, ease: 'easeOut' } as const;
 
 export function AgentWizard() {
   const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState(1);
   const form = useForm<AgentWizardValues>({
     resolver: zodResolver(agentWizardSchema),
     shouldUnregister: false,
@@ -56,6 +57,7 @@ export function AgentWizard() {
   const handleNext = async () => {
     const fields = stepFields[step] ?? [];
     if (!fields.length) {
+      setDirection(1);
       setStep((value) => Math.min(value + 1, steps.length - 1));
       return;
     }
@@ -63,6 +65,7 @@ export function AgentWizard() {
     const valid = await form.trigger(fields);
     if (!valid) return;
 
+    setDirection(1);
     setStep((value) => Math.min(value + 1, steps.length - 1));
   };
 
@@ -102,9 +105,10 @@ export function AgentWizard() {
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={step}
+              custom={direction}
               variants={stepVariants}
               initial="initial"
               animate="animate"
@@ -276,7 +280,10 @@ export function AgentWizard() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setStep((value) => Math.max(value - 1, 0))}
+              onClick={() => {
+                setDirection(-1);
+                setStep((value) => Math.max(value - 1, 0));
+              }}
               disabled={step === 0}
               leftIcon={<ArrowLeft className="h-4 w-4" aria-hidden />}
             >
