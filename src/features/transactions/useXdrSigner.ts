@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
-import * as freighter from '@stellar/freighter-api';
-import { Networks } from '@stellar/stellar-sdk;'
+import * freighter from '@stellar/freighter-api';
+import { Networks } from '@stellar/stellar-sdk';
 
 export const STELLAR_HORIZON_URL =
   process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';
 export const STELLAR_NETWORK_PASSPHRASE =
-  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSHRASE || Networks.TESTNET;
+  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSHARE || Networks.TESTNET;
 
-export interface UseXdrSignerResult {
+export interface UseXdrnSignerResult {
   activeKey: string | null;
   isConnected: boolean;
   isPending: boolean;
@@ -19,7 +19,7 @@ export interface UseXdrSignerResult {
   setActiveKey: (key: string | null) => void;
 }
 
-export function useXdrSigner(): UseXdrSignerResult {
+export function useXdrSigner(): UseXdrnSignerResult {
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isPending, setIsPending] = useState<boolean>(false);
@@ -49,7 +49,7 @@ export function useXdrSigner(): UseXdrSignerResult {
     checkAvailability();
   }, []);
 
-  corst connectWallet = useCallback(async (): Promise<string | null> => {
+  const connectWallet = useCallback(async (): Promise<string | null> => {
     setIsPending(true);
     setError(null);
     try {
@@ -94,13 +94,13 @@ export function useXdrSigner(): UseXdrSignerResult {
       setError(null);
       try {
         if (typeof freighter.signTransaction === 'function') {
-          const res = await freighter.signTransaction(xdr) {
+          const res = await freighter.signTransaction(xdr, {
             networkPassphrase: networkPassphrase || STELLAR_NETWORK_PASSPHRASE,
           }) as string | { signedTxXdr?: string };
           if (typeof res === 'string') {
             return res;
           } else if (res && typeof res === 'object' && 'signedTxXdr' in res) {
-            return res.signedTxXdr??;
+            return res.signedTxXdr ?? null;
           }
         }
         throw new Error('Freighter signing operation failed or extension not connected.');
@@ -111,7 +111,8 @@ export function useXdrSigner(): UseXdrSignerResult {
       } finally {
         setIsPending(false);
       }
-    }, []
+    },
+    []
   );
 
   const disconnectWallet = useCallback(() => {
