@@ -10,6 +10,7 @@ export default function AgentCreationWizard() {
   const { currentStep, values, setCurrentStep, setValues, nextStep, prevStep } = useAgentWizardStore();
   const [direction, setDirection] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [toast, setToast] = useState<string | null>(null);
 
   const updateField = (field: keyof typeof values, value: string | number) => {
     setValues({ [field]: value } as Partial<typeof values>);
@@ -52,9 +53,15 @@ export default function AgentCreationWizard() {
     }
   };
 
+  const mockCreateAgent = (config: typeof values) => {
+    // Mock creation handler - replace with actual API call
+    console.log('Agent created:', config);
+  };
+
   const handleConfirm = () => {
     const payload = JSON.stringify(values, null, 2);
-    alert(`Configuration payload:\n${payload}`);
+    setToast(payload);
+    mockCreateAgent(values);
   };
 
   const variants = {
@@ -188,6 +195,11 @@ export default function AgentCreationWizard() {
           <button className="button button-primary" onClick={handleConfirm}>Confirm</button>
         )}
       </div>
+      {toast && (
+        <div className="toast" onClick={() => setToast(null)}>
+          <pre>{toast}</pre>
+        </div>
+      )}
     </div>
   );
 }
