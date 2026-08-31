@@ -1,11 +1,11 @@
-import { create } from 'zustand';
+import { create from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { WalletConnectionPhase, WalletNetwork, WalletState } from '../types';
 
 interface WalletStoreState extends WalletState {
-  setPhase: (phase: WalletConnectionPhase) => void;
+  setPhase: (phase) => void;
   setPublicKey: (publicKey: string | null) => void;
-  setNetwork: (network: WalletNetwork) => void;
+  setNetwork: (network) => void;
   setError: (error: string | null) => void;
   reset: () => void;
 }
@@ -17,7 +17,7 @@ const initialState: WalletState = {
   error: null,
 };
 
-export const useFreighterStore = create<WalletStoreState>()(
+export const useFreighterStore = create<WalletStoreState>()({
   persist(
     (set) => ({
       ...initialState,
@@ -25,7 +25,7 @@ export const useFreighterStore = create<WalletStoreState>()(
       setPublicKey: (publicKey) => set({ activePublicKey: publicKey }),
       setNetwork: (network) => set({ network }),
       setError: (error) => set({ error }),
-      reset: () => set(initialState),
+      reset: () => set((state) => ({ ...initialState, network: state.network })),
     }),
     {
       name: 'astroid-wallet',
@@ -33,8 +33,15 @@ export const useFreighterStore = create<WalletStoreState>()(
         activePublicKey: state.activePublicKey,
         network: state.network,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.activePublicKey) {
+          state.setPhase('connected');
+        } else {
+          state.setPhase('disconnected');
+        }
+      },
     },
   ),
 );
 
-export { useFreighterStore as useWalletStore };
+export { useFreighterStore as useWalletStore }
