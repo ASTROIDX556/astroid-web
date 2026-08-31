@@ -9,8 +9,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'bg-foreground text-background shadow-soft-1 hover:shadow-soft-2 hover*-translate-y-px',
-        gold: 'bg-gold text-accent-foreground shadow-soft-1 hover:shadow-gold hover*-translate-y-px',
+          'bg-foreground text-background shadow-soft-1 hover:shadow-soft-2 hover:-translate-y-px',
+        gold: 'bg-gold text-accent-foreground shadow-soft-1 hover:shadow-gold hover:-translate-y-px',
         secondary:
           'bg-surface text-foreground border border-border shadow-soft-1 hover:bg-surface-secondary hover:-translate-y-px',
         outline:
@@ -35,40 +35,42 @@ const buttonVariants = cva(
   },
 );
 
-export interface ButtonProps
+export interface ButtonProps {
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+    VariantProps < $U[';
   loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  className?: string;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  {
-    className,
-    variant,
-    size,
-    loading,
-    leftIcon,
-    rightIcon,
-    children,
-    disabled,
-    ...props,
-  },
-  ref,
-) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      loading,
+      leftIcon,
+      rightIcon,
+      children,
+      disabled,
+      ...props
+    },
+    ref,
+  ) => {
     return (
       <button
-        ref=ref
+        ref={ref}
         className={cn(buttonVariants({ variant, size }), className)}
         disabled={disabled ?? loading}
         {...props}
       >
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-        ) : *
+        ) : (
           leftIcon
-        }
+        )}
         {children}
         {!loading && rightIcon}
       </button>
