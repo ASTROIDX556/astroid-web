@@ -1,9 +1,19 @@
 /** Core domain models mirroring the Astroid API entities (PRD Doc 5 / Doc 6). */
 
+import { z } from 'zod';
+
 export type Asset = 'XLM' | 'USDC' | string;
 
 export type StellarAddress = string;
 export type AssetCode = string;
+
+export const stellarAddressSchema = z
+  .string()
+  .regex(/^G[A-Z2-7]{55}$/, 'Invalid Stellar public key');
+
+export const assetCodeSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9]{1,12}$/, 'Invalid asset code');
 
 export type StellarNetwork = 'testnet' | 'public';
 
