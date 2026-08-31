@@ -17,6 +17,7 @@ import { PageTransition } from '@/components/ui/motion';
 import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
 import { DepartmentBudgetBreakdown } from '@/features/budgets/DepartmentBudgetBreakdown';
+import { BudgetBreakdownChart } from '@/features/budgets/BudgetBreakdownChart';
 import { BudgetMatrix } from '@/features/budgets/BudgetMatrix';
 import { BudgetMeterCard } from '@/features/budgets/BudgetMeters';
 
@@ -162,6 +163,10 @@ export default function BudgetsPage() {
               <div className="pt-4 border-t border-border space-y-4">
                 <SectionLabel>Department Allocation & Drill-Down Matrix</SectionLabel>
                 <BudgetMatrix />
+              </div>
+              <div className="pt-4 border-t border-border space-y-4">
+                <SectionLabel>Department Spend Breakdown</SectionLabel>
+                <BudgetBreakdownChart />
               </div>
             </div>
           );

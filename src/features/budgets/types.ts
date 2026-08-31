@@ -12,6 +12,13 @@ export interface AgentAllocation {
   asset: AssetCode;
   velocity24h: number; // e.g. amount spent in last 24h
   lastTransactionAt: string;
+  ledger?: {
+    id: string;
+    date: string;
+    description: string;
+    counterparty?: string;
+    amount: number;
+  }[];
 }
 
 export interface DepartmentBudget {
