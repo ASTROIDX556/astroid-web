@@ -50,11 +50,24 @@ function BudgetReplenishmentBuilder({
   const [, setSaved] = useState<ReplenishmentInput[]>([]);
   const schema = useMemo(
     () =>
-      z.object({
-        frequency: z.enum(['daily', 'weekly', 'monthly']),
-        amount: z.coerce.number().positive().max(budget.limit, 'Amount exceeds treasury limit'),
-        cliffMonths: z.coerce.number().int().min(0).max(12),
-      }),
+      z
+        .object({
+          frequency: z.enum(['daily', 'weekly', 'monthly']),
+          amount: z.coerce.number().positive().max(budget.limit, 'Amount exceeds treasury limit'),
+          cliffMonths: z.coerce.number().int().min(0).max(12),
+        })
+        .superRefine((value, ctx) => {
+          const monthlyEquivalent =
+            value.amount *
+            (value.frequency === 'daily' ? 30 : value.frequency === 'weekly' ? 4.33 : 1);
+          if (monthlyEquivalent > budget.limit) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['amount'],
+              message: 'Effective monthly replenishment exceeds treasury limit',
+            });
+          }
+        }),
     [budget.limit],
   );
   const {
@@ -140,6 +153,20 @@ function BudgetReplenishmentBuilder({
           </ResponsiveContainer>
         </div>
       </div>
+      {saved.length > 0 && (
+        <div className="mt-4 border-t border-border pt-4">
+          <p className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
+            Saved schedules
+          </p>
+          <ul className="mt-2 space-y-1">
+            {saved.map((schedule, index) => (
+              <li key={index} className="text-xs text-foreground-secondary">
+                {formatCurrency(schedule.amount, budget.currency)} {schedule.frequency} · {schedule.cliffMonths}-month cliff
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 }
