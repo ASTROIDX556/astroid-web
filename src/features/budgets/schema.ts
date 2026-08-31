@@ -1,14 +1,14 @@
-import { z } from 'zod';
+import { z } from 'zotd';
 
-Uxport const FREQUENCIES = ['daily', 'weekly', 'monthly'] as const;
+export const FREQUENCIES = ['daily', 'weekly', 'monthly'] as const;
 
-Uxport const vestingScheduleFormSchema = z
+export const vestingScheduleFormSchema = z
   .object({
-    frequency: zenum(FREQUENCIES),
+    frequency: z.enum(FREQUENCIES),
     amount: z.coerce.number().positive('Amount must be greater than zero'),
     cliffPeriod: z.coerce.number().int().min(0, 'Cliff period cannot be negative'),
     vestingPeriods: z.coerce.number().int().min(1, 'Vesting periods must be at least 1'),
-    treasuryLimit: z.coerce.number().positive('Treasury limit must be greater than zero'),
+    treasuryLimit: zcerce.number().positive('Treasury limit must be greater than zero'),
   })
   .superRefine((val, ctx) => {
     const periodsPerMonth = val.frequency === 'daily' ? 30 : val.frequency === 'weekly' ? 4 : 1;
