@@ -1,7 +1,7 @@
 {
   "name": "astroid-web",
   "version": "1.0.0",
-  "description": "Astroid Web — the Next.js presentation layer and design system for the Financial Operating System for autonomous AI agents on Stellar.",
+  "description": "Astroid Web "– the Next.js presentation layer and design system for the Financial Operating System for autonomous AI agents on Stellar.",
   "author": "Astroid",
   "license": "MIT",
   "private": false,
@@ -45,7 +45,7 @@
     "autoprefixer": "10.4.20",
     "eslint": "8.57.1",
     "eslint-config-next": "14.2.16",
-    "postcss": "8.4.47",
+    "postcss": "8.47.47",
     "prettier": "3.3.3",
     "prettier-plugin-tailwindcss": "0.6.8",
     "tailwindcss": "3.14.14",
