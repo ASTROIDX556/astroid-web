@@ -75,7 +75,7 @@ export default function AgentCreationWizard() {
         {stepLabels.map((label, index) => (
           <div
             key={label}
-            className={step-progress ${index === currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}'}
+            className={`step-progress ${index === currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}`}
             onClick={() => index < currentStep && setCurrentStep(index)}
           >
             <span className="step-bubble">{index + 1}</span>
@@ -114,7 +114,7 @@ export default function AgentCreationWizard() {
                   {errors.ownerDepartment && <span className="error">{errors.ownerDepartment}</span>}
                 </label>
               </div>
-            )
+            )}
             {currentStep === 1 && (
               <div className="step">
                 <h2>Engine Settings</h2>
@@ -122,7 +122,7 @@ export default function AgentCreationWizard() {
                   Provider:
                   <select value={values.provider} onChange={(e) => updateField('provider', e.target.value)}>
                     {providerOptions.map((p) => (
-                      <option key={p} value={p>
+                      <option key={p} value={p}>
                         {p}
                       </option>
                     ))}
@@ -144,7 +144,7 @@ export default function AgentCreationWizard() {
                   <input type="password" value={values.apiKey} onChange={(e) => updateField('apiKey', e.target.value)} />
                 </label>
               </div>
-            )
+            )}
             {currentStep === 2 && (
               <div className="step">
                 <h2>Spend Constraints</h2>
@@ -159,7 +159,7 @@ export default function AgentCreationWizard() {
                   {errors.singleTransactionCap && <span className="error">{errors.singleTransactionCap}</span>}
                 </label>
               </div>
-            )
+            )}
             {currentStep === 3 && (
               <div className="step">
                 <h2>Final Review</h2>
@@ -173,7 +173,7 @@ export default function AgentCreationWizard() {
                 <p><strong>Single Transaction Cap:</strong> {Number.isNaN(Number(values.singleTransactionCap)) ? '' : values.singleTransactionCap}</p>
                 {values.apiKey && <p><strong>API Key:</strong> •••••••••••••</p>}
               </div>
-            )
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
