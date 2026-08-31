@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,10 +24,19 @@ const stepFields: Record<number, (keyof AgentWizardValues)[]> = {
   3: [],
 };
 
+const stepVariants = {
+  initial: { opacity: 0, x: 24 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -24 },
+};
+
+const transition = { duration: 0.2, ease: 'easeOut' };
+
 export function AgentWizard() {
   const [step, setStep] = useState(0);
   const form = useForm<AgentWizardValues>({
     resolver: zodResolver(agentWizardSchema),
+    shouldUnregister: false,
     defaultValues: {
       name: '',
       description: '',
@@ -55,8 +65,13 @@ export function AgentWizard() {
     setStep((value) => Math.min(value + 1, steps.length - 1));
   };
 
+  const mockCreateAgent = async (values: AgentWizardValues) => {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    console.info('[mock] Agent creation payload', JSON.stringify(values, null, 2));
+  };
+
   const onSubmit = (values: AgentWizardValues) => {
-    console.info('Agent registration payload', values);
+    void mockCreateAgent(values);
     setStep(steps.length - 1);
   };
 
@@ -85,6 +100,15 @@ export function AgentWizard() {
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              variants={stepVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={transition}
+            >
           {step === 0 && (
             <div className="space-y-4">
               <FormField label="Agent name" htmlFor="agent-name" error={form.formState.errors.name?.message} required>
@@ -197,6 +221,10 @@ export function AgentWizard() {
                   <dd className="mt-1 text-sm text-foreground">{form.watch('name')}</dd>
                 </div>
                 <div>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Description</dt>
+                  <dd className="mt-1 text-sm text-foreground">{form.watch('description')}</dd>
+                </div>
+                <div>
                   <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Department</dt>
                   <dd className="mt-1 text-sm text-foreground">{form.watch('ownerDepartment')}</dd>
                 </div>
@@ -209,6 +237,10 @@ export function AgentWizard() {
                   <dd className="mt-1 text-sm text-foreground">{form.watch('model')}</dd>
                 </div>
                 <div>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Provider key</dt>
+                  <dd className="mt-1 text-sm text-foreground">{form.watch('apiKey') ? '********' : 'Not provided'}</dd>
+                </div>
+                <div>
                   <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Budget</dt>
                   <dd className="mt-1 text-sm text-foreground">{form.watch('budget')} XLM</dd>
                 </div>
@@ -219,6 +251,8 @@ export function AgentWizard() {
               </dl>
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
 
           <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
             <Button
