@@ -37,3 +37,25 @@ export interface DepartmentBudget {
   agents: AgentAllocation[];
   updatedAt: string;
 }
+
+export type BudgetAlertLevel = 'ok' | 'warning' | 'critical';
+
+export interface BudgetThresholds {
+  warningThreshold: number;
+  criticalThreshold: number;
+}
+
+export interface BudgetAlert {
+  id: string;
+  departmentId: string;
+  departmentName: string;
+  currentUtilization: number;
+  level: BudgetAlertLevel;
+  message: string;
+  triggeredAt: string;
+}
+
+export interface BudgetAlertSettings {
+  thresholds: BudgetThresholds;
+  enabled: boolean;
+}
