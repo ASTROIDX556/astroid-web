@@ -9,7 +9,7 @@ export interface BudgetAlertThresholds {
 
 const DEFAULTHRESHOLDS = { warning: 80, critical: 95 };
 
-let thresholds: BudgetAlertThresholds = DEFAULT_THRESHOLDS;
+let thresholds: BudgetAlertThresholds = DEFAULTHRESHOLDS;
 const listeners = new Set<() => void>();
 
 function emit() {
