@@ -320,6 +320,27 @@ export const transactionDepartments = Array.from(
   new Set(transactions.map(getTransactionDepartment)),
 ).sort();
 
+export const transactionAssets = Array.from(
+  new Set(transactions.map((transaction) => transaction.asset)),
+).sort();
+
+const transactionSearchIndex = new Map<string, string>(
+  transactions.map((transaction): [string, string] => [
+    transaction.id,
+    [
+      transaction.asset,
+      transaction.counterpartyAddress,
+      transaction.counterparty,
+      transaction.agentName,
+      transaction.memo,
+      transaction.purpose,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase(),
+  ]),
+);
+
 export function getTransactionFilterStatus(transaction: Transaction): TransactionFilterStatus {
   switch (transaction.status) {
     case 'completed':
@@ -340,17 +361,7 @@ export function getTransactionFilterStatus(transaction: Transaction): Transactio
 function matchesTransactionQuery(transaction: Transaction, query: TransactionQuery): boolean {
   const search = query.search?.trim().toLowerCase();
   if (search) {
-    const haystack = [
-      transaction.asset,
-      transaction.counterpartyAddress,
-      transaction.counterparty,
-      transaction.agentName,
-      transaction.memo,
-      transaction.purpose,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
+    const haystack = transactionSearchIndex.get(transaction.id) ?? '';
 
     if (!haystack.includes(search)) {
       return false;
@@ -394,7 +405,13 @@ export function queryTransactions(query: TransactionQuery = {}): TransactionPage
   };
 }
 
+const MAX_TRANSACTION_QUERY_CACHE_SIZE = 100;
+
 const transactionQueryCache = new Map<string, TransactionPage>();
+
+export function clearTransactionQueryCache(): void {
+  transactionQueryCache.clear();
+}
 
 export function queryTransactionsCached(query: TransactionQuery = {}): TransactionPage {
   const page = Math.max(1, query.page ?? 1);
@@ -408,6 +425,13 @@ export function queryTransactionsCached(query: TransactionQuery = {}): Transacti
 
   const result = queryTransactions({ ...query, page, pageSize });
   transactionQueryCache.set(cacheKey, result);
+
+  if (transactionQueryCache.size > MAX_TRANSACTION_QUERY_CACHE_SIZE) {
+    const oldestKey = transactionQueryCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      transactionQueryCache.delete(oldestKey);
+    }
+  }
 
   return result;
 }
