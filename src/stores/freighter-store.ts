@@ -67,7 +67,9 @@ const getFreighter = async () =>
     isConnected?: () => Promise<boolean | { isConnected?: boolean }>;
     setAllowed?: () => Promise<boolean | { isAllowed?: boolean }>;
     getAddress?: () => Promise<string | { address?: string; publicKey?: string }>;
-    getNetwork?: () => Promise<string | { network?: string }>;
+    getPublicKey?: () => Promise<string | { address?: string; publicKey?: string }>;
+    getNetwork?: () => Promise<string | { network?: string; networkPassphrase?: string }>;
+    getNetworkDetails?: () => Promise<{ network?: string; networkPassphrase?: string }>;
     signTransaction?: (xdr: string, options?: Record<string, unknown>) => Promise<string | { signedTxXdr?: string; signedXDR?: string; xdr?: string }>;
   };
 
@@ -140,13 +142,23 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
         }
       }
 
-      const addressResult = typeof freighter.getAddress === 'function' ? await withTimeout(freighter.getAddress()) : null;
+      const addressResult =
+        typeof freighter.getPublicKey === 'function'
+          ? await withTimeout(freighter.getPublicKey())
+          : typeof freighter.getAddress === 'function'
+            ? await withTimeout(freighter.getAddress())
+            : null;
       const publicKey = resolveWalletAddress(addressResult);
       if (!publicKey) {
         throw new Error('Freighter did not return a valid Stellar public key.');
       }
 
-      const networkResult = typeof freighter.getNetwork === 'function' ? await withTimeout(freighter.getNetwork()) : null;
+      const networkResult =
+        typeof freighter.getNetwork === 'function'
+          ? await withTimeout(freighter.getNetwork())
+          : typeof freighter.getNetworkDetails === 'function'
+            ? await withTimeout(freighter.getNetworkDetails())
+            : null;
       const network = resolveNetwork(networkResult) ?? 'testnet';
 
       set({
@@ -186,7 +198,10 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
         throw new Error('Freighter does not expose transaction signing support.');
       }
 
-      const response = await withTimeout(freighter.signTransaction(xdr));
+      const { network } = get();
+      const response = await withTimeout(
+        freighter.signTransaction(xdr, { networkPassphrase: getNetworkPassphrase(network ?? 'testnet') }),
+      );
       const signedXdr =
         typeof response === 'string'
           ? response
@@ -210,7 +225,11 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     await get().checkExtension();
     const freighter = await getFreighter();
     const walletAddress = resolveWalletAddress(
-      typeof freighter.getAddress === 'function' ? await withTimeout(freighter.getAddress()).catch(() => null) : null,
+      typeof freighter.getPublicKey === 'function'
+        ? await withTimeout(freighter.getPublicKey()).catch(() => null)
+        : typeof freighter.getAddress === 'function'
+          ? await withTimeout(freighter.getAddress()).catch(() => null)
+          : null,
     );
 
     if (!walletAddress) {
@@ -219,7 +238,11 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     }
 
     const network = resolveNetwork(
-      typeof freighter.getNetwork === 'function' ? await withTimeout(freighter.getNetwork()).catch(() => null) : null,
+      typeof freighter.getNetwork === 'function'
+        ? await withTimeout(freighter.getNetwork()).catch(() => null)
+        : typeof freighter.getNetworkDetails === 'function'
+          ? await withTimeout(freighter.getNetworkDetails()).catch(() => null)
+          : null,
     );
 
     set({
@@ -251,9 +274,11 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   },
 
   addTrustline: async ({ assetCode, issuer }: { assetCode: string; issuer: string }) => {
-    const { publicKey, network, requestSignature } = get();
-    if (!publicKey) {
-      throw new Error('No wallet connected.');
+    const { status, publicKey, network, requestSignature } = get();
+    if (status !== 'connected' || !publicKey) {
+      const message = 'No wallet connected.';
+      set({ error: message });
+      throw new Error(message);
     }
 
     const server = getServer(network ?? 'testnet');
