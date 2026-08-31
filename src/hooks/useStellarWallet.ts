@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import * as StellarSdk from '@stellar/stellar-sdk';
+import { z } from 'zod';
 
 export type StellarWalletStatus = 'idle' | 'checking' | 'connected' | 'missing' | 'error';
 
@@ -36,8 +38,20 @@ async function loadFreighter(): Promise<FreighterModule | null> {
   }
 }
 
+const trustlineSchema = z.object({
+  assetCode: z.string().min(1, 'Asset code is required.').max(12).regex(/^[a-zA-Z0-9]{1,12}$/, 'Invalid asset code.'),
+  issuer: z.string().regex(/^G[2-7A-H-J-NP-Z]{55}$/, 'Invalid Stellar public key.'),
+});
+
+export type AccountBalance = {
+  assetCode: string;
+  assetIssuer: string | null;
+  balance: string;
+  limit?: string;
+};
+
 export function useStellarWallet() {
-  const [status, setStatus] = useState<StellarWalletStatus>('checking');
+  const [status, setStatus] = useState<StellarWalletStatus=('checking');
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,7 +102,7 @@ export function useStellarWallet() {
       const isAllowed =
         typeof allowed === 'boolean'
           ? allowed
-          : (allowed as { isAllowed?: boolean } | null)?.isAllowed ?? false;
+          : (allowed as { isAllowed?: boolean } | null)?.isAllowed ?> false;
 
       if (!isAllowed) {
         throw new Error('Freighter approval was rejected. Please approve the connection in the browser extension.');
@@ -140,6 +154,109 @@ export function useStellarWallet() {
     }
   }, []);
 
+  const getNetworkDetails = useCallback(async () => {
+    const api = await loadFreighter();
+    if (!api) {
+      setStatus('missing');
+      setError('Freighter is not installed.');
+      return null;
+    }
+
+    try {
+      const network = await withTimeout(api.getNetwork());
+      if (typeof network === 'string') {
+        return {
+          networkUrl: 'https://horizon.stellar.org',
+          networkPassphrase: StellarSdk.Networks.PUBLIC,
+        };
+      }
+      return {
+        networkUrl: network.networkUrl,
+        networkPassphrase: network.networkPassphrase,
+      };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not fetch network details.');
+      return null;
+    }
+  }, []);
+
+  const getAccountBalances = useCallback(async (): Promise<AccountBalance[] | null> => {
+    if (!publicKey) {
+      setError('No connected wallet address.');
+      return null;
+    }
+
+    const network = await getNetworkDetails();
+    if (!network) return null;
+
+    try {
+      const server = new StellarSdk.Server(network.networkUrl);
+      const account = await server.loadAccount(publicKey);
+      return account.balances.map((balance) => {
+        if (balance.asset_type === 'native') {
+          return {
+            assetCode: 'XLM',
+            assetIssuer: null,
+            balance: balance.balance,
+            limit: undefined,
+          };
+        }
+        const assetLine = balance as StellarSdk.Horizon.BalanceLineAsset;
+        return {
+          assetCode: assetLine.asset_code,
+          assetIssuer: assetLine.asset_issuer,
+          balance: balance.balance,
+          limit: assetLine.limit,
+        };
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load account balances.');
+      return null;
+    }
+  }, [publicKey, getNetworkDetails]);
+
+  const addTrustline = useCallback(
+    async (assetCode: string, issuer: string): Promise<string | null> => {
+      if (!publicKey) {
+        setError('No connected wallet address.');
+        return null;
+      }
+
+      const parsed = trustlineSchema.safeParse({ assetCode, issuer });
+      if (!parsed.success) {
+        setError(parsed.error.issues.map((i) => i.message).join(', '));
+        return null;
+      }
+
+      const network = await getNetworkDetails();
+      if (!network) return null;
+
+      try {
+        const server = new StellarSdk.Server(network.networkUrl);
+        const account = await server.loadAccount(publicKey);
+        const fee = await server.fetchBaseFee();
+        const asset = new StellarSdk.Asset(assetCode, issuer);
+        const transaction = new StellarSdk.TransactionBuilder(account, {
+          fee: fee.toString(),
+          networkPassphrase: network.networkPassphrase,
+        })
+          .addOperation(StellarSdk.Operation.changeTrust({ asset }))
+          .setTimeout(30)
+          .build();
+
+        const xdr = transaction.toXDR();
+        const signedXdr = await signTransaction(xdr);
+        if (!signedXdr) return null;
+
+        return signedXdr;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create trustline.');
+        return null;
+      }
+    },
+    [publicKey, getNetworkDetails, signTransaction],
+  );
+
   return {
     status,
     publicKey,
@@ -150,6 +267,9 @@ export function useStellarWallet() {
     refreshConnection,
     connect,
     signTransaction,
+    getNetworkDetails,
+    getAccountBalances,
+    addTrustline,
   };
 }
 
