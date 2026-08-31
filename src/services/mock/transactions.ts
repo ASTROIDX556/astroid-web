@@ -416,6 +416,46 @@ export function clearTransactionQueryCache(): void {
 }
 
 export function queryTransactionsCached(query: TransactionQuery = {}): TransactionPage {
+  const queryKey = JSON.stringify(query);
+  const cachedPage = transactionQueryCache.get(queryKey);
+  if (cachedPage) {
+    return cachedPage;
+  }
+
+  const { page, pageSize, ...filterQuery } = query;
+  const filterKey = JSON.stringify(filterQuery);
+  let filtered = transactionFilterCache.get(filterKey);
+  if (!filtered) {
+    filtered = transactions.filter((transaction) => matchesTransactionQuery(transaction, filterQuery));
+    if (transactionFilterCache.size >= MAX_TRANSACTION_QUERY_CACHE_SIZE) {
+      transactionFilterCache.clear();
+    }
+    transactionFilterCache.set(filterKey, filtered);
+  }
+
+  const normalizedPage = Math.max(1, page ?? 1);
+  const normalizedPageSize = Math.max(1, pageSize ?? 10);
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / normalizedPageSize));
+  const safePage = Math.min(normalizedPage, totalPages);
+  const start = (safePage - 1) * normalizedPageSize;
+
+  const result: TransactionPage = {
+    items: filtered.slice(start, start + normalizedPageSize),
+    total,
+    page: safePage,
+    pageSize: normalizedPageSize,
+    totalPages,
+  };
+
+  if (transactionQueryCache.size >= MAX_TRANSACTION_QUERY_CACHE_SIZE) {
+    transactionQueryCache.clear();
+  }
+  transactionQueryCache.set(queryKey, result);
+
+  return result;
+}
+uery = {}): TransactionPage {
   const page = Math.max(1, query.page ?? 1);
   const pageSize = Math.max(1, query.pageSize ?? 10);
   const cacheKey = JSON.stringify({ ...query, page, pageSize });
