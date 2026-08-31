@@ -176,6 +176,8 @@ export const MOCK_BUDGET_SCHEDULES = [
     amount: 100000,
     cliff: 3,
     duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
   },
   {
     id: 'schedule-2',
@@ -185,6 +187,8 @@ export const MOCK_BUDGET_SCHEDULES = [
     amount: 20000,
     cliff: 1,
     duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
   },
   {
     id: 'schedule-3',
@@ -194,6 +198,8 @@ export const MOCK_BUDGET_SCHEDULES = [
     amount: 70000,
     cliff: 3,
     duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
   },
   {
     id: 'schedule-4',
@@ -203,6 +209,8 @@ export const MOCK_BUDGET_SCHEDULES = [
     amount: 90000,
     cliff: 3,
     duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
   },
   {
     id: 'schedule-5',
@@ -212,6 +220,8 @@ export const MOCK_BUDGET_SCHEDULES = [
     amount: 2000,
     cliff: 0,
     duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
   },
   {
     id: 'schedule-6',
@@ -221,6 +231,8 @@ export const MOCK_BUDGET_SCHEDULES = [
     amount: 300000,
     cliff: 3,
     duration: 12,
+    asset: 'XLM',
+    startDate: new Date().toISOString(),
   },
   {
     id: 'schedule-7',
@@ -230,6 +242,8 @@ export const MOCK_BUDGET_SCHEDULES = [
     amount: 200000,
     cliff: 3,
     duration: 12,
+    asset: 'XLM',
+    startDate: new Date().toISOString(),
   },
   {
     id: 'schedule-8',
@@ -239,6 +253,8 @@ export const MOCK_BUDGET_SCHEDULES = [
     amount: 60000,
     cliff: 3,
     duration: 12,
+    asset: 'ASTRO',
+    startDate: new Date().toISOString(),
   },
   {
     id: 'schedule-9',
@@ -248,5 +264,7 @@ export const MOCK_BUDGET_SCHEDULES = [
     amount: 40000,
     cliff: 6,
     duration: 12,
+    asset: 'ASTRO',
+    startDate: new Date().toISOString(),
   },
 ];
