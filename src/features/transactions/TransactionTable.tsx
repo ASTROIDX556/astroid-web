@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
@@ -14,9 +14,10 @@ interface TransactionTableProps {
   transactions: Transaction[];
   onSelect?: (transaction: Transaction) => void;
   className?: string;
+  isLoading?: boolean;
 }
 
-export function TransactionTable({ transactions, className }: TransactionTableProps) {
+export function TransactionTable({ transactions, className, isLoading = false }: TransactionTableProps) {
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
       {
@@ -92,22 +93,135 @@ export function TransactionTable({ transactions, className }: TransactionTablePr
     [],
   );
 
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [assetFilter, setAssetFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(handler);
+  }, [query]);
+
+  const assets = useMemo(() => Array.from(new Set(transactions.map(tx => tx.asset))), [transactions]);
+  const statuses = useMemo(() => Array.from(new Set(transactions.map(tx => tx.status))), [transactions]);
+
+  const filteredTransactions = useMemo(() => {
+    const q = debouncedQuery.trim().toLowerCase();
+    return transactions.filter((tx) => {
+      const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;
+      const matchesAsset = assetFilter === 'all' || tx.asset === assetFilter;
+      const searchable = [tx.counterparty, tx.counterpartyAddress, tx.purpose, tx.asset, tx.agentName].join(' ').toLowerCase();
+      const matchesQuery = !q || searchable.includes(q);
+      return matchesStatus && matchesAsset && matchesQuery;
+    });
+  }, [transactions, debouncedQuery, statusFilter, assetFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedTransactions = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredTransactions.slice(start, start + pageSize);
+  }, [filteredTransactions, safePage, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, statusFilter, assetFilter, pageSize]);
+
   return (
-    <DataTable
-      data={transactions}
-      columns={columns}
-      getRowId={(row) => row.id}
-      searchable
-      searchPlaceholder="Search counterparty, purpose, or asset"
-      pageSize={8}
-      className={className}
-      caption="Transactions"
-      emptyState={
-        <div className="rounded-card border border-dashed border-border bg-surface p-8 text-center text-sm text-foreground-secondary">
-          No matching transactions.
+    <div className={className}>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search asset code or public key"
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Search transactions"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Filter by status"
+        >
+          <option value="all">All statuses</option>
+          {statuses.map((status) => (
+            <option key={status} value={status}>{status}</option>
+          ))}
+        </select>
+        <select
+          value={assetFilter}
+          onChange={(e) => setAssetFilter(e.target.value)}
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Filter by asset"
+        >
+          <option value="all">All assets</option>
+          {assets.map((asset) => (
+            <option key={asset} value={asset}>{asset}</option>
+          ))}
+        </select>
+        <select
+          value={pageSize}
+          onChange={(e) => setPageSize(Number(e.target.value))}
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Page size"
+        >
+          {[8, 16, 24].map((size) => (
+            <option key={size} value={size}>{size} per page</option>
+          ))}
+        </select>
+      </div>
+
+      {isLoading ? (
+        <div className="rounded-card border border-border bg-surface p-8 text-center text-sm text-foreground-secondary">
+          Loading transactions…
         </div>
-      }
-    />
+      ) : (
+        <DataTable
+          data={pagedTransactions}
+          columns={columns}
+          getRowId={(row) => row.id}
+          className={className}
+          caption="Transactions"
+          emptyState={
+            <div className="rounded-card border border-dashed border-border bg-surface p-8 text-center text-sm text-foreground-secondary">
+              No matching transactions.
+            </div>
+          }
+          searchable={false}
+          pageSize={Number.MAX_SAFE_INTEGER}
+        />
+      )}
+
+      {!isLoading && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-foreground-muted">
+            Page {safePage} of {totalPages} · {filteredTransactions.length} results
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPage(Math.max(1, safePage - 1))}
+              disabled={safePage <= 1}
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage(Math.min(totalPages, safePage + 1))}
+              disabled={safePage >= totalPages}
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
