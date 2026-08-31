@@ -92,7 +92,7 @@ function getGaugeColors(state: BudgetMeterState): { track: string; stroke: strin
 }
 
 function Gauge({ percent = 0, label, spent, allocated, currency }: BudgetMeterProps) {
-  const [threshold] = useBudgetThresholds();
+  const [thresholds] = useBudgetThresholds();
   const safePercent = Math.min(100, Math.max(0, percent));
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
@@ -107,7 +107,7 @@ function Gauge({ percent = 0, label, spent, allocated, currency }: BudgetMeterPr
           <circle
             cx="70"
             cy="70"
-            r=radius
+            r={radius}
             fill="none"
             className={colors.track}
             strokeWidth="10"
@@ -128,7 +128,7 @@ function Gauge({ percent = 0, label, spent, allocated, currency }: BudgetMeterPr
         <div className="absolute inset-0 grid place-items-center text-center">
           <div>
             <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-foreground-muted">
-              {safePercent.toFixed(0)}%{safePercent.toFixed(0)}%
+              {safePercent.toFixed(0)}%
             </p>
           </div>
         </div>
@@ -161,7 +161,7 @@ function Gauge({ percent = 0, label, spent, allocated, currency }: BudgetMeterPr
         </div>
 
         <div className="flex items-center gap-2 text-2xs text-foreground-muted">
-          <span className={inline-flex rounded-full px-2 py-1 ${colors.ring}}>
+          <span className={`inline-flex rounded-full px-2 py-1 ${colors.ring}`}>
             {state === 'critical' ? 'Over-allocated' : state === 'warning' ? 'Elevated usage' : 'Within limit'}
           </span>
           {state === 'critical' && (
@@ -198,7 +198,7 @@ function PreviewGauge({ thresholds }: { thresholds: BudgetThresholds }) {
             strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={circumference}
-            strokeDashoffset={track ? dashOffset : dashOffset}
+            strokeDashoffset={dashOffset}
             className={state === 'critical' ? 'animate-pulse' : ''}
           />
         </svg>
@@ -322,13 +322,13 @@ export function BudgetWarningsCard({
   className?: string;
 }) {
   const [threshold] = useBudgetThresholds();
-  const baseBudgets = useMemo<BudgetMeterProps[]>() => budgets ?? DEFAULT_BUDGETS, [budgets]);
+  const baseBudgets = useMemo(() => budgets ?? DEFAULT_BUDGETS, [budgets]);
 
   const warnings = baseBudgets
-    .map((budget) => {
+    .map((budget) => ({
       ...budget,
       percent: budget.allocated > 0 ? (budget.spent / budget.allocated) * 100 : 0,
-    })
+    }))
     .filter((budget) => budget.percent >= threshold.warning);
 
   return (
@@ -387,7 +387,7 @@ export function BudgetMeters({
 }: {
   budgets?: BudgetMeterProps[];
 }) {
-  const baseBudgets = useMemo<BudgetMeterProps[]>() => budgets ?? DEFAULT_BUDGETS, [budgets]);
+  const baseBudgets = useMemo(() => budgets ?? DEFAULT_BUDGETS, [budgets]);
 
   const [values, setValues] = useState<number[]>(baseBudgets.map((budget) => (budget.allocated > 0 ? (budget.spent / budget.allocated) * 100 : 0)));
 
