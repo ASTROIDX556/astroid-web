@@ -1,1 +1,1 @@
-export default function ProposalTimeline() { return <div>Drafted | Voting Active | Approved | Executed</div>; }
+export { default } from './components/ProposalTimeline';
