@@ -33,7 +33,7 @@ const RiskBadge: React.FC<{ risk?: string; className?: string }> = ({ risk, clas
   );
 };
 
-const columns: Column<Transaction>[] = [
+const _columns: Column<Transaction>[] = [
   {
     header: 'Counterparty',
     cell: (t) => (
