@@ -1,13 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Bell, Sparkles, ChevronsUpDown, Check, Menu } from 'lucide-react';
+import { Search, Sparkles, ChevronsUpDown, Check, Menu } from 'lucide-react';
 import { Dropdown, type DropdownItem } from '@/components/ui/dropdown';
 import { Avatar } from '@/components/ui/avatar';
-import { useOrganizations, useCurrentUser, useNotifications } from '@/hooks/use-queries';
+import { NotificationCenter } from '@/components/NotificationCenter';
+import { useOrganizations, useCurrentUser } from '@/hooks/use-queries';
 import { usePreferencesStore } from '@/stores/preferences-store';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
 import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
+import { CircuitBreakerControl } from '@/features/security';
 
 interface TopbarProps {
   /** Opens the mobile navigation drawer. */
@@ -22,7 +24,6 @@ interface TopbarProps {
 export function Topbar({ onOpenNav }: TopbarProps) {
   const orgsQuery = useOrganizations();
   const userQuery = useCurrentUser();
-  const notificationsQuery = useNotifications();
 
   const activeOrgId = usePreferencesStore((s) => s.activeOrgId);
   const setActiveOrg = usePreferencesStore((s) => s.setActiveOrg);
@@ -32,7 +33,6 @@ export function Topbar({ onOpenNav }: TopbarProps) {
   const orgs = orgsQuery.data ?? [];
   const activeOrg = orgs.find((o) => o.id === activeOrgId) ?? orgs[0];
   const user = userQuery.data;
-  const unread = (notificationsQuery.data ?? []).filter((n) => !n.read).length;
 
   const orgItems: DropdownItem[] = orgs.map((org) => ({
     label: org.name,
@@ -102,6 +102,9 @@ export function Topbar({ onOpenNav }: TopbarProps) {
         {/* Stellar Network Health & RPC Latency Widget */}
         <NetworkHealthWidget />
 
+        {/* Emergency Circuit Breaker */}
+        <CircuitBreakerControl currentUser={user?.name ?? 'operator'} />
+
         {/* Assistant */}
         <button
           type="button"
@@ -113,18 +116,7 @@ export function Topbar({ onOpenNav }: TopbarProps) {
         </button>
 
         {/* Notifications */}
-        <Link
-          href="/notifications"
-          className="relative grid h-9 w-9 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground"
-          aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}
-        >
-          <Bell className="h-[18px] w-[18px]" aria-hidden />
-          {unread > 0 && (
-            <span className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-xs bg-gold px-1 text-[10px] font-bold text-background-secondary">
-              {unread > 9 ? '9+' : unread}
-            </span>
-          )}
-        </Link>
+        <NotificationCenter />
 
         {/* Account */}
         <Dropdown
