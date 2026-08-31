@@ -1,1 +1,1 @@
-export const mockPropoosals 0 [];
+export const mockProposals = [];
