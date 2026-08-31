@@ -10,6 +10,7 @@ import { XdrSignatureStatus } from '@/features/transactions/XdrSignatureStatus';
 import { FeeOptimizationPanel } from '@/features/transactions/FeeOptimizationPanel';
 import { TransactionAuditToolbar } from '@/features/transactions/TransactionAuditToolbar';
 import { TransactionHistory } from '@/features/transactions/TransactionHistory';
+import { Badge, RiskBadge } from '@/types';
 
 
 const columns: Column<Transaction>[] = [
