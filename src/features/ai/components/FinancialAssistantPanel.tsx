@@ -14,7 +14,7 @@ import {
   Copy,
   ChevronRight,
 } from 'lucide-react';
-import { AiChatMessage as ChatMessage, SendMessagePayloadSchema } from '@/types/ai';
+import { ChatMessage, SendMessagePayloadSchema } from '@/types/ai';
 const INITIAL_SUGGESTIONS = [
   'Summarize agent spending over the last 24 hours',
   'Flag anomalies or policy violations in recent transactions',
