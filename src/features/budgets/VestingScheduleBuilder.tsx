@@ -19,10 +19,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/format';
-import {
-  vestingScheduleFormSchema,
-  type VestingScheduleFormValues,
-} from './schema';
+import { z } from 'zod';
+
+const vestingScheduleFormSchema = z
+  .object({
+    frequency: z.enum(['daily', 'weekly', 'monthly']),
+    amount: z.number().min(0, 'Amount must be at least 0'),
+    cliffPeriod: z.number().int().min(0, 'Cliff period must be a non-negative integer'),
+    vestingPeriods: z.number().int().min(1, 'Vesting periods must be at least 1'),
+    treasuryLimit: z.number().min(0, 'Treasury limit must be at least 0'),
+  })
+  .refine((values) => getTotalReplenishment(values) <= values.treasuryLimit, {
+    message: 'Projected replenishments exceed the treasury limit',
+    path: ['treasuryLimit'],
+  });
+
+type VestingScheduleFormValues = z.infer<typeof vestingScheduleFormSchema>;
 
 function getPeriodsPerMonth(frequency: VestingScheduleFormValues['frequency']) {
   return frequency === 'daily' ? 30 : frequency === 'weekly' ? 4 : 1;
@@ -36,6 +48,10 @@ function getTotalReplenishment(values: VestingScheduleFormValues) {
 function buildVestingProjection(values: VestingScheduleFormValues) {
   const months = 12;
   const periodsPerMonth = getPeriodsPerMonth(values.frequency);
+  const amount = Number.isFinite(values.amount) ? values.amount : 0;
+  const vestingPeriods = Number.isFinite(values.vestingPeriods)
+    ? Math.max(1, values.vestingPeriods)
+    : 1;
   const data: Array<{ month: number; available: number }> = [];
 
   for (let month = 0; month <= months; month++) {
@@ -44,8 +60,8 @@ function buildVestingProjection(values: VestingScheduleFormValues) {
     let available = 0;
     for (let i = 0; i < completedDeposits; i++) {
       const age = completedDeposits - i - 1;
-      const vestedFraction = Math.min(1, (age + 1) / values.vestingPeriods);
-      available += values.amount * vestedFraction;
+      const vestedFraction = Math.min(1, (age + 1) / vestingPeriods);
+      available += amount * vestedFraction;
     }
     data.push({ month, available: Math.round(available * 100) / 100 });
   }
@@ -62,15 +78,7 @@ export default function VestingScheduleBuilder({
   const [savedSchedule, setSavedSchedule] = useState<VestingScheduleFormValues | null>(null);
 
   const form = useForm<VestingScheduleFormValues>({
-    resolver: zodResolver(
-      vestingScheduleFormSchema.refine(
-        (values) => getTotalReplenishment(values) <= values.treasuryLimit,
-        {
-          message: 'Projected replenishments exceed the treasury limit',
-          path: ['treasuryLimit'],
-        }
-      )
-    ),
+    resolver: zodResolver(vestingScheduleFormSchema),
     defaultValues: {
       frequency: 'monthly',
       amount: 1000,
