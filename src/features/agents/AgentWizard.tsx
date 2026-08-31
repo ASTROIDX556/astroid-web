@@ -19,7 +19,7 @@ const steps = [
 
 const stepFields: Record<number, (keyof AgentWizardValues)[]> = {
   0: ['name', 'description', 'ownerDepartment'],
-  1: ['provider', 'model', 'apiKey'],
+  1: ['provider', 'model', 'temperature', 'apiKey'],
   2: ['budget', 'singleTransactionCap'],
   3: [],
 };
@@ -30,7 +30,7 @@ const stepVariants = {
   exit: { opacity: 0, x: -24 },
 };
 
-const transition = { duration: 0.2, ease: 'easeOut' };
+const transition = { duration: 0.2, ease: 'easeOut' } as const;
 
 export function AgentWizard() {
   const [step, setStep] = useState(0);
@@ -43,6 +43,7 @@ export function AgentWizard() {
       ownerDepartment: '',
       provider: 'OpenAI',
       model: 'gpt-4o-mini',
+      temperature: 0.7,
       apiKey: '',
       budget: 5000,
       singleTransactionCap: 1500,
@@ -93,6 +94,7 @@ export function AgentWizard() {
                   ? 'border-gold bg-gold-soft text-gold-strong'
                   : 'border-border bg-surface-secondary text-foreground-secondary'
               }`}
+              aria-current={index === step ? 'step' : undefined}
             >
               {item.label}
             </span>
@@ -171,6 +173,18 @@ export function AgentWizard() {
                 />
               </FormField>
 
+              <FormField label="Temperature" htmlFor="temperature" error={form.formState.errors.temperature?.message}>
+                <Input
+                  id="temperature"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="2"
+                  {...form.register('temperature', { valueAsNumber: true })}
+                  invalid={Boolean(form.formState.errors.temperature)}
+                />
+              </FormField>
+
               <FormField label="Provider key" htmlFor="api-key" error={form.formState.errors.apiKey?.message}>
                 <Input
                   id="api-key"
@@ -185,12 +199,12 @@ export function AgentWizard() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <FormField label="Initial budget (XLM)" htmlFor="budget" error={form.formState.errors.budget?.message} required>
+              <FormField label="Daily spend limit (XLM)" htmlFor="budget" error={form.formState.errors.budget?.message} required>
                 <Input
                   id="budget"
                   type="number"
                   step="0.01"
-                  {...form.register('budget')}
+                  {...form.register('budget', { valueAsNumber: true })}
                   invalid={Boolean(form.formState.errors.budget)}
                 />
               </FormField>
@@ -205,7 +219,7 @@ export function AgentWizard() {
                   id="singleTransactionCap"
                   type="number"
                   step="0.01"
-                  {...form.register('singleTransactionCap')}
+                  {...form.register('singleTransactionCap', { valueAsNumber: true })}
                   invalid={Boolean(form.formState.errors.singleTransactionCap)}
                 />
               </FormField>
@@ -237,15 +251,19 @@ export function AgentWizard() {
                   <dd className="mt-1 text-sm text-foreground">{form.watch('model')}</dd>
                 </div>
                 <div>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Temperature</dt>
+                  <dd className="mt-1 text-sm text-foreground">{form.watch('temperature')}</dd>
+                </div>
+                <div>
                   <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Provider key</dt>
                   <dd className="mt-1 text-sm text-foreground">{form.watch('apiKey') ? '********' : 'Not provided'}</dd>
                 </div>
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Budget</dt>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Daily limit</dt>
                   <dd className="mt-1 text-sm text-foreground">{form.watch('budget')} XLM</dd>
                 </div>
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Cap</dt>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Single cap</dt>
                   <dd className="mt-1 text-sm text-foreground">{form.watch('singleTransactionCap')} XLM</dd>
                 </div>
               </dl>
