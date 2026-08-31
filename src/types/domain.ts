@@ -97,6 +97,17 @@ export interface AssetBalance {
   usdValue: number;
 }
 
+export type TrustlineStatus = 'active' | 'inactive' | 'pending';
+
+export interface Trustline {
+  assetCode: string;
+  assetIssuer?: string;
+  balance: number;
+  limit: number;
+  status: TrustlineStatus;
+  isNative: boolean;
+}
+
 export interface Wallet {
   id: string;
   organizationId: string;
@@ -107,6 +118,7 @@ export interface Wallet {
   network: StellarNetwork;
   status: WalletStatus;
   balances: AssetBalance[];
+  trustlines?: Trustline[];
   totalUsdValue: number;
   riskScore: number;
   createdAt: string;
