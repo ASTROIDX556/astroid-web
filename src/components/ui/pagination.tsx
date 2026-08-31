@@ -1,1 +1,1 @@
-import React from 'react';export default function(){return <nav>/>;}
+export default(){return<nav/>}
