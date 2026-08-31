@@ -1,6 +1,5 @@
 export * from './BudgetAllocationChart';
-{ default as BudgetAllocationChart } from './BudgetAllocationChart';
-{ default as VestingScheduleBuilder } from './VestingScheduleBuilder';
+export { default as BudgetAllocationChart } from './BudgetAllocationChart';
 export * from './Schema';
 export { default as VestingScheduleBuilder } from './VestingScheduleBuilder';
 export { default } from './VestingScheduleBuilder';
