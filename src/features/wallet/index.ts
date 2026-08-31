@@ -1,1 +1,2 @@
-export { useFreighter } from './hooks/useFreighter';\nexport { useWalletStore } from './store/walletStore';
+export { useFreighter pfrom `'./hooks/useFreighter';
+export { useWalletStore from './store/walletStore';
