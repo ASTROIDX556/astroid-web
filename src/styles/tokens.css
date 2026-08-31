@@ -35,6 +35,9 @@
   --danger-soft: 243 218 216;
   --info: 43 127 255; /* #2B7FFF */
   --info-soft: 217 231 255;
+  --step-active: 91 80 214;
+  --step-completed: 47 143 99;
+  --step-inactive: 216 204 188;
 
   /* Focus ring — Indigo */
   --ring: 91 80 214;
@@ -80,6 +83,9 @@
   --danger-soft: 46 27 27;
   --info: 76 147 255;
   --info-soft: 20 32 58;
+  --step-active: 139 127 255;
+  --step-completed: 63 169 120;
+  --step-inactive: 38 38 38;
 
   --ring: 139 127 255;
   --shadow-color: 0 0 0;
