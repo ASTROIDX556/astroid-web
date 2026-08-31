@@ -39,6 +39,7 @@ export function BudgetAlertSettings({
   }, [defaultWarning, defaultCritical, currentUtilization]);
 
   const isInvalid = warning >= critical;
+  const validationId = 'threshold-validation';
 
   const handleWarningChange = (value: number) => {
     const clamped = Math.min(100, Math.max(0, value));
@@ -104,7 +105,15 @@ export function BudgetAlertSettings({
               onChange={(e) => handleWarningChange(Number(e.target.value))}
               className="mt-3 h-2 w-full accent-warning"
               aria-label="Warning threshold"
+              aria-describedby={isInvalid ? validationId : undefined}
             />
+            <div className="mt-1 flex justify-between text-[10px] font-medium text-foreground-muted" aria-hidden="true">
+              <span>0%</span>
+              <span>25%</span>
+              <span>50%</span>
+              <span>75%</span>
+              <span>100%</span>
+            </div>
           </div>
 
           <div className="rounded-card border border-border p-3">
@@ -124,12 +133,20 @@ export function BudgetAlertSettings({
               onChange={(e) => handleCriticalChange(Number(e.target.value))}
               className="mt-3 h-2 w-full accent-destructive"
               aria-label="Critical threshold"
+              aria-describedby={isInvalid ? validationId : undefined}
             />
+            <div className="mt-1 flex justify-between text-[10px] font-medium text-foreground-muted" aria-hidden="true">
+              <span>0%</span>
+              <span>25%</span>
+              <span>50%</span>
+              <span>75%</span>
+              <span>100%</span>
+            </div>
           </div>
         </div>
 
         {isInvalid && (
-          <p className="rounded-card bg-destructive/10 border-destructive/20 border p-2 text-xs text-destructive" role="alert">
+          <p id={validationId} className="rounded-card bg-destructive/10 border-destructive/20 border p-2 text-xs font-medium text-destructive" role="alert">
             Warning threshold must be less than critical threshold.
           </p>
         )}
@@ -145,6 +162,8 @@ export function BudgetAlertSettings({
                 className={`h-full rounded-full ${gaugeBackground}`}
                 style={{ width: `${barWidth}%` }}
               />
+              <div className="absolute inset-y-0 w-0.5 bg-foreground/70" style={{ left: `${warning}%` }} aria-hidden="true" />
+              <div className="absolute inset-y-0 w-0.5 bg-foreground/70" style={{ left: `${critical}%` }} aria-hidden="true" />
             </div>
             <Gauge className={`h-5 w-5 ${gaugeColor}`} aria-hidden />
           </div>
