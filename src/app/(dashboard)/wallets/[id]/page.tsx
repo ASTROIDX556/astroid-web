@@ -9,9 +9,10 @@ import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { DataTable, type Column } from '@/components/dashboard/data-table';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useWallet } from '@/hooks/use-queries';
+import { useWallet, useTransactions } from '@/hooks/use-queries';
 import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatNumber, formatDateTime, truncateHash } from '@/lib/format';
+import { TransactionHistoryTable } from '@/features/wallet/components/TransactionHistoryTable';
 import type { AssetBalance } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 
@@ -33,6 +34,7 @@ const balanceColumns: Column<AssetBalance>[] = [
 
 export default function WalletDetailPage({ params }: { params: { id: string } }) {
   const wallet = useWallet(params.id);
+  const allTransactions = useTransactions();
 
   return (
     <PageTransition className="space-y-8">
@@ -114,6 +116,28 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
                   rowKey={(b) => b.asset}
                 />
               </div>
+
+              {/* Transaction history for this wallet */}
+              <QueryBoundary
+                query={allTransactions}
+                loading={<div className="skeleton h-48 w-full rounded-card" />}
+              >
+                {(txns) => {
+                  const walletTxns = txns.filter((t) => t.walletId === data.id);
+                  return (
+                    <div className="space-y-4">
+                      <SectionLabel>Transaction history</SectionLabel>
+                      {walletTxns.length === 0 ? (
+                        <p className="text-sm text-foreground-secondary">
+                          No transactions recorded for this wallet yet.
+                        </p>
+                      ) : (
+                        <TransactionHistoryTable transactions={walletTxns} />
+                      )}
+                    </div>
+                  );
+                }}
+              </QueryBoundary>
             </div>
           );
         }}
