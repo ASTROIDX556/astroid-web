@@ -53,7 +53,7 @@ function BudgetReplenishmentBuilder({
       z.object({
         frequency: z.enum(['daily', 'weekly', 'monthly']),
         amount: z.coerce.number().positive().max(budget.limit, 'Amount exceeds treasury limit'),
-        cliffMonths: z.coerce.number().min(0).max(12),
+        cliffMonths: z.coerce.number().int().min(0).max(12),
       }),
     [budget.limit],
   );
@@ -74,7 +74,7 @@ function BudgetReplenishmentBuilder({
     const monthlyTopUp = amountValue * (frequency === 'daily' ? 30 : frequency === 'weekly' ? 4.33 : 1);
     return Array.from({ length: 13 }, (_, month) => ({
       month: month === 0 ? 'Now' : `M${month}`,
-      balance: Math.max(0, budget.remaining + Math.max(0, month - cliffValue) * monthlyTopUp),
+      balance: Math.min(budget.limit, Math.max(0, budget.remaining + Math.max(0, month - cliffValue) * monthlyTopUp)),
     }));
   }, [amountValue, cliffValue, frequency, budget.remaining]);
 
