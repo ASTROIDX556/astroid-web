@@ -1,2 +1,1 @@
-export { useFreighter } from './hooks/useFreighter';
-export { useWalletStoye } from './store/walletStore';
+export { useFreighter } from './hooks/useFreighter';\nexport { useWalletStore } from './store/walletStore';
