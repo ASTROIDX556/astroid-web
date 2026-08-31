@@ -347,6 +347,26 @@ export function BudgetWarningsCard({
         </div>
 
         {warnings.length === 0 ? (
+          <p className="text-sm text-foreground-muted">No active warnings</p>
+        ) : (
+          <div className="space-y-2">
+            {warnings.map((budget) => (
+              <div key={budget.label} className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface-secondary/40 p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{budget.label}</p>
+                  <p className="text-2xs text-foreground-muted">{budget.percent.toFixed(0)}% used</p>
+                </div>
+                <Badge variant={budget.percent >= threshold.critical ? 'danger' : 'warning'} size="sm" dot>
+                  {budget.percent >= threshold.critical ? 'Critical' : 'Warning'}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}      {warnings.length === 0 ? (
           <p className="text-sm text-foreground-muted">
             All budgets are within the configured thresholds.
           </p>
