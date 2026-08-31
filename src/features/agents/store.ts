@@ -23,7 +23,7 @@ const initialValues: AgentWizardValues = {
   singleTransactionCap: 0,
 };
 
-export const useAgentWizardStore = create<AgentWizardState)((set) => ({
+export const useAgentWizardStore = create<AgentWizardState>((set) => ({
   currentStep: 0,
   values: initialValues,
   setCurrentStep: (step) => set({ currentStep: step }),
