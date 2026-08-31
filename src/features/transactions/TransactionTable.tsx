@@ -128,7 +128,7 @@ export function TransactionTable({ transactions, className, isLoading = false }:
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuery, statusFilter, assetFilter, pageSize]);
+  }, [debouncedQuery]);
 
   return (
     <div className={className}>
@@ -143,7 +143,7 @@ export function TransactionTable({ transactions, className, isLoading = false }:
         />
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           aria-label="Filter by status"
         >
@@ -154,7 +154,7 @@ export function TransactionTable({ transactions, className, isLoading = false }:
         </select>
         <select
           value={assetFilter}
-          onChange={(e) => setAssetFilter(e.target.value)}
+          onChange={(e) => { setAssetFilter(e.target.value); setPage(1); }}
           className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           aria-label="Filter by asset"
         >
@@ -165,7 +165,7 @@ export function TransactionTable({ transactions, className, isLoading = false }:
         </select>
         <select
           value={pageSize}
-          onChange={(e) => setPageSize(Number(e.target.value))}
+          onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
           className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           aria-label="Page size"
         >
