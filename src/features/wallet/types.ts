@@ -1,4 +1,5 @@
 /** An asset entry in the Stellar Asset Directory. */
+
 export type AssetVerificationStatus = 'verified' | 'unverified';
 
 export type AssetTrustlineStatus = 'trusted' | 'untrusted';
@@ -24,7 +25,7 @@ export interface AddAssetFormValues {
 /** Wallet connection phase for the Freighter integration. */
 export type WalletConnectionPhase =
   | 'not-installed'
-  | 'connectin''
+  | 'connecting'
   | 'connected'
   | 'disconnected'
   | 'error';
