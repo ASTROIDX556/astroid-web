@@ -16,6 +16,7 @@ import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
+import { DepartmentBudgetBreakdown } from '@/features/budgets/DepartmentBudgetBreakdown';
 import { BudgetMatrix } from '@/features/budgets/BudgetMatrix';
 import { BudgetMeterCard } from '@/features/budgets/BudgetMeters';
 
@@ -88,6 +89,8 @@ export default function BudgetsPage() {
 
               {/* Recharts Budget Allocation & Threshold Chart */}
               <BudgetAllocationChart data={chartData} />
+
+              <DepartmentBudgetBreakdown />
 
               <SectionLabel>{data.length} budgets</SectionLabel>
               <div className="grid gap-4 sm:grid-cols-2">
