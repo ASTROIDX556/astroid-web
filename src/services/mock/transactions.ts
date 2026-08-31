@@ -408,9 +408,11 @@ export function queryTransactions(query: TransactionQuery = {}): TransactionPage
 const MAX_TRANSACTION_QUERY_CACHE_SIZE = 100;
 
 const transactionQueryCache = new Map<string, TransactionPage>();
+const transactionFilterCache = new Map<string, Transaction[]>();
 
 export function clearTransactionQueryCache(): void {
   transactionQueryCache.clear();
+  transactionFilterCache.clear();
 }
 
 export function queryTransactionsCached(query: TransactionQuery = {}): TransactionPage {
@@ -423,7 +425,39 @@ export function queryTransactionsCached(query: TransactionQuery = {}): Transacti
     return cached;
   }
 
-  const result = queryTransactions({ ...query, page, pageSize });
+  const filterKey = JSON.stringify({
+    search: query.search,
+    asset: query.asset,
+    status: query.status,
+    department: query.department,
+    agentId: query.agentId,
+  });
+  let filtered = transactionFilterCache.get(filterKey);
+
+  if (!filtered) {
+    filtered = queryTransactions({ ...query, page: 1, pageSize: Number.MAX_SAFE_INTEGER }).items;
+    transactionFilterCache.set(filterKey, filtered);
+
+    if (transactionFilterCache.size > MAX_TRANSACTION_QUERY_CACHE_SIZE) {
+      const oldestKey = transactionFilterCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        transactionFilterCache.delete(oldestKey);
+      }
+    }
+  }
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const normalizedPage = Math.min(page, totalPages);
+  const start = (normalizedPage - 1) * pageSize;
+
+  const result: TransactionPage = {
+    items: filtered.slice(start, start + pageSize),
+    total,
+    page: normalizedPage,
+    pageSize,
+    totalPages,
+  };
   transactionQueryCache.set(cacheKey, result);
 
   if (transactionQueryCache.size > MAX_TRANSACTION_QUERY_CACHE_SIZE) {
