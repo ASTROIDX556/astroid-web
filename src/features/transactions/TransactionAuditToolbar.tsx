@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Search, FileSpreadsheet, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, FileSpreadsheet, X, ChevronLeft, ChevronRight, SearchX } from 'lucide-react';
 
 interface TransactionAuditToolbarProps {
   totalRecordsCount: number;
@@ -163,7 +163,7 @@ export function TransactionAuditToolbar({
             className="flex items-center gap-1.5 rounded-button border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-secondary hover:border-gold hover:text-foreground transition-colors"
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Export CSV</span>
+            <span aria-live="polite">Export CSV</span>
           </button>
         )}
       </div>
@@ -175,7 +175,12 @@ export function TransactionAuditToolbar({
               <span className="animate-spin rounded-full h-3 w-3 border-2 border-gold border-t-transparent" />
               Loading transactions...
             </span>
-          ) : isEmpty ? 'No transactions found' : (
+          ) : isEmpty ? (
+            <span className="inline-flex items-center gap-1.5">
+              <SearchX className="h-3.5 w-3.5 text-foreground-muted" />
+              No transactions found
+            </span>
+          ) : (
             `Showing ${displayRecordRange.start}-${displayRecordRange.end} of ${filteredRecordsCount} transactions`
           )}
         </span>
@@ -183,10 +188,14 @@ export function TransactionAuditToolbar({
       </div>
 
       {paginationEnabled && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+        <div
+          aria-label="Pagination"
+          className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3"
+        >
           <div className="flex items-center gap-2">
             <span className="text-2xs text-foreground-muted">Rows per page:</span>
             <select
+              aria-label="Rows per page"
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
               className="rounded-button border border-border bg-surface px-2 py-1 text-xs text-foreground font-medium focus:border-gold focus:outline-none"
