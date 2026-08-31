@@ -181,7 +181,7 @@ export function AssistantDrawer() {
         >
         <div
           role="dialog"
-          aria-label="AI Executive Command Terminal"
+          aria-label="Financial Briefing Assistant"
           aria-modal="false"
           className="relative flex h-[580px] max-h-[calc(100vh-120px)] w-[400px] max-w-[calc(100vw-48px)] flex-col rounded-card border border-border-strong bg-surface/95 shadow-raised backdrop-blur-xl overflow-hidden"
         >
@@ -191,8 +191,8 @@ export function AssistantDrawer() {
                 <Sparkles className="h-4 w-4" aria-hidden />
               </span>
               <div>
-                <h3 className="font-display text-sm font-semibold leading-tight">Command Terminal</h3>
-                <p className="text-2xs text-foreground-secondary">Autonomous AI Copilot</p>
+                <h3 className="font-display text-sm font-semibold leading-tight">Financial Briefing</h3>
+                <p className="text-2xs text-foreground-secondary">Powered by NVIDIA NIM</p>
               </div>
             </span>
             <button
@@ -238,7 +238,7 @@ export function AssistantDrawer() {
                   {msg.role === 'assistant' ? (
                     <ReactMarkdown>{msg.content || '_Thinking…_'}</ReactMarkdown>
                   ) : (
-                    msg.content
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
                   )}
                 </div>
               </motion.div>
@@ -249,7 +249,7 @@ export function AssistantDrawer() {
                 <p className="text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
                   Suggested Actions
                 </p>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
                   {suggestions.map((s) => (
                     <button
                       key={s.label}
@@ -258,7 +258,7 @@ export function AssistantDrawer() {
                         setDraft(s.prompt);
                         composerRef.current?.focus();
                       }}
-                      className="group flex items-center justify-between gap-2 rounded-button border border-border bg-surface p-3 text-left text-xs text-foreground-secondary transition-all duration-fast hover:border-gold hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
+                      className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-foreground-secondary transition-all duration-fast hover:border-gold hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
                     >
                       <span className="truncate">{s.label}</span>
                       <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
@@ -289,7 +289,7 @@ export function AssistantDrawer() {
                   }
                 }}
                 rows={1}
-                placeholder="Ask about spend, policies..."
+                placeholder="Ask for a financial briefing..."
                 className="max-h-32 flex-1 resize-none bg-transparent py-1.5 text-sm text-foreground outline-none placeholder:text-foreground-muted"
               />
               <button
