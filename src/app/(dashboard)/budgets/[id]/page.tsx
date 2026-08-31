@@ -1,5 +1,19 @@
 'use client';
 
+import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import Link from 'next/link';
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
@@ -21,6 +35,107 @@ import {
 } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
+
+type ReplenishmentInput = {
+  frequency: 'daily' | 'weekly' | 'monthly';
+  amount: number;
+  cliffMonths: number;
+};
+
+function BudgetReplenishmentBuilder({
+  budget,
+}: {
+  budget: { limit: number; remaining: number; currency: string };
+}) {
+  const [, setSaved] = useState<ReplenishmentInput[]>([]);
+  const schema = useMemo(
+    () =>
+      z.object({
+        frequency: z.enum(['daily', 'weekly', 'monthly']),
+        amount: z.coerce.number().positive().max(budget.limit, 'Amount exceeds treasury limit'),
+        cliffMonths: z.coerce.number().min(0).max(12),
+      }),
+    [budget.limit],
+  );
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<ReplenishmentInput>({
+    resolver: zodResolver(schema),
+    defaultValues: { frequency: 'monthly', amount: budget.remaining || budget.limit || 1000, cliffMonths: 0 },
+  });
+  const frequency = watch('frequency') ?? 'monthly';
+  const amountValue = Number(watch('amount')) || 0;
+  const cliffValue = Number(watch('cliffMonths')) || 0;
+
+  const projection = useMemo(() => {
+    const monthlyTopUp = amountValue * (frequency === 'daily' ? 30 : frequency === 'weekly' ? 4.33 : 1);
+    return Array.from({ length: 13 }, (_, month) => ({
+      month: month === 0 ? 'Now' : `M${month}`,
+      balance: Math.max(0, budget.remaining + Math.max(0, month - cliffValue) * monthlyTopUp),
+    }));
+  }, [amountValue, cliffValue, frequency, budget.remaining]);
+
+  const onSubmit = (values: ReplenishmentInput) => {
+    setSaved((prev) => [...prev, values]);
+    toast.success('Replenishment schedule saved', {
+      description: `${formatCurrency(values.amount, budget.currency)} ${values.frequency} with ${values.cliffMonths}-month cliff`,
+    });
+  };
+
+  return (
+    <Card className="p-5">
+      <SectionLabel>Recurring replenishment & vesting</SectionLabel>
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <label className="space-y-1.5">
+            <span className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">Frequency</span>
+            <select {...register('frequency')} className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors focus:border-gold-strong">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+            {errors.frequency && <p className="text-xs text-danger">{errors.frequency.message}</p>}
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">Amount</span>
+            <input type="number" step="0.01" min="0" {...register('amount')} className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors focus:border-gold-strong" />
+            {errors.amount && <p className="text-xs text-danger">{errors.amount.message}</p>}
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">Cliff (months)</span>
+            <input type="number" min="0" max="12" {...register('cliffMonths')} className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors focus:border-gold-strong" />
+            {errors.cliffMonths && <p className="text-xs text-danger">{errors.cliffMonths.message}</p>}
+          </label>
+        </div>
+        <div className="flex items-end">
+          <button type="submit" className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-90">
+            Save schedule
+          </button>
+        </div>
+      </form>
+      <div className="mt-6">
+        <div className="flex items-center justify-between">
+          <p className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">Projected availability</p>
+          <span className="text-2xs text-foreground-muted">12-month horizon</span>
+        </div>
+        <div className="mt-3 h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={projection} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Line type="monotone" dataKey="balance" className="stroke-gold-strong" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 const spendColumns: Column<Transaction>[] = [
   {
@@ -142,6 +257,8 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                   <ProgressBar value={utilization} label="Budget utilization" className="mt-4" tone={utilization >= 90 ? 'danger' : utilization >= 75 ? 'warning' : 'gold'} />
                 </div>
               </Card>
+
+              <BudgetReplenishmentBuilder budget={data} />
 
               <div className="grid gap-6 lg:grid-cols-3">
                 {/* Spend ledger */}
