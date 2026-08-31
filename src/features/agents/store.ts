@@ -1,5 +1,6 @@
-import { create from 'zustand';
-import { AgentWizardValues, providerOptions } from './schema';
+import { create } from 'zustand';
+import { providerOptions } from './schema';
+import type { AgentWizardValues } from './schema';
 
 interface AgentWizardState {
   currentStep: number;
