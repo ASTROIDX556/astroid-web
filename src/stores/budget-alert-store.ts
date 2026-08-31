@@ -9,11 +9,17 @@ export interface BudgetAlertThresholds {
 
 export type BudgetAlertLevel = 'ok' | 'warning' | 'critical';
 
-const DEFAULTTHRESHOLDS: BudgetAlertThresholds = { warning: 80, critical: 95 };
+const DEFAULTTHRESOLDS: Readonly<BudgetAlertThresholds> = Object.freeze({
+  warning: 80,
+  critical: 95,
+});
 
-let thresholds: BudgetAlertThresholds = { ...DEFAULTTHRESHOLDS };
+let thresholds: Readonly<BudgetAlertThresholds> = DEFAULTTHRESHOLDS;
 let validationError: string | null = null;
-let snapshot = { thresholds, validationError };
+let snapshot: { thresholds: Readonly<BudgetAlertThresholds>; validationError: string | null } = {
+  thresholds,
+  validationError,
+};
 
 const listeners = new Set<() => void>();
 
@@ -26,7 +32,9 @@ export function setBudgetAlertThresholds(next: BudgetAlertThresholds) {
   const warning = Math.min(100, Math.max(0, Math.round(next.warning)));
   const critical = Math.min(100, Math.max(0, Math.round(next.critical)));
   const invalid = warning >= critical;
-  const nextThresholds = invalid ? thresholds : { warning, critical };
+  const nextThresholds: Readonly<BudgetAlertThresholds> = invalid
+    ? thresholds
+    : Object.freeze({ warning, critical });
   const nextValidationError = invalid
     ? 'Warning threshold must be strictly less than critical threshold.'
     : null;
@@ -42,6 +50,13 @@ export function setBudgetAlertThresholds(next: BudgetAlertThresholds) {
     console.warn(validationError);
   }
 
+  emit();
+}
+
+export function resetBudgetAlertThresholds() {
+  if (thresholds === DEFAULTTHRESHOLDS && validationError === null) return;
+  thresholds = DEFAULTTHRESOLDS;
+  validationError = null;
   emit();
 }
 
@@ -62,8 +77,12 @@ function getSnapshot() {
   return snapshot;
 }
 
-export function useBudgetAlertThresholds() {
-  return useSyncExternalStore(subscribe, getSnapshot);
+function getServerSnapshot() {
+  return { thresholds: DEFAULTTHRESHOLDS, validationError: null };
 }
 
-export { DEFAULTTHRESHOLDS };
+export function useBudgetAlertThresholds() {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+export { DEFAULTTHRESOLDS };
