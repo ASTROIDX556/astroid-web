@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';import type { StateCreator } from 'zustand';
 import { useCallback } from 'react';
 
-export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+export type FreighterConnectionStatus = 'not-installed' | 'disconnected' | 'connecting' | 'connected' | 'error';
 
 interface FreighterWalletState {
   status: FreighterConnectionStatus;
@@ -22,7 +22,7 @@ interface FreighterWalletState {
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
 
 const withTimeout = async <T>(promise: Promise<T>, ms = 15000): Promise<T> => {
-  let timeoutId: ReturnType</timeout> | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return await new Promise<T>((resolve, reject) => {
     timeoutId = setTimeout(() => {
@@ -81,12 +81,12 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
   checkExtension: async () => {
     try {
       const freighter = await getFreighter();
-      const connectedResult = typeof freighter.isConnected === 'function' ? await withTimeout(freighter.isConnected()) : { isConnected: true };
+      const connectedResult = typeof freighter.isConnected === 'function' ? await withTimeout(freighter.isConnected()) : false;
       const connected = typeof connectedResult === 'boolean' ? connectedResult : Boolean((connectedResult as { isConnected?: boolean } | undefined)?.isConnected);
-      set({ isInstalled: true, status: connected ? 'connected' : 'disconnected' });
+      set({ isInstalled: typeof freighter.isConnected === 'function', status: typeof freighter.isConnected === 'function' ? (connected ? 'connected' : 'disconnected') : 'not-installed' });
       return Boolean(connected);
     } catch {
-      set({ isInstalled: false, status: 'disconnected', error: 'Freighter extension is not installed or unavailable.' });
+      set({ isInstalled: false, status: 'not-installed', error: 'Freighter extension is not installed or unavailable.' });
       return false;
     }
   },
@@ -98,7 +98,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
       const freighter = await getFreighter();
       const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
       if (!installed && typeof freighter.isConnected !== 'function') {
-        set({ isInstalled: false, status: 'disconnected', error: 'Freighter extension is not installed.' });
+        set({ isInstalled: false, status: 'not-installed', error: 'Freighter extension is not installed.' });
         return null;
       }
 
@@ -133,7 +133,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to connect to the Freighter wallet.';
       set({
-        status: 'disconnected',
+        status: 'error',
         publicKey: null,
         network: null,
         error: message,
@@ -233,13 +233,13 @@ export interface UseFreighterOptions {
       };
 }
 
-export const MOCK_PUBLIC_KEY = `Gb$A['a'.repeat(55)}`;
+export const MOCK_PUBLIC_KEY = `G${'A'.repeat(55)}`;
 
 export function useFreighter(options: UseFreighterOptions = {}) {
-  const status = useFreighterStore(((state) => state.status);
+  const status = useFreighterStore((state) => state.status);
   const isInstalled = useFreighterStore((state) => state.isInstalled);
   const publicKey = useFreighterStore((state) => state.publicKey);
-  const network = useFreighterStore(((state) => state.network);
+  const network = useFreighterStore((state) => state.network);
   const error = useFreighterStore((state) => state.error);
   const storeConnect = useFreighterStore((state) => state.connect);
   const storeDisconnect = useFreighterStore((state) => state.disconnect);
@@ -269,7 +269,7 @@ export function useFreighter(options: UseFreighterOptions = {}) {
 
       if (mockReject) {
         useFreighterStore.setState({
-          status: 'disconnected',
+          status: 'error',
           publicKey: null,
           network: null,
           error: 'Mock connection rejected by user.',
