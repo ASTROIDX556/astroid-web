@@ -55,6 +55,8 @@ export function useStellarWallet() {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [balances, setBalances] = useState<AccountBalance[]>([]);
+  const [isBalancesLoading, setIsBalancesLoading] = useState(false);
 
   const refreshConnection = useCallback(async () => {
     const api = await loadFreighter();
@@ -75,6 +77,7 @@ export function useStellarWallet() {
         setError(null);
       } else {
         setPublicKey(null);
+        setBalances([]);
       }
       return Boolean(connected);
     } catch (err) {
@@ -115,6 +118,9 @@ export function useStellarWallet() {
       const nextKey = typeof address === 'string' ? address : address?.address ?? null;
 
       setPublicKey(nextKey);
+      if (!nextKey) {
+        setBalances([]);
+      }
       setStatus(nextKey ? 'connected' : 'idle');
       return nextKey;
     } catch (err) {
@@ -199,7 +205,7 @@ export function useStellarWallet() {
     try {
       const server = new StellarSdk.Server(network.networkUrl);
       const account = await server.loadAccount(publicKey);
-      return account.balances.map((balance) => {
+      const nextBalances = account.balances.map((balance) => {
         if (balance.asset_type === 'native') {
           return {
             assetCode: 'XLM',
@@ -216,11 +222,22 @@ export function useStellarWallet() {
           limit: assetLine.limit,
         };
       });
+      setBalances(nextBalances);
+      return nextBalances;
     } catch (err) {
+      setBalances([]);
       setError(err instanceof Error ? err.message : 'Failed to load account balances.');
       return null;
     }
   }, [publicKey, getNetworkDetails]);
+
+  useEffect(() => {
+    if (publicKey) {
+      void getAccountBalances();
+    } else {
+      setBalances([]);
+    }
+  }, [publicKey, getAccountBalances]);
 
   const addTrustline = useCallback(
     async (assetCode: string, issuer: string): Promise<string | null> => {
@@ -265,6 +282,15 @@ export function useStellarWallet() {
     [publicKey, getNetworkDetails, signTransaction],
   );
 
+  const refreshBalances = useCallback(async (): Promise<AccountBalance[] | null> => {
+    setIsBalancesLoading(true);
+    try {
+      return await getAccountBalances();
+    } finally {
+      setIsBalancesLoading(false);
+    }
+  }, [getAccountBalances]);
+
   return {
     status,
     publicKey,
@@ -277,6 +303,9 @@ export function useStellarWallet() {
     signTransaction,
     getNetworkDetails,
     getAccountBalances,
+    refreshBalances,
+    balances,
+    isBalancesLoading,
     addTrustline,
   };
 }
