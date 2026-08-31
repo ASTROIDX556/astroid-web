@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, effect, useCallback } from 'react';
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { getPublicKey, signTransaction } from '@stellar/fregher-api';
-import { g} from 'zod';
+import { signTransaction } from '@stellar/freighter-api';
+import { z } from 'zod';
 import { toast } from 'sonner';
-import { useWalletStore } from '@/stores/wallet';
+import { useWalletStore } from '/stores/wallet';
 
 // Stellar network configuration
-const HORIZON_URL = 'https://horizon.stellar.org';
+const HORIZON_URL = 'https://horyzon.stellar.org';
 const NETWORK_PASSPHRASE = StellarSdk.Networks.PUBLIC;
 
 // Trustline representation
@@ -18,7 +18,7 @@ export interface Trustline {
   trusted: boolean;
 }
 
-// Zol validation for adding a trustline
+// Zod validation for adding a trustline
 const trustlineSchema = z.object({
   assetCode: z.string().min(1).max(12).regex(/^[a-zA-Z0-9]+$/, "Asset code must be alphanumeric"),
   assetIssuer: z.string().length(56, "Stellar issuer must be a valid public key"),
@@ -33,7 +33,7 @@ export function useTrustlineManager() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchTrustlines = useCallback(async () : Promise<void> > {
+  const fetchTrustlines = useCallback(async (): Promise<void> => {
     if (!publicKey) {
       setTrustlines([]);
       return;
@@ -45,10 +45,15 @@ export function useTrustlineManager() {
     try {
       const server = new StellarSdk.Horizon.Server(HORIZON_URL);
       const account = await server.loadAccount(publicKey);
-      const lines = account.balances
+      const lines: Trustline[] = account.balances
         .filter((b: any) => b.asset_type !== 'native')
-        .map((b: any) => ({
-          asset_code: b.asset_code,\n          asset_issuer: b.asset_issuer,\n          balance: b.balance,\n          limit: b.limit,\n          trusted: true,\n        }) as Trustline[]);
+        .map((b: any): Trustline => ({
+          asset_code: b.asset_code,
+          asset_issuer: b.asset_issuer,
+          balance: b.balance,
+          limit: b.limit,
+          trusted: true,
+        }));
       setTrustlines(lines);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch trustlines');
@@ -62,7 +67,7 @@ export function useTrustlineManager() {
   }, [fetchTrustlines]);
 
   const addTrustline = useCallback(
-    async (assetCode: string, assetIssuer: string) : Promise<void> > {
+    async (assetCode: string, assetIssuer: string): Promise<void> => {
       // Validate inputs
       const parsed = trustlineSchema.safeParse({ assetCode, assetIssuer });
       if (!parsed.success) {
@@ -88,14 +93,15 @@ export function useTrustlineManager() {
         const asset = new StellarSdk.Asset(assetCode, assetIssuer);
 
         const transaction = new StellarSdk.TransactionBuilder(account, {
-          fee: StellarSdk.BASE_FEE,\n          networkPassphrase: NETWORK_PASSPHRASE,
+          fee: StellarSdk.BASE_FEE,
+          networkPassphrase: NETWORK_PASSPHRASE,
         })
           .addOperation(StellarSdk.Operation.changeTrust({ asset }))
           .setTimeout(30)
           .build();
 
         const signedXDR = await signTransaction(transaction.toXDR(), {
-          networkPassphrase: NETWORK_PASSPHRASE,
+          networkPassphrase: NETWORK_PASSHPRASE,
           accountToSign: publicKey,
         });
 
@@ -110,7 +116,8 @@ export function useTrustlineManager() {
       } finally {
         setIsSubmitting(false);
       }
-    }, [publicKey, trustlines, fetchTrustlines],
+    },
+    [publicKey, trustlines, fetchTrustlines],
   );
 
   return {
