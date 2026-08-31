@@ -95,41 +95,74 @@ export function NvidiaAssistantWidget() {
     setInputText('');
     setIsStreaming(true);
 
-    // Mock response fallback simulating Nvidia NIM LLM response
-    setTimeout(() => {
-      let replyText = `Nvidia NIM LLM Insights: Analyzed query "${text}". On-chain telemetry indicates normal agent activity across Stellar Testnet.`;
-      let briefing;
+    // Mock response fallback simulating streaming Nvidia NIM LLM response
+    let replyText = `Nvidia NIM LLM Insights: Analyzed query "${text}". On-chain telemetry indicates normal agent activity across Stellar Testnet.`;
+    let briefing;
 
-      if (text.toLowerCase().includes('daily') || text.toLowerCase().includes('spend')) {
-        replyText =
-          'Daily spend summary analysis completed. All 8 active agents are operating within established daily budget envelopes.';
-        briefing = {
-          totalDailySpend: 24500,
-          currency: 'USDC',
-          activeAgentsCount: 8,
-          lowBalanceWalletsCount: 0,
-          topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
-          recommendation: 'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
-        };
-      } else if (text.toLowerCase().includes('balance') || text.toLowerCase().includes('wallet')) {
-        replyText =
-          'Wallet balance audit: 7 of 8 agent wallets are fully funded. 1 wallet (agt-ci-bot) is at 15.5% capacity.';
-      } else if (text.toLowerCase().includes('gas') || text.toLowerCase().includes('fee')) {
-        replyText =
-          'Soroban RPC network congestion is currently minimal. Recommended base fee: 100 stroops.';
+    if (text.toLowerCase().includes('daily') || text.toLowerCase().includes('spend')) {
+      replyText =
+        'Daily spend summary analysis completed. All 8 active agents are operating within established daily budget envelopes.';
+      briefing = {
+        totalDailySpend: 24500,
+        currency: 'USDC',
+        activeAgentsCount: 8,
+        lowBalanceWalletsCount: 0,
+        topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
+        recommendation: 'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
+      };
+    } else if (text.toLowerCase().includes('portfolio') || text.toLowerCase().includes('health')) {
+      replyText =
+        'Portfolio health summary: all strategies are within target allocations and reserve requirements.';
+      briefing = {
+        totalDailySpend: 13200,
+        currency: 'USDC',
+        activeAgentsCount: 8,
+        lowBalanceWalletsCount: 1,
+        topSpenderAgent: 'Yield Harvest Bot (6,100 USDC)',
+        recommendation: 'Maintain current allocations; monitor agt-ci-bot before next epoch.',
+      };
+    } else if (text.toLowerCase().includes('balance') || text.toLowerCase().includes('wallet')) {
+      replyText =
+        'Wallet balance audit: 7 of 8 agent wallets are fully funded. 1 wallet (agt-ci-bot) is at 15.5% capacity.';
+    } else if (text.toLowerCase().includes('gas') || text.toLowerCase().includes('fee')) {
+      replyText =
+        'Soroban RPC network congestion is currently minimal. Recommended base fee: 100 stroops.';
+    }
+
+    const assistantId = `ast-${Date.now()}`;
+    const words = replyText.split(' ');
+    let streamedContent = '';
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+
+    const streamInterval = window.setInterval(() => {
+      const nextWord = words.shift();
+
+      if (nextWord !== undefined) {
+        streamedContent = streamedContent ? `${streamedContent} ${nextWord}` : nextWord;
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === assistantId ? { ...msg, content: streamedContent } : msg)),
+        );
       }
 
-      const assistantMsg: ChatMessage = {
-        id: `ast-${Date.now()}`,
-        role: 'assistant',
-        content: replyText,
-        timestamp: new Date().toISOString(),
-        structuredBriefing: briefing,
-      };
-
-      setMessages((prev) => [...prev, assistantMsg]);
-      setIsStreaming(false);
-    }, 1000);
+      if (words.length === 0) {
+        window.clearInterval(streamInterval);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantId ? { ...msg, structuredBriefing: briefing } : msg,
+          ),
+        );
+        setIsStreaming(false);
+      }
+    }, 40);
   };
 
   // Keyboard shortcut listener
@@ -220,6 +253,7 @@ export function NvidiaAssistantWidget() {
         aria-label="Chat messages"
         aria-live="polite"
         aria-relevant="additions"
+        aria-busy={isStreaming}
       >
         {messages.map((msg) => {
           const isAssistant = msg.role === 'assistant';
