@@ -11,10 +11,10 @@ import { FormField, Input, Select, Textarea } from '@/components/ui/input';
 import { agentWizardSchema, providerOptions, type AgentWizardValues } from '@/features/agents/schema';
 
 const steps = [
-  { key: 'basic', label: 'Basic info' },
-  { key: 'model', label: 'Model selection' },
-  { key: 'funding', label: 'Funding & limits' },
-  { key: 'confirmation', label: 'Confirmation' },
+  { key: 'basic', label: 'Identity & Role' },
+  { key: 'model', label: 'Engine Settings' },
+  { key: 'funding', label: 'Spend Constraints' },
+  { key: 'confirmation', label: 'Final Review' },
 ] as const;
 
 const stepFields: Record<number, (keyof AgentWizardValues)[]> = {
@@ -285,7 +285,7 @@ export function AgentWizard() {
 
             {step < steps.length - 1 ? (
               <Button type="button" variant="gold" onClick={handleNext} rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}>
-                {currentStep.label === 'Confirmation' ? 'Review' : 'Next'}
+                {currentStep.label === 'Spend Constraints' ? 'Review' : 'Next'}
               </Button>
             ) : (
               <Button type="submit" variant="gold">
