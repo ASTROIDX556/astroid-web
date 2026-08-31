@@ -2,26 +2,26 @@
  * Types related to multi-party proposal approvals.
  * Used by the ProposalTimeline component and related workflows.
  */
-
-/** Possible lifecycle stages of a proposal. */
+ 
+ /** Possible lifecycle stages of a proposal. */
 export type ProposalStatus =
   | 'drafted'
   | 'voting_active'
   | 'approved'
   | 'executed';
-
-/** Direction of a vote cast by an approver. */
+ 
+ /** Direction of a vote cast by an approver. */
 export type VoteType = 'approve' | 'reject';
-
-/** Types of events shown in the proposal timeline. */
+ 
+ /** Types of events shown in the proposal timeline. */
 export type ApprovalEventType =
   | 'submitted'
   | 'voting_started'
   | 'vote_cast'
   | 'threshold_reached'
   | 'executed';
-
-/** A single approver participating in the proposal. */
+ 
+ /** A single approver participating in the proposal. */
 export interface Approver {
   /** Unique identifier of the approver (e.g., key id). */
   id: string;
@@ -36,8 +36,8 @@ export interface Approver {
   /** ISO timestamp when the vote was cast. */
   votedAt?: string;
 }
-
-/** An event entry in the proposal's chronological history. */
+ 
+ /** An event entry in the proposal's chronological history. */
 export interface ApprovalEvent {
   /** Unique identifier for the event. */
   id: string;
@@ -50,8 +50,8 @@ export interface ApprovalEvent {
   /** Optional human-readable details about the event. */
   details?: string;
 }
-
-/** A multi-party proposal requiring approvals before execution. */
+ 
+ /** A multi-party proposal requiring approvals before execution. */
 export interface Proposal {
   /** Unique proposal identifier. */
   id: string;
@@ -70,11 +70,11 @@ export interface Proposal {
   /** Chronological history of approval-related events. */
   timeline: ApprovalEvent[];
 }
-
-/**
- * Props for the ProposalTimeline component.
- * These are defined here as a convenience for consumers of the component.
- */
+ 
+ /**
+  * Props for the ProposalTimeline component.
+  * These are defined here as a convenience for consumers of the component.
+  */
 export interface ProposalTimelineProps {
   /** The proposal to render the approval flow for. */
   proposal: Proposal;
