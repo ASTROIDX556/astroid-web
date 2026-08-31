@@ -74,9 +74,16 @@ function BudgetReplenishmentBuilder({
     const monthlyTopUp = amountValue * (frequency === 'daily' ? 30 : frequency === 'weekly' ? 4.33 : 1);
     return Array.from({ length: 13 }, (_, month) => ({
       month: month === 0 ? 'Now' : `M${month}`,
-      balance: Math.min(budget.limit, Math.max(0, budget.remaining + Math.max(0, month - cliffValue) * monthlyTopUp)),
+      balance: Math.min(
+        budget.limit,
+        Math.max(
+          0,
+          budget.remaining +
+            (month > 0 && month >= cliffValue ? month * monthlyTopUp : 0),
+        ),
+      ),
     }));
-  }, [amountValue, cliffValue, frequency, budget.remaining]);
+  }, [amountValue, cliffValue, frequency, budget.remaining, budget.limit]);
 
   const onSubmit = (values: ReplenishmentInput) => {
     setSaved((prev) => [...prev, values]);
@@ -101,12 +108,12 @@ function BudgetReplenishmentBuilder({
           </label>
           <label className="space-y-1.5">
             <span className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">Amount</span>
-            <input type="number" step="0.01" min="0" {...register('amount')} className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors focus:border-gold-strong" />
+            <input type="number" step="0.01" min="0" {...register('amount', { valueAsNumber: true })} className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors focus:border-gold-strong" />
             {errors.amount && <p className="text-xs text-danger">{errors.amount.message}</p>}
           </label>
           <label className="space-y-1.5">
             <span className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">Cliff (months)</span>
-            <input type="number" min="0" max="12" {...register('cliffMonths')} className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors focus:border-gold-strong" />
+            <input type="number" min="0" max="12" {...register('cliffMonths', { valueAsNumber: true })} className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors focus:border-gold-strong" />
             {errors.cliffMonths && <p className="text-xs text-danger">{errors.cliffMonths.message}</p>}
           </label>
         </div>
