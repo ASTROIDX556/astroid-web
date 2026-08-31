@@ -33,8 +33,6 @@ export default function PoliciesPage() {
 
       <BudgetSimulator />
 
-      <PolicySandboxWidget />
-
       <QueryBoundary
         query={policies}
         loading={
@@ -55,6 +53,8 @@ export default function PoliciesPage() {
       >
         {(data) => (
           <div className="space-y-6">
+            <PolicySandboxWidget policies={data} />
+
             <SectionLabel>Spending rule designer</SectionLabel>
             <PolicyRulesBuilder />
 

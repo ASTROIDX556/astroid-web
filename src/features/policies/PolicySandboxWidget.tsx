@@ -18,7 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
-import { defaultPolicyRules } from './usePolicySimulation';
+import type { Policy } from '@/types/domain';
+import { defaultPolicyRules, mapPoliciesToSandboxRules, type PolicyRule } from './usePolicySimulation';
 
 // ---------------------------------------------------------------------------
 // Zod schema for sandbox transaction input
@@ -93,7 +94,12 @@ function computeRiskScore(values: SandboxFormValues, steps: EvaluationStep[]): n
 // PolicySandboxWidget
 // ---------------------------------------------------------------------------
 
-export function PolicySandboxWidget() {
+interface PolicySandboxWidgetProps {
+  /** Live policies fetched from the API. When provided, overrides the built-in defaults. */
+  policies?: Policy[];
+}
+
+export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
   const [values, setValues] = useState<SandboxFormValues>(defaultFormValues);
   const [errors, setErrors] = useState<Partial<Record<keyof SandboxFormValues, string>>>({});
   const [result, setResult] = useState<SandboxEvaluationResult | null>(null);
@@ -119,6 +125,14 @@ export function PolicySandboxWidget() {
     setResult(null);
   }, []);
 
+  // Resolve which rules to evaluate against: live policies take precedence.
+  const activeRules: PolicyRule[] = useMemo(() => {
+    if (policies && policies.length > 0) {
+      return mapPoliciesToSandboxRules(policies);
+    }
+    return defaultPolicyRules;
+  }, [policies]);
+
   const runEvaluation = useCallback(() => {
     const parsed = sandboxTransactionSchema.safeParse(values);
     if (!parsed.success) {
@@ -136,34 +150,112 @@ export function PolicySandboxWidget() {
     const steps: EvaluationStep[] = [];
 
     // Evaluate against each enabled policy rule
-    for (const rule of defaultPolicyRules) {
+    for (const rule of activeRules) {
       if (!rule.enabled) continue;
 
       let passed = true;
       let message = '';
       let reasonCode = '';
 
-      if (rule.type === 'max_amount' && rule.threshold !== undefined) {
-        passed = validated.amount <= rule.threshold;
-        message = passed
-          ? `Amount $${validated.amount.toLocaleString()} is within the $${rule.threshold.toLocaleString()} cap.`
-          : `Amount $${validated.amount.toLocaleString()} exceeds the $${rule.threshold.toLocaleString()} maximum threshold.`;
-        reasonCode = passed ? 'AMOUNT_WITHIN_CAP' : 'AMOUNT_EXCEEDS_THRESHOLD';
-      } else if (rule.type === 'allowed_assets') {
-        const allowed = rule.allowedAssets ?? [];
-        passed = allowed.includes(validated.asset);
-        message = passed
-          ? `Asset ${validated.asset} is on the allow-list.`
-          : `Asset ${validated.asset} is not on the allowed assets list (${allowed.join(', ')}).`;
-        reasonCode = passed ? 'ASSET_ALLOWED' : 'ASSET_BLOCKED';
-      } else if (rule.type === 'multi_sig') {
-        // Sandbox always simulates a single signer
-        const required = rule.requiredCoSigners ?? 2;
-        passed = required <= 1;
-        message = passed
-          ? 'Sufficient signatures present.'
-          : `This transaction requires ${required} co-signers but only 1 is present in sandbox mode.`;
-        reasonCode = passed ? 'MULTISIG_SATISFIED' : 'MULTISIG_INSUFFICIENT';
+      switch (rule.type) {
+        case 'max_amount': {
+          if (rule.threshold !== undefined) {
+            passed = validated.amount <= rule.threshold;
+            message = passed
+              ? `Amount $${validated.amount.toLocaleString()} is within the $${rule.threshold.toLocaleString()} cap.`
+              : `Amount $${validated.amount.toLocaleString()} exceeds the $${rule.threshold.toLocaleString()} maximum threshold.`;
+            reasonCode = passed ? 'AMOUNT_WITHIN_CAP' : 'AMOUNT_EXCEEDS_THRESHOLD';
+          }
+          break;
+        }
+
+        case 'allowed_assets': {
+          const allowed = rule.allowedAssets ?? [];
+          passed = allowed.includes(validated.asset);
+          message = passed
+            ? `Asset ${validated.asset} is on the allow-list.`
+            : `Asset ${validated.asset} is not on the allowed assets list (${allowed.join(', ')}).`;
+          reasonCode = passed ? 'ASSET_ALLOWED' : 'ASSET_BLOCKED';
+          break;
+        }
+
+        case 'multi_sig': {
+          // Sandbox always simulates a single signer
+          const required = rule.requiredCoSigners ?? 2;
+          passed = required <= 1;
+          message = passed
+            ? 'Sufficient signatures present.'
+            : `This transaction requires ${required} co-signers but only 1 is present in sandbox mode.`;
+          reasonCode = passed ? 'MULTISIG_SATISFIED' : 'MULTISIG_INSUFFICIENT';
+          break;
+        }
+
+        case 'allowed_recipients': {
+          const allowed = rule.allowedRecipients ?? [];
+          passed = allowed.length === 0 || allowed.some((r) => validated.recipient.includes(r));
+          message = passed
+            ? `Recipient is on the approved vendor list.`
+            : `Recipient is not on the approved vendor list (${allowed.join(', ')}).`;
+          reasonCode = passed ? 'RECIPIENT_ALLOWED' : 'RECIPIENT_BLOCKED';
+          break;
+        }
+
+        case 'blocked_recipients': {
+          const blocked = rule.blockedRecipients ?? [];
+          passed = !blocked.some((r) => validated.recipient.includes(r));
+          message = passed
+            ? `Recipient is not on the blocklist.`
+            : `Recipient matches a blocked address on the deny list.`;
+          reasonCode = passed ? 'RECIPIENT_CLEAR' : 'RECIPIENT_BLOCKED';
+          break;
+        }
+
+        case 'rate_limit': {
+          // In sandbox mode we flag rate-limited rules as needing runtime context
+          passed = true;
+          message = rule.rateLimitPerHour
+            ? `Rate limit of ${rule.rateLimitPerHour} txns/hr applies — verified at execution time.`
+            : 'Rate limit rule present — evaluated at execution time.';
+          reasonCode = 'RATE_LIMIT_NOTE';
+          break;
+        }
+
+        case 'time_window': {
+          const now = new Date();
+          const currentMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+          if (rule.windowStart && rule.windowEnd) {
+            const [startH, startM] = rule.windowStart.split(':').map(Number);
+            const [endH, endM] = rule.windowEnd.split(':').map(Number);
+            const startMinutes = (startH ?? 0) * 60 + (startM ?? 0);
+            const endMinutes = (endH ?? 0) * 60 + (endM ?? 0);
+            passed = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+          }
+          message = passed
+            ? `Current time is within the allowed execution window (${rule.windowStart ?? '?'}–${rule.windowEnd ?? '?'}).`
+            : `Current time is outside the allowed execution window (${rule.windowStart ?? '?'}–${rule.windowEnd ?? '?'}).`;
+          reasonCode = passed ? 'TIME_WINDOW_OPEN' : 'TIME_WINDOW_CLOSED';
+          break;
+        }
+
+        case 'budget_limit': {
+          if (rule.budgetLimitUsd !== undefined) {
+            passed = validated.amount <= rule.budgetLimitUsd;
+            message = passed
+              ? `Amount $${validated.amount.toLocaleString()} is within the budget cap of $${rule.budgetLimitUsd.toLocaleString()}.`
+              : `Amount $${validated.amount.toLocaleString()} exceeds the budget cap of $${rule.budgetLimitUsd.toLocaleString()}.`;
+            reasonCode = passed ? 'BUDGET_WITHIN_CAP' : 'BUDGET_EXCEEDED';
+          }
+          break;
+        }
+
+        case 'emergency_lock': {
+          passed = !rule.emergencyActive;
+          message = rule.emergencyActive
+            ? 'Emergency stop is active — all transactions are halted.'
+            : 'Emergency stop is inactive — transactions may proceed.';
+          reasonCode = passed ? 'EMERGENCY_INACTIVE' : 'EMERGENCY_ACTIVE';
+          break;
+        }
       }
 
       steps.push({
@@ -178,14 +270,21 @@ export function PolicySandboxWidget() {
     const failedSteps = steps.filter((s) => !s.passed);
     let outcome: SandboxEvaluationResult['outcome'] = 'approved';
     if (failedSteps.length > 0) {
-      const hasBlocking = steps.some((s) => !s.passed && s.reasonCode.includes('EXCEEDS') || s.reasonCode === 'ASSET_BLOCKED');
+      const hasBlocking = failedSteps.some(
+        (s) =>
+          s.reasonCode === 'AMOUNT_EXCEEDS_THRESHOLD' ||
+          s.reasonCode === 'ASSET_BLOCKED' ||
+          s.reasonCode === 'RECIPIENT_BLOCKED' ||
+          s.reasonCode === 'EMERGENCY_ACTIVE' ||
+          s.reasonCode === 'BUDGET_EXCEEDED',
+      );
       outcome = hasBlocking ? 'rejected' : 'flagged';
     }
 
     const riskScore = computeRiskScore(validated, steps);
 
     setResult({ outcome, steps, riskScore });
-  }, [values]);
+  }, [values, activeRules]);
 
   // -- Derived -----------------------------------------------------------
 
