@@ -130,7 +130,10 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                 <div className="space-y-4">
                   <SectionLabel>Policy builder</SectionLabel>
                   <Card className="p-5">
-                    <PolicyForm />
+                    <PolicyForm
+                      policyId={params.id}
+                      defaultValues={data}
+                    />
                   </Card>
                 </div>
               )}
