@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowDownLeft, ArrowUpRight, SearchX } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
@@ -108,12 +109,12 @@ export function TransactionTable({ transactions, className, isLoading = false }:
   const statuses = useMemo(() => Array.from(new Set(transactions.map(tx => tx.status))), [transactions]);
 
   const filteredTransactions = useMemo(() => {
-    const q = debouncedQuery.trim().toLowerCase();
+    const terms = debouncedQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
     return transactions.filter((tx) => {
       const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;
       const matchesAsset = assetFilter === 'all' || tx.asset === assetFilter;
-      const searchable = [tx.counterparty, tx.counterpartyAddress, tx.purpose, tx.asset, tx.agentName].join(' ').toLowerCase();
-      const matchesQuery = !q || searchable.includes(q);
+      const searchable = [tx.id, tx.counterparty, tx.counterpartyAddress, tx.purpose, tx.asset, tx.agentName].join(' ').toLowerCase();
+      const matchesQuery = terms.every((term) => searchable.includes(term));
       return matchesStatus && matchesAsset && matchesQuery;
     });
   }, [transactions, debouncedQuery, statusFilter, assetFilter]);
@@ -136,7 +137,7 @@ export function TransactionTable({ transactions, className, isLoading = false }:
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search asset code or public key"
+          placeholder="Search asset, public key, or agent"
           className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-ring"
           aria-label="Search transactions"
         />
@@ -148,7 +149,7 @@ export function TransactionTable({ transactions, className, isLoading = false }:
         >
           <option value="all">All statuses</option>
           {statuses.map((status) => (
-            <option key={status} value={status}>{status}</option>
+            <option key={status} value={status}>{transactionStatus(status).label}</option>
           ))}
         </select>
         <select
