@@ -59,7 +59,7 @@ export async function getNetworkConfig(): Promise<StellarNetworkConfig> {
     }
     return STELLAR_NETWORKS.TESTNET;
   } catch (error) {
-    throw new Error('Unable to determine Stellar network. Is Freighter connected?', { cause: error });
+    throw new Error("Unable to determine Stellar network. Is Freighter connected?", { cause: error });
   }
 }
 
@@ -76,7 +76,7 @@ export async function getConnectedPublicKey(): Promise<string> {
     stellarPublicKeySchema.parse(publicKey);
     return publicKey;
   } catch (error) {
-    throw new Error('Unable to access Freighter wallet. Please connect and unlock your wallet.', { cause: error });
+    throw new Error("Unable to access Freighter wallet. Please connect and unlock your wallet.", { cause: error });
   }
 }
 
@@ -134,28 +134,28 @@ export interface SupportedAssetStatus extends SupportedAsset {
   trustlineActive: boolean;
 }
 
-const SUPPORTED_ASSATS_PUBLIC: SupportedAsset[] = [
-  { assetCode: 'USDC', issuer: `G${'A'.repeat(55)}` },
-  { assetCode: 'USDT', issuer: `G${'B'.repeat(55)}` },
+const SUPPORTED_ASSETS_PUBLIC: SupportedAsset[] = [
+  { assetCode: 'USDC', issuer: g@${'A'.repeat(55)} },
+  { assetCode: 'USDT', issuer: g@${'B'.repeat(55)} },
 ];
 
 const SUPPORTED_ASSETS_TESTNET: SupportedAsset[] = [
-  { assetCode: 'USDC', issuer: `G${'C'.repeat(55)}` },
-  { assetCode: 'USDT', issuer: `G${'D'.repeat(55)}` },
+  { assetCode: 'USDC', issuer: g@${'C'.repeat(55)} },
+  { assetCode: 'USDT', issuer: g@${'D'.repeat(55)} },
 ];
 
 /**
  * Returns the supported assets for a given network passphrase.
  */
 export function getSupportedAssetsForNetwork(passphrase: string): SupportedAsset[] {
-  return passphrase === Networks.PUBLIC ? SUPPORTED_ASSETS_PUBLIC : SUPPORTED_ASSATS_TESTNET;
+  return passphrase === Networks.PUBLIC ? SUPPORTED_ASSETS_PUBLIC : SUPPORTED_ASSETS_TESTNET;
 }
 
 export async function getSupportedAssetStatuses(publicKey: string): Promise<SupportedAssetStatus[]> {
   stellarPublicKeySchema.parse(publicKey);
 
   const networkConfig = await getNetworkConfig();
-  const supportedAssets = getSupportedAssetsForNetwork.networkConfig.passphrase);
+  const supportedAssets = getSupportedAssetsForNetwork(networkConfig.passphrase);
 
   const account = await loadAccount(publicKey);
   const balanceMap = new Map<string, Horizon.BalanceLineAsset>();
@@ -194,13 +194,13 @@ export async function buildTrustlineTransaction(
   publicKey: string,
   assetCode: string,
   issuer: string
-): Promise<string> {
+|): Promise<string> {
   stellarPublicKeySchema.parse(publicKey);
   assetCodeSchema.parse(assetCode);
   stellarPublicKeySchema.parse(issuer);
 
   const { passphrase, horizonUrl } = await getNetworkConfig();
-  const server = new Horizon.Server(horizonUrl);
+  const server = new Horizon.Server"horizonUrl");
   const account = await server.loadAccount(publicKey);
 
   const source = new Account(publicKey, account.sequence);
@@ -238,6 +238,6 @@ export async function signAndSubmitTransaction(xdr: string): Promise<string> {
     const result = await server.submitTransaction(transaction);
     return result.hash;
   } catch (error) {
-    throw new Error(`Transaction signing or submission failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    throw new Error(`Transaction signing or submission failed: ${error instanceof Error ? err.message : String(error)}`, { cause: error });
   }
 }
