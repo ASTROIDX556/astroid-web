@@ -35,8 +35,8 @@ export const spendingPolicySchema = z.object({
             .split(',')
             .map((entry) => entry.trim())
             .filter(Boolean);
-          return assets.length > 0 && assets.every((asset) => asset.length > 1);
-        }, 'At least one asset is required.'),
+          return assets.length > 0 && assets.every((asset) => /^[A-Za-z0-9]{1,12}$/.test(asset));
+        }, 'At least one valid asset code is required.'),
       }),
       z.object({
         type: z.literal('recipientWhitelist'),
@@ -52,6 +52,8 @@ export const spendingPolicySchema = z.object({
     ])
   ).min(1, 'At least one rule is required.'),
 });
+
+export { spendingPolicySchema as policySchema };
 
 export type SpendingPolicy = z.infer<typeof spendingPolicySchema>;
 export type SpendingPolicyRule = SpendingPolicy['rules'][number];
@@ -206,6 +208,7 @@ export function SpendingPolicyBuilder() {
                         <Input
                           {...form.register(`rules.${index}.maxSingleTransactionLimit` as any)}
                           type="number"
+                          inputMode="decimal"
                           min={0.01}
                           step="0.01"
                           placeholder="2500"
@@ -219,6 +222,7 @@ export function SpendingPolicyBuilder() {
                         <Input
                           {...form.register(`rules.${index}.rollingBudgetLimit` as any)}
                           type="number"
+                          inputMode="decimal"
                           min={0.01}
                           step="0.01"
                           placeholder="20000"
@@ -254,6 +258,8 @@ export function SpendingPolicyBuilder() {
                       >
                         <Input
                           {...form.register(`rules.${index}.allowedAssets` as any)}
+                          autoComplete="off"
+                          spellCheck={false}
                           placeholder="XLM, USDC, EURC"
                         />
                       </FormField>
@@ -270,6 +276,8 @@ export function SpendingPolicyBuilder() {
                       >
                         <Input
                           {...form.register(`rules.${index}.whitelistAddresses` as any)}
+                          autoComplete="off"
+                          spellCheck={false}
                           placeholder="GABC...XYZ, GDEF...LMN"
                         />
                       </FormField>
@@ -305,3 +313,5 @@ export function SpendingPolicyBuilder() {
     </Card>
   );
 }
+
+export { SpendingPolicyBuilder as PolicyForm };
