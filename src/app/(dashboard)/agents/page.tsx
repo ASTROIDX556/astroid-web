@@ -18,7 +18,7 @@ import { PageTransition } from '@/components/ui/motion';
 import { AgentTemplateWizard } from '@/features/agents/components/AgentTemplateWizard';
 import { AgentTimeline } from '@/features/agents/components/AgentTimeline';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -133,17 +133,18 @@ export default function AgentsPage() {
 
 function AgentCreationWizard() {
   const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     department: '',
     provider: 'openai',
-    model: 'gtp-4',
+    model: 'gpt-4',
     temperature: 0.7,
     dailyLimit: '',
     transactionLimit: '',
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const steps = [
     { title: 'Identity & Role', fields: ['name', 'description', 'department'] },
@@ -152,39 +153,94 @@ function AgentCreationWizard() {
     { title: 'Final Review', fields: [] },
   ];
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const validateCurrentStep = () => {
     const currentFields = steps[step].fields;
-    const newErrors = {};
-    currentFields.forEach((field) => {
-      const value = formData[field];
-      if (field === 'name' && !value.trim()) {
-        newErrors.name = 'Name is required';
+    const newErrors: Record<string, string> = {};
+
+    const requireField = (field: string, message: string) => {
+      const value = formData[field as keyof typeof formData];
+      if (!value || (typeof value === 'string' && !value.trim())) {
+        newErrors[field] = message;
       }
-      if (field === 'dailyLimit' || field === 'transactionLimit') {
-        if (!value || isNaN(Number(value))) {
-          newErrors[field] = 'Enter a valid number';
-        }
+    };
+
+    if (currentFields.includes('name')) requireField('name', 'Name is required');
+    if (currentFields.includes('description')) requireField('description', 'Description is required');
+    if (currentFields.includes('department')) requireField('department', 'Department is required');
+    if (currentFields.includes('provider')) requireField('provider', 'Provider is required');
+    if (currentFields.includes('model')) requireField('model', 'Model is required');
+
+    if (currentFields.includes('temperature')) {
+      const temperature = Number(formData.temperature);
+      if (formData.temperature === '' || Number.isNaN(temperature) || temperature < 0 || temperature > 1) {
+        newErrors.temperature = 'Temperature must be between 0 and 1';
       }
-    });
+    }
+
+    if (currentFields.includes('dailyLimit')) {
+      const dailyLimit = Number(formData.dailyLimit);
+      if (!formData.dailyLimit.trim() || Number.isNaN(dailyLimit) || dailyLimit <= 0) {
+        newErrors.dailyLimit = 'Enter a valid positive number';
+      }
+    }
+
+    if (currentFields.includes('transactionLimit')) {
+      const transactionLimit = Number(formData.transactionLimit);
+      if (!formData.transactionLimit.trim() || Number.isNaN(transactionLimit) || transactionLimit <= 0) {
+        newErrors.transactionLimit = 'Enter a valid positive number';
+      }
+    }
+
+    if (
+      currentFields.includes('dailyLimit') &&
+      currentFields.includes('transactionLimit') &&
+      Number(formData.dailyLimit) > 0 &&
+      Number(formData.transactionLimit) > 0 &&
+      Number(formData.transactionLimit) > Number(formData.dailyLimit)
+    ) {
+      newErrors.transactionLimit = 'Must not exceed daily limit';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const next = () => {
-    if (validateCurrentStep()) setStep((s) => Math.min(s + 1, steps.length - 1));
+    if (validateCurrentStep()) {
+      setDirection(1);
+      setStep((s) => Math.min(s + 1, steps.length - 1));
+    }
   };
 
-  const back = () => setStep((s) => Math.max(s - 1, 0));
+  const back = () => {
+    setDirection(-1);
+    setStep((s) => Math.max(s - 1, 0));
+  };
+
+  const mockCreateAgent = (payload: Record<string, unknown>) => {
+    console.log('Mock create agent:', JSON.stringify(payload, null, 2));
+  };
 
   const handleSubmit = () => {
     if (validateCurrentStep()) {
-      const payload = { ...formData, dailyLimit: Number(formData.dailyLimit), transactionLimit: Number(formData.transactionLimit), temperature: Number(formData.temperature) };
-      console.log('Agent configuration:', payload);
+      const payload = {
+        ...formData,
+        dailyLimit: Number(formData.dailyLimit),
+        transactionLimit: Number(formData.transactionLimit),
+        temperature: Number(formData.temperature),
+      };
+      mockCreateAgent(payload);
     }
+  };
+
+  const slideVariants = {
+    enter: (dir: number) => ({ x: dir > 0 ? 40 : -40, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -40 : 40, opacity: 0 }),
   };
 
   return (
@@ -196,7 +252,12 @@ function AgentCreationWizard() {
           <div key={s.title} className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => i < step && setStep(i)}
+              onClick={() => {
+                if (i < step) {
+                  setDirection(-1);
+                  setStep(i);
+                }
+              }}
               className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
                 i === step ? 'bg-foreground text-background' : i < step ? 'bg-gold-soft text-gold-strong' : 'bg-muted text-foreground-muted'
               }`}
@@ -211,10 +272,12 @@ function AgentCreationWizard() {
       <AnimatePresence mode="wait">
         <motion.div
           key={step}
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -40 }}
-          transition={{ duration: 0.2 }}
+          custom={direction}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.2, ease: 'easeOut' }}
         >
           {step === 0 && (
             <div className="space-y-4">
@@ -226,10 +289,12 @@ function AgentCreationWizard() {
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Input id="description" name="description" value={formData.description} onChange={handleChange} placeholder="What should this agent do?" />
+                {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description}</p>}
               </div>
               <div>
                 <Label htmlFor="department">Department</Label>
                 <Input id="department" name="department" value={formData.department} onChange={handleChange} placeholder="e.g. Marketing" />
+                {errors.department && <p className="mt-1 text-xs text-red-500">{errors.department}</p>}
               </div>
             </div>
           )}
@@ -242,14 +307,17 @@ function AgentCreationWizard() {
                   <option value="nvidia">Nvidia</option>
                   <option value="ollama">Ollama</option>
                 </select>
+                {errors.provider && <p className="mt-1 text-xs text-red-500">{errors.provider}</p>}
               </div>
               <div>
                 <Label htmlFor="model">Model</Label>
                 <Input id="model" name="model" value={formData.model} onChange={handleChange} placeholder="e.g. gpt-4" />
+                {errors.model && <p className="mt-1 text-xs text-red-500">{errors.model}</p>}
               </div>
               <div>
                 <Label htmlFor="temperature">Temperature</Label>
                 <Input id="temperature" name="temperature" type="number" min="0" max="1" step="0.1" value={formData.temperature} onChange={handleChange} />
+                {errors.temperature && <p className="mt-1 text-xs text-red-500">{errors.temperature}</p>}
               </div>
             </div>
           )}
