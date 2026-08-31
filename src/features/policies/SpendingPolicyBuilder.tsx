@@ -12,11 +12,13 @@ import { FormField, Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
 import { isValidStellarPublicKey } from '@/stores/freighter-store';
 
-const validAddressList = (value: string) =>
-  value
+const splitList = (value: string | undefined) =>
+  (value ?? '')
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
+
+const validAddressList = (value: string | undefined) => splitList(value);
 
 export const spendingPolicySchema = z.object({
   name: z.string().trim().min(3, 'Policy name must be at least 3 characters.'),
@@ -102,15 +104,12 @@ export function SpendingPolicyBuilder() {
           case 'tokenRestriction':
             return {
               type: 'tokenRestriction',
-              allowedAssets: rule.allowedAssets
-                .split(',')
-                .map((asset) => asset.trim())
-                .filter(Boolean),
+              allowedAssets: splitList(rule.allowedAssets),
             };
           case 'recipientWhitelist':
             return {
               type: 'recipientWhitelist',
-              whitelistAddresses: validAddressList(rule.whitelistAddresses).filter(Boolean),
+              whitelistAddresses: validAddressList(rule.whitelistAddresses),
             };
           default:
             return rule;
