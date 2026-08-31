@@ -127,7 +127,7 @@ export function useStellarWallet() {
     }
   }, []);
 
-  const signTransaction = useCallback(async (xdr: string) => {
+  const signTransaction = useCallback(async (xdr: string, networkPassphrase?: string) => {
     const api = await loadFreighter();
     if (!api) {
       setStatus('missing');
@@ -139,7 +139,9 @@ export function useStellarWallet() {
     setError(null);
 
     try {
-      const response = await withTimeout(api.signTransaction(xdr));
+      const response = networkPassphrase
+        ? await withTimeout(api.signTransaction(xdr, { networkPassphrase }))
+        : await withTimeout(api.signTransaction(xdr));
       const signature =
         typeof response === 'string'
           ? response
@@ -168,9 +170,11 @@ export function useStellarWallet() {
     try {
       const network = await withTimeout(api.getNetwork());
       if (typeof network === 'string') {
+        const networkName = network.toUpperCase();
+        const isTestnet = networkName === 'TESTNET' || networkName.includes('TESTNET');
         return {
-          networkUrl: 'https://horizon.stellar.org',
-          networkPassphrase: StellarSdk.Networks.PUBLIC,
+          networkUrl: isTestnet ? 'https://horizon-testnet.stellar.org' : 'https://horizon.stellar.org',
+          networkPassphrase: isTestnet ? StellarSdk.Networks.TESTNET : StellarSdk.Networks.PUBLIC,
         };
       }
       return {
@@ -248,7 +252,7 @@ export function useStellarWallet() {
           .build();
 
         const xdr = transaction.toXDR();
-        const signedXdr = await signTransaction(xdr);
+        const signedXdr = await signTransaction(xdr, network.networkPassphrase);
         if (!signedXdr) return null;
 
         const result = await server.submitTransaction(signedXdr);
