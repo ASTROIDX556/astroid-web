@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, SearchX } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/badge';
@@ -176,7 +175,11 @@ export function TransactionTable({ transactions, className, isLoading = false }:
       </div>
 
       {isLoading ? (
-        <div className="rounded-card border border-border bg-surface p-8 text-center text-sm text-foreground-secondary">
+        <div
+          role="status"
+          className="flex flex-col items-center justify-center rounded-card border border-border bg-surface p-8 text-center text-sm text-foreground-secondary"
+        >
+          <div className="mb-2 h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" aria-hidden />
           Loading transactions…
         </div>
       ) : (
@@ -187,7 +190,8 @@ export function TransactionTable({ transactions, className, isLoading = false }:
           className={className}
           caption="Transactions"
           emptyState={
-            <div className="rounded-card border border-dashed border-border bg-surface p-8 text-center text-sm text-foreground-secondary">
+            <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-border bg-surface p-8 text-center text-sm text-foreground-secondary">
+              <SearchX className="mb-2 h-8 w-8 text-foreground-muted" aria-hidden />
               No matching transactions.
             </div>
           }
@@ -197,16 +201,17 @@ export function TransactionTable({ transactions, className, isLoading = false }:
       )}
 
       {!isLoading && (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-foreground-muted">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-foreground-muted" aria-live="polite">
             Page {safePage} of {totalPages} · {filteredTransactions.length} results
           </p>
-          <div className="flex gap-2">
+          <nav className="flex gap-2" aria-label="Pagination">
             <button
               type="button"
               onClick={() => setPage(Math.max(1, safePage - 1))}
               disabled={safePage <= 1}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Previous page"
             >
               Previous
             </button>
@@ -214,11 +219,12 @@ export function TransactionTable({ transactions, className, isLoading = false }:
               type="button"
               onClick={() => setPage(Math.min(totalPages, safePage + 1))}
               disabled={safePage >= totalPages}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Next page"
             >
               Next
             </button>
-          </div>
+          </nav>
         </div>
       )}
     </div>
