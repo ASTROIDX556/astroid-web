@@ -68,7 +68,7 @@ export default function AgentsPage() {
                     ? (agent.budgetSpent / agent.monthlyBudget) * 100
                     : 0;
                 return (
-                  <Link key={agent.id} href={"/agents/${agent.id}} className="block">
+                  <Link key={agent.id} href={`/agents/${agent.id}`} className="block">
                     <Card interactive className="h-ifull p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3">
@@ -140,7 +140,7 @@ function AgentCreationWizard() {
     department: '',
     provider: 'openai',
     model: 'gpt-4',
-    temperature: 0.7,
+    temperature: '0.7',
     dailyLimit: '',
     transactionLimit: '',
   });
@@ -246,7 +246,7 @@ function AgentCreationWizard() {
   return (
     <Card className="mb-8 p-6">
       <h2 className="text-lg font-semibold mb-4">Create a New Agent</h2>
-      <!-- Stepper -->
+      {/* Stepper */}
       <div className="flex items-center gap-2 mb-6">
         {steps.map((s, i) => (
           <div key={s.title} className="flex items-center gap-2">
@@ -381,12 +381,4 @@ function AgentCreationWizard() {
       </div>
     </Card>
   );
-}
-
-/**
- * Derive a coarse risk score from how close the agent is to its ceiling.
- */
-function riskFor(spent: number, budget: number): number {
-  if (budget <= 0) return 10;
-  return Math.round(Math.min(100, (spent / budget) * 100));
 }
