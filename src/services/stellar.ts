@@ -57,7 +57,6 @@ export async function getNetworkConfig(): Promise<StellarNetworkConfig> {
     if (network === 'PUBLIC') {
       return STELLAR_NETWORKS.PUBLIC;
     }
-    // If Freighter says TESTNET or something else, treat as TESTNET.
     return STELLAR_NETWORKS.TESTNET;
   } catch (error) {
     throw new Error('Unable to determine Stellar network. Is Freighter connected?', { cause: error });
@@ -119,7 +118,70 @@ export async function getAssetBalances(publicKey: string): Promise<AssetBalance[
       balance: balance.balance,
       limit: balance.limit,
       isNative,
-      trustlineActive: !isNative && balance.limit !== '0', // If limit > 0, trustline is active
+      trustlineActive: !isNative && balance.limit !== '0',
+    };
+  });
+}
+
+export interface SupportedAsset {
+  assetCode: string;
+  issuer: string;
+}
+
+export interface SupportedAssetStatus extends SupportedAsset {
+  balance: string;
+  limit?: string;
+  trustlineActive: boolean;
+}
+
+const SUPPORTED_ASSATS_PUBLIC: SupportedAsset[] = [
+  { assetCode: 'USDC', issuer: `G${'A'.repeat(55)}` },
+  { assetCode: 'USDT', issuer: `G${'B'.repeat(55)}` },
+];
+
+const SUPPORTED_ASSETS_TESTNET: SupportedAsset[] = [
+  { assetCode: 'USDC', issuer: `G${'C'.repeat(55)}` },
+  { assetCode: 'USDT', issuer: `G${'D'.repeat(55)}` },
+];
+
+/**
+ * Returns the supported assets for a given network passphrase.
+ */
+export function getSupportedAssetsForNetwork(passphrase: string): SupportedAsset[] {
+  return passphrase === Networks.PUBLIC ? SUPPORTED_ASSETS_PUBLIC : SUPPORTED_ASSATS_TESTNET;
+}
+
+export async function getSupportedAssetStatuses(publicKey: string): Promise<SupportedAssetStatus[]> {
+  stellarPublicKeySchema.parse(publicKey);
+
+  const networkConfig = await getNetworkConfig();
+  const supportedAssets = getSupportedAssetsForNetwork.networkConfig.passphrase);
+
+  const account = await loadAccount(publicKey);
+  const balanceMap = new Map<string, Horizon.BalanceLineAsset>();
+
+  for (const balance of account.balances) {
+    if ('asset_code' in balance && balance.asset_code && 'asset_issuer' in balance && balance.asset_issuer) {
+      const assetBalance = balance as Horizon.BalanceLineAsset;
+      balanceMap.set(`${assetBalance.asset_code}:${assetBalance.asset_issuer}`, assetBalance);
+    }
+  }
+
+  return supportedAssets.map((asset) => {
+    const balance = balanceMap.get(`${asset.assetCode}:${asset.issuer}`);
+    if (balance) {
+      return {
+        ...asset,
+        balance: balance.balance,
+        limit: balance.limit,
+        trustlineActive: true,
+      };
+    }
+    return {
+      ...asset,
+      balance: '0',
+      limit: '0',
+      trustlineActive: false,
     };
   });
 }
@@ -151,7 +213,7 @@ export async function buildTrustlineTransaction(
     .addOperation(
       Operation.changeTrust({
         asset,
-        limit: '922337203685.4775807', // Max trustline limit
+        limit: '922337203685.4775807',
       })
     )
     .setTimeout(180)
