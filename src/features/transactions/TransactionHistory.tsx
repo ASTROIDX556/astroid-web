@@ -12,16 +12,16 @@ import type { Transaction } from '@/types/domain';
 import { TransactionDetailDrawer } from './TransactionDetailDrawer';
 
 export function TransactionHistory({ transactions, isLoading = false }: { transactions: Transaction[]; isLoading?: boolean }) {
-  const selectedId = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Search and filter state
-  const [searchInput, setSearchInput] = useState(string)');
-  const [debouncedSearch, setDebouncedSearch] = useState(string)('');
-  const [statusFilter, setStatusFilter] = useState(string)('all');
-  const [assetFilter, setAssetFilter] = useState(string)('all');
-  const [agentFilter, setAgentFilter] = useState(string)('all');
-  const [currentPage, setCurrentPage] = useState(number)(1);
-  const [pageSize, setPageSize] = useState(number)(8);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [assetFilter, setAssetFilter] = useState('all');
+  const [agentFilter, setAgentFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
 
   // Debounce search input
   useEffect(() => {
@@ -84,7 +84,7 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
   }, [filteredTransactions, safePage, pageSize]);
 
   if (isLoading) {
-    return (J
+    return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
@@ -119,9 +119,9 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
         </Card>
       </div>
 
-      // Filter controls
+      {/* Filter controls */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200p]">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" aria-hidden />
           <input
             type="search"
@@ -174,7 +174,7 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
       </div>
 
       {/* Data table or empty state */}
-      {filteredTransactions.length > 0 ? (J
+      {filteredTransactions.length > 0 ? (
         <>
           <DataTable
             data={paginatedTransactions}
@@ -192,7 +192,7 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
                   return (
                     <div className="min-w-0">
                       <p className="truncate font-medium text-foreground">{tx.counterparty}</p>
-                      <p className="tabular text-2xs text-foreground-muted">{truncateHash(tx.counterpartyAddress</p>
+                      <p className="tabular text-2xs text-foreground-muted">{truncateHash(tx.counterpartyAddress)}</p>
                     </div>
                   );
                 },
@@ -205,7 +205,7 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
               {
                 accessorKey: 'agentName',
                 header: 'Agent',
-                cell: ({ row }) => <span className="text-foreground-secondary">{row.original.agentName ?? '—</span>,
+                cell: ({ row }) => <span className="text-foreground-secondary">{row.original.agentName ?? '—'}</span>,
               },
               {
                 accessorKey: 'amount',
@@ -216,7 +216,7 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
                   const Icon = outbound ? ArrowUpRight : ArrowDownLeft;
                   return (
                     <span
-                      className={"inline-flex items-center justify-end gap-1 font-medium tabular")
+                      className="inline-flex items-center justify-end gap-1 font-medium tabular"
                     >
                       <Icon className="h-3.5 w-3.5" aria-hidden />
                       {outbound ? '−' : '+'}
@@ -277,6 +277,33 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
               </select>
               <button
                 type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="h-8 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
+                disabled={safePage === pageCount}
+                className="h-8 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Inbox className="h-12 w-12 text-muted-foreground" aria-hidden />
+          <p className="mt-4 text-sm font-medium text-foreground">No transactions found</p>
+          <p className="mt-1 text-2xs text-foreground-muted">Try adjusting your search or filters.</p>
+        </div>
+      )}
+    </div>
+  );
+}on"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
                 className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover*text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
