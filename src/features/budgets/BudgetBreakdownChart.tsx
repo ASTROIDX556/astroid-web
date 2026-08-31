@@ -21,6 +21,7 @@ export interface BudgetBreakdownChartProps {
   className?: string;
 }
 
+/** A single treemap node, normalized from either a department or a sub-department (agent) row. */
 interface BreakdownNode {
   id: string;
   name: string;
@@ -28,6 +29,7 @@ interface BreakdownNode {
   consumed: number;
   asset: string;
   size: number;
+  /** Present only for leaf (agent) nodes — drives the drill-down modal. */
   agent?: AgentAllocation;
 }
 
@@ -54,7 +56,15 @@ function toAgentNode(agent: AgentAllocation, asset: string): BreakdownNode {
   };
 }
 
-function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: any) {
+interface TreemapContentProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  payload?: BreakdownNode;
+}
+
+function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapContentProps) {
   if (!payload || width <= 0 || height <= 0) return null;
   const pct = payload.allocated > 0 ? (payload.consumed / payload.allocated) * 100 : 0;
   const { hex } = getThresholdColor(pct);
@@ -127,6 +137,11 @@ function BreakdownTooltip({ active, payload }: { active?: boolean; payload?: { p
   );
 }
 
+/**
+ * Hierarchical department → agent budget treemap with click-through
+ * drill-down. Selecting a department zooms into its per-agent allocations;
+ * selecting an agent opens a modal with its recent ledger history.
+ */
 export function BudgetBreakdownChart({
   data = MOCK_DEPARTMENT_BUDGETS,
   title = 'Department Budget Breakdown',
@@ -141,7 +156,7 @@ export function BudgetBreakdownChart({
     [data, activeDeptId],
   );
 
-  const nodes = useMemo(() => {
+  const nodes: BreakdownNode[] = useMemo(() => {
     if (!activeDept) return data.map(toNode);
     return activeDept.agents.map((a) => toAgentNode(a, activeDept.asset));
   }, [data, activeDept]);

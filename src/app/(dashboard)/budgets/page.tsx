@@ -165,6 +165,10 @@ export default function BudgetsPage() {
                 <BudgetMatrix />
               </div>
               <div className="pt-4 border-t border-border space-y-4">
+                <SectionLabel>Department Budget Breakdown</SectionLabel>
+                <DepartmentBudgetBreakdown />
+              </div>
+              <div className="pt-4 border-t border-border space-y-4">
                 <SectionLabel>Department Spend Breakdown</SectionLabel>
                 <BudgetBreakdownChart />
               </div>
