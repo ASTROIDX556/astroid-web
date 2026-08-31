@@ -48,7 +48,7 @@ export function TransactionAuditToolbar({
 
   // Debounced URL query param update
   useEffect(() {
-    const handler = setTimeout(() {
+    const handler = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
 
       if (searchTerm.trim()) {
@@ -69,7 +69,7 @@ export function TransactionAuditToolbar({
         params.delete('asset');
       }
 
-      router.replace(${pathname}?${params.toString()}, { scroll: false });
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }, 300);
 
     return () => clearTimeout(handler);
@@ -108,7 +108,7 @@ export function TransactionAuditToolbar({
               placeholder="Search by asset code, public key, tx hash, or recipient..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="wfull rounded-button border border-border bg-surface pl-9 pr-8 py-1.5 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
+              className="w-full rounded-button border border-border bg-surface pl-9 pr-8 py-1.5 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
             />
             {searchTerm && (
               <button
@@ -141,7 +141,7 @@ export function TransactionAuditToolbar({
             <option value="all">All Assets</option>
             <option value="USDC">USDC</option>
             <option value="XLM">XLM</option>
-            <option value="ASTRO">ASTNO</option>
+            <option value="ASTRO">ASTRO</option>
             <option value="EURC">EURC</option>
           </select>
 
@@ -193,7 +193,7 @@ export function TransactionAuditToolbar({
             >
               {[10, 20, 50, 100].map(size => (
                 <option key={size} value={size}>{size}</option>
-              )}
+              ))}
             </select>
           </div>
           <div className="flex items-center gap-1">
