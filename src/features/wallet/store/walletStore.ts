@@ -1,11 +1,11 @@
-import { create from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { WalletConnectionPhase, WalletNetwork, WalletState } from '../types';
 
 interface WalletStoreState extends WalletState {
-  setPhase: (phase) => void;
+  setPhase: (phase: WalletConnectionPhase) => void;
   setPublicKey: (publicKey: string | null) => void;
-  setNetwork: (network) => void;
+  setNetwork: (network: WalletNetwork) => void;
   setError: (error: string | null) => void;
   reset: () => void;
 }
@@ -17,7 +17,7 @@ const initialState: WalletState = {
   error: null,
 };
 
-export const useFreighterStore = create<WalletStoreState>()({
+export const useFreighterStore = create<WalletStoreState>()(
   persist(
     (set) => ({
       ...initialState,
@@ -35,13 +35,13 @@ export const useFreighterStore = create<WalletStoreState>()({
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.activePublicKey) {
-          state.setPhase('connected');
+          state?.setPhase?.('connected');
         } else {
-          state.setPhase('disconnected');
+          state?.setPhase?.('disconnected');
         }
       },
-    },
-  ),
+    }
+  )
 );
 
-export { useFreighterStore as useWalletStore }
+export { useFreighterStore as useWalletStore };
