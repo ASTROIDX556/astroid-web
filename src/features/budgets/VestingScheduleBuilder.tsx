@@ -78,6 +78,7 @@ export default function VestingScheduleBuilder({
   const [savedSchedule, setSavedSchedule] = useState<VestingScheduleFormValues | null>(null);
 
   const form = useForm<VestingScheduleFormValues>({
+    mode: 'onChange',
     resolver: zodResolver(vestingScheduleFormSchema),
     defaultValues: {
       frequency: 'monthly',
@@ -118,6 +119,7 @@ export default function VestingScheduleBuilder({
           className="grid gap-4 sm:grid-cols-2"
           onSubmit={form.handleSubmit(onSubmit)}
           id="vesting-schedule-form"
+          noValidate
         >
           <div className="space-y-2">
             <Label htmlFor="frequency">Replenishment frequency</Label>
