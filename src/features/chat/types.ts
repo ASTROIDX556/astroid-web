@@ -2,6 +2,15 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 
 export type IconName = 'sparkles' | 'chart' | 'wallet' | 'activity' | 'settings';
 
+export interface StructuredBriefing {
+  totalDailySpend: number;
+  currency: string;
+  activeAgentsCount: number;
+  lowBalanceWalletsCount: number;
+  topSpenderAgent: string;
+  recommendation: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: MessageRole;
@@ -9,14 +18,8 @@ export interface ChatMessage {
   timestamp: string;
   isStreaming?: boolean;
   error?: string;
-  structuredBriefing?: {
-    totalDailySpend: number;
-    currency: string;
-    activeAgentsCount: number;
-    lowBalanceWalletsCount: number;
-    topSpenderAgent: string;
-    recommendation: string;
-  };
+  format?: 'markdown' | 'text';
+  structuredBriefing?: StructuredBriefing;
 }
 
 export interface QuickPromptChip {
