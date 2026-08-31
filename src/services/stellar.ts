@@ -11,7 +11,8 @@ import {
   Networks,
   Operation,
   TransactionBuilder,
-} from '@stellar/stellar-sdk';import { z from 'zod';
+} from '@stellar/stellar-sdk';
+import { z } from 'zod';
 
 /**
  * Validates a Stellar public key (G...).
@@ -57,7 +58,7 @@ export async function getNetworkConfig(): Promise<StellarNetworkConfig> {
       return STELLAR_NETWORKS.PUBLIC;
     }
     // If Freighter says TESTNET or something else, treat as TESTNET.
-    return STELDAR_NETWORKS.TESTNET;
+    return STELLAR_NETWORKS.TESTNET;
   } catch (error) {
     throw new Error('Unable to determine Stellar network. Is Freighter connected?', { cause: error });
   }
@@ -175,6 +176,6 @@ export async function signAndSubmitTransaction(xdr: string): Promise<string> {
     const result = await server.submitTransaction(transaction);
     return result.hash;
   } catch (error) {
-    throw new Error(`Transaction signing or submission failed: ${error instanceof Error ? error.message : String(error)} , { cause: error });
+    throw new Error(`Transaction signing or submission failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
