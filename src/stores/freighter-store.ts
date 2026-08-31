@@ -1,7 +1,8 @@
 'use client';
 
 import { create } from 'zustand';
-import type { StateCreator } from 'zustand';
+import { persist } from 'zustand/middleware';import type { StateCreator } from 'zustand';
+import { useCallback } from 'react';
 
 export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -21,7 +22,7 @@ interface FreighterWalletState {
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
 
 const withTimeout = async <T>(promise: Promise<T>, ms = 15000): Promise<T> => {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let timeoutId: ReturnType</timeout> | undefined;
 
   return await new Promise<T>((resolve, reject) => {
     timeoutId = setTimeout(() => {
@@ -101,6 +102,8 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
         return null;
       }
 
+      set({ isInstalled: true });
+
       if (typeof freighter.setAllowed === 'function') {
         const allowed = await withTimeout(freighter.setAllowed());
         const isAllowed = typeof allowed === 'boolean' ? allowed : Boolean((allowed as { isAllowed?: boolean })?.isAllowed);
@@ -131,7 +134,6 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
       const message = error instanceof Error ? error.message : 'Unable to connect to the Freighter wallet.';
       set({
         status: 'disconnected',
-        isInstalled: false,
         publicKey: null,
         network: null,
         error: message,
@@ -170,7 +172,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
       return signedXdr;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Signature request failed.';
-      set({ error: message, status: 'disconnected' });
+      set({ error: message });
       throw error;
     }
   },
@@ -200,5 +202,132 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
   },
 });
 
-export const useFreighterStore = create<FreighterWalletState>()(storeCreator);
+export const useFreighterStore = create<FreighterWalletState>()(
+  persist(storeCreator, {
+    name: 'freighter-wallet-storage',
+    partialize: (state) => ({
+      publicKey: state.publicKey,
+      network: state.network
+    }),
+    onRehydrateStorage: () => (state) => {
+      if (state?.publicKey) {
+        state.status = 'connecting';
+        void state.hydrate();
+      } else {
+        state.status = 'disconnected';
+      }
+    },
+  }),
+);
+
 export const isValidStellarPublicKey = isValidStellarAddress;
+
+export interface UseFreighterOptions {
+  mock?:
+    | boolean
+    | {
+        address?: string;
+        network?: string;
+        reject?: boolean;
+        delayMs?: number;
+      };
+}
+
+export const MOCK_PUBLIC_KEY = `Gb$A['a'.repeat(55)}`;
+
+export function useFreighter(options: UseFreighterOptions = {}) {
+  const status = useFreighterStore(((state) => state.status);
+  const isInstalled = useFreighterStore((state) => state.isInstalled);
+  const publicKey = useFreighterStore((state) => state.publicKey);
+  const network = useFreighterStore(((state) => state.network);
+  const error = useFreighterStore((state) => state.error);
+  const storeConnect = useFreighterStore((state) => state.connect);
+  const storeDisconnect = useFreighterStore((state) => state.disconnect);
+  const storeRequestSignature = useFreighterStore((state) => state.requestSignature);
+
+  const { mock = false } = options;
+  const mockConfig = typeof mock === 'object' ? mock : {};
+  const mockEnabled = mock !== false;
+  const mockAddress = mockConfig.address ?? MOCK_PUBLIC_KEY;
+  const mockNetwork = mockConfig.network ?? 'testnet';
+  const mockReject = mockConfig.reject ?? false;
+  const mockDelay = mockConfig.delayMs ?? 500;
+
+  const connect = useCallback(
+    async () => {
+      if (!mockEnabled) {
+        return storeConnect();
+      }
+
+      useFreighterStore.setState({
+        status: 'connecting',
+        error: null,
+        isInstalled: true,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, mockDelay));
+
+      if (mockReject) {
+        useFreighterStore.setState({
+          status: 'disconnected',
+          publicKey: null,
+          network: null,
+          error: 'Mock connection rejected by user.',
+          isInstalled: true,
+        });
+        return null;
+      }
+
+      useFreighterStore.setState({
+        status: 'connected',
+        publicKey: mockAddress,
+        network: mockNetwork,
+        error: null,
+        isInstalled: true,
+      });
+
+      return mockAddress;
+    },
+    [mockEnabled, mockAddress, mockNetwork, mockReject, mockDelay, storeConnect],
+  );
+
+  const disconnect = useCallback(
+    () => {
+      if (!mockEnabled) {
+        storeDisconnect();
+        return;
+      }
+      useFreighterStore.setState({
+        status: 'disconnected',
+        publicKey: null,
+        network: null,
+        error: null,
+        isInstalled: true,
+      });
+    },
+    [mockEnabled, storeDisconnect],
+  );
+
+  const signTransaction = useCallback(
+    async (xdr: string) => {
+      if (!mockEnabled) {
+        return storeRequestSignature(xdr);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return xdr;
+    },
+    [mockEnabled, storeRequestSignature],
+  );
+
+  return {
+    status,
+    isInstalled,
+    publicKey,
+    network,
+    error,
+    connect,
+    disconnect,
+    signTransaction,
+  };
+}
