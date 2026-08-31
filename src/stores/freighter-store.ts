@@ -124,9 +124,9 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   connect: async () => {
     set({ status: 'connecting', error: null });
 
+    const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
     try {
       const freighter = await getFreighter();
-      const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
       if (!installed && typeof freighter.isConnected !== 'function') {
         set({ isInstalled: false, status: 'disconnected', error: 'Freighter extension is not installed.' });
         return null;
@@ -162,7 +162,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
       const message = error instanceof Error ? error.message : 'Unable to connect to the Freighter wallet.';
       set({
         status: 'disconnected',
-        isInstalled: false,
+        isInstalled: installed,
         publicKey: null,
         network: null,
         error: message,
@@ -207,13 +207,14 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   },
 
   hydrate: async () => {
+    await get().checkExtension();
     const freighter = await getFreighter();
     const walletAddress = resolveWalletAddress(
       typeof freighter.getAddress === 'function' ? await withTimeout(freighter.getAddress()).catch(() => null) : null,
     );
 
     if (!walletAddress) {
-      set({ status: 'disconnected', publicKey: null, network: null, isInstalled: false, error: null });
+      set({ status: 'disconnected', publicKey: null, network: null, error: null });
       return;
     }
 
@@ -276,7 +277,11 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
 
       const signedXdr = await requestSignature(transaction.toXDR());
       await server.submitTransaction(signedXdr);
-      await get().loadBalances();
+      try {
+        await get().loadBalances();
+      } catch {
+        // Balance refresh is best-effort; the trustline transaction succeeded.
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add trustline.';
       set({ error: message });
