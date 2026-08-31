@@ -20,9 +20,10 @@ const defaultSuggestions = [
 
 /**
  * Slide-over AI assistant. Seeds from the mock conversation and the daily
- * briefing's suggested prompts. Composer is local-only (no backend in mock
- * mode) — sending appends an optimistic user turn plus a canned acknowledgement
- * so the interaction reads end-to-end.
+ * briefing's suggested prompts. The live path streams from NVIDIA NIM.
+ * Composer is local-only (no backend in mock mode) — sending appends an
+ * optimistic user turn plus a canned acknowledgement so the interaction reads
+ * end-to-end.
  */
 export function AssistantDrawer() {
   const open = useAssistantStore((s) => s.open);
@@ -97,23 +98,62 @@ export function AssistantDrawer() {
       return;
     }
 
+    const assistantId = `a-${Date.now()}`;
+    let accumulated = '';
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: 'assistant', content: '', createdAt: new Date().toISOString() },
+    ]);
+
     try {
       const res = await fetch(`${env.apiUrl}${env.apiVersion}/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ message: trimmed, stream: true }),
       });
-      const body = await res.json();
-      const reply = body?.data?.reply ?? body?.reply ?? 'No response from AI.';
-      setMessages((prev) => [
-        ...prev,
-        { id: `a-${Date.now()}`, role: 'assistant', content: reply, createdAt: new Date().toISOString() },
-      ]);
+      if (!res.ok || !res.body) throw new Error('AI request failed');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          const event = line.trim();
+          if (!event.startsWith('data:')) continue;
+          const data = event.slice(5).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const chunk = JSON.parse(data);
+            const delta = chunk?.choices?.[0]?.delta?.content;
+            if (delta) {
+              accumulated += delta;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantId ? { ...m, content: accumulated } : m)),
+              );
+            }
+          } catch {
+            // Ignore partial JSON frames and keep reading the stream.
+          }
+        }
+      }
+      if (!accumulated) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, content: 'No response from AI.' } : m)),
+        );
+      }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { id: `a-err-${Date.now()}`, role: 'assistant', content: 'Failed to reach the AI service. Check the API connection.', createdAt: new Date().toISOString() },
-      ]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, content: 'Failed to reach the AI service. Check the API connection.' }
+            : m,
+        ),
+      );
     }
   };
 
@@ -159,7 +199,7 @@ export function AssistantDrawer() {
             </button>
           </header>
 
-          <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-5">
+          <div ref={scrollRef} role="log" aria-live="polite" aria-relevant="additions text" className="flex-1 space-y-4 overflow-y-auto p-5">
             {messages.length === 0 && (
               <div className="rounded-card border border-dashed border-border bg-surface-secondary/40 p-4 text-sm leading-relaxed text-foreground-secondary">
                 Ask for a treasury summary, a budget-risk review, or a plain-English explanation of a Stellar transfer.
@@ -167,8 +207,11 @@ export function AssistantDrawer() {
             )}
 
             {messages.map((msg) => (
-              <div
+              <motion.div
                 key={msg.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15 }}
                 className={cn('flex gap-3', msg.role === 'user' && 'flex-row-reverse')}
               >
                 {msg.role === 'assistant' ? (
@@ -192,7 +235,7 @@ export function AssistantDrawer() {
                     msg.content
                   )}
                 </div>
-              </div>
+              </motion.div>
             ))}
 
             {suggestions.length > 0 && (
