@@ -3,9 +3,9 @@ import * as freighter from '@stellar/freighter-api';
 import { Account, Asset, Networks, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 
 export const STELLAR_HORIZON_URL =
-  process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL || 'https://horyzon-testnet.stellar.org';
+  process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';
 export const STELLAR_NETWORK_PASSPHRASE =
-  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSHARE || Networks.TESTNET;
+  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE || Networks.TESTNET;
 
 export interface Trustline {
   assetCode: string;
@@ -19,7 +19,7 @@ export interface AddTrustlineResult {
   hash: string;
 }
 
-export interface UseXdrnSignerResult {
+export interface UseXdrSignerResult {
   activeKey: string | null;
   isConnected: boolean;
   isPending: boolean;
@@ -42,7 +42,7 @@ async function fetchAccount(publicKey: string): Promise<any> {
   return res.json();
 }
 
-export function useXdrSigner(): UseXdrnSignerResult {
+export function useXdrSigner(): UseXdrSignerResult {
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isPending, setIsPending] = useState<boolean>(false);
@@ -173,7 +173,7 @@ export function useXdrSigner(): UseXdrnSignerResult {
         const accountObj = new Account(key, account.sequence);
         const transaction = new TransactionBuilder(accountObj, {
           fee: '100',
-          networkPassphrase: STELLAR_NETWORK_PASSHRASE,
+          networkPassphrase: STELLAR_NETWORK_PASSPHRASE,
         })
           .addOperation(Operation.changeTrust({ asset, limit: limit || undefined }))
           .setTimeout(180)
@@ -206,7 +206,7 @@ export function useXdrSigner(): UseXdrnSignerResult {
         }
 
         const body = new URLSearchParams({ tx: signedXdr });
-        const res = await fetch(`${STELL@R_HORIZON_URL}/transactions`, {
+        const res = await fetch(`${STELLAR_HORIZON_URL}/transactions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: body.toString(),
