@@ -44,7 +44,7 @@ export function BudgetAlertSettings({
     const clamped = Math.min(100, Math.max(0, value));
     setWarning(clamped);
     if (clamped < critical) {
-      onChange?.clamped, critical);
+      onChange?.(clamped, critical);
     }
   };
 
@@ -52,7 +52,7 @@ export function BudgetAlertSettings({
     const clamped = Math.min(100, Math.max(0, value));
     setCritical(clamped);
     if (clamped > warning) {
-      onChange?.warning, clamped);
+      onChange?.(warning, clamped);
     }
   };
 
@@ -137,16 +137,16 @@ export function BudgetAlertSettings({
         <div className="rounded-card border border-border bg-surface-secondary/50 p-4">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Budget preview</span>
-            <span className={text-sm font-semibold {gaugeColor}}>{utilization}</span>
+            <span className={`text-sm font-semibold ${gaugeColor}`}>{utilization}</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-muted">
               <div
-                className={h-full rounded-full {gaugeBackground}}
-                style?{{ width: `${barWidth}%` }}
+                className={`h-full rounded-full ${gaugeBackground}`}
+                style={{ width: `${barWidth}%` }}
               />
             </div>
-            <Gauge className={h-5 w-5 {gaugeColor}} aria-hidden />
+            <Gauge className={`h-5 w-5 ${gaugeColor}`} aria-hidden />
           </div>
           <div className="mt-3 flex items-center gap-2">
             <span className="text-xs text-foreground-muted">Simulate usage:</span>
@@ -182,7 +182,7 @@ export function BudgetAlertSettings({
               {warnings.map((warningItem) => (
                 <li
                   key={warningItem.id}
-                  className={flex items-center justify-between gap-2 rounded-card border p-2 ${warningItem.severity === 'critical' ? 'border-rose-500/30 bg-rose-500/10' : 'border-amber-500/30 bg-amber-500/10'}}
+                  className={`flex items-center justify-between gap-2 rounded-card border p-2 ${warningItem.severity === 'critical' ? 'border-rose-500/30 bg-rose-500/10' : 'border-amber-500/30 bg-amber-500/10'}`}
                 >
                   <div className="flex items-center gap-2">
                     {warningItem.severity === 'critical' ? (
@@ -192,7 +192,7 @@ export function BudgetAlertSettings({
                     )}
                     <span className="text-xs font-medium text-foreground">{warningItem.department}</span>
                   </div>
-                  <span className={text-xs font-semibold ${warningItem.severity === 'critical' ? 'text-rose-500' : 'text-amber-500'}}>
+                  <span className={`text-xs font-semibold ${warningItem.severity === 'critical' ? 'text-rose-500' : 'text-amber-500'}`}>
                     {warningItem.used}% used
                   </span>
                 </li>
