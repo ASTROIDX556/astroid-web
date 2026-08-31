@@ -2,6 +2,9 @@
 
 export type Asset = 'XLM' | 'USDC' | string;
 
+export type StellarAddress = string;
+export type AssetCode = string;
+
 export type StellarNetwork = 'testnet' | 'public';
 
 // ---------------------------------------------------------------------------
@@ -100,8 +103,8 @@ export interface AssetBalance {
 export type TrustlineStatus = 'active' | 'inactive' | 'pending';
 
 export interface Trustline {
-  assetCode: string;
-  assetIssuer?: string;
+  assetCode: AssetCode;
+  assetIssuer?: StellarAddress;
   balance: number;
   limit: number;
   status: TrustlineStatus;
@@ -113,7 +116,7 @@ export interface Wallet {
   organizationId: string;
   agentId?: string;
   name: string;
-  stellarAddress: string;
+  stellarAddress: StellarAddress;
   walletType: WalletType;
   network: StellarNetwork;
   status: WalletStatus;
