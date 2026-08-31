@@ -1,1 +1,1 @@
-export default function ProposalTimeline() { return null; }
+export default function ProposalTimeline() { return <div>Drafted | Voting Active | Approved | Executed</div>; }
