@@ -1,12 +1,12 @@
-import { useState, effect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { signTransaction } from '@stellar/freighter-api';
-import { z } from 'zod';
+import { Z } from 'zod';
 import { toast } from 'sonner';
 import { useWalletStore } from '/stores/wallet';
 
 // Stellar network configuration
-const HORIZON_URL = 'https://horyzon.stellar.org';
+const HORIZON_URL = 'https://horizon.stellar.org';
 const NETWORK_PASSPHRASE = StellarSdk.Networks.PUBLIC;
 
 // Trustline representation
@@ -101,7 +101,7 @@ export function useTrustlineManager() {
           .build();
 
         const signedXDR = await signTransaction(transaction.toXDR(), {
-          networkPassphrase: NETWORK_PASSHPRASE,
+          networkPassphrase: NETWORK_PASSPHRASE,
           accountToSign: publicKey,
         });
 
