@@ -219,3 +219,28 @@ export const MOCK_BUDGET_ALERT_THRESHOLDS = {
   warning: 80,
   critical: 95,
 };
+
+export const MOCK_ACTIVE_BUDGET_ALERTS = [
+  {
+    id: 'alert-dept-ops',
+    departmentId: 'dept-ops',
+    departmentName: 'Treasury & Operations',
+    level: 'warning',
+    utilization: 82,
+    alertThresholds: {
+      warning: 60,
+      critical: 90,
+    },
+  },
+  {
+    id: 'alert-dept-ai',
+    departmentId: 'dept-ai',
+    departmentName: 'AI Research & Model Inference',
+    level: 'critical',
+    utilization: 92,
+    alertThresholds: {
+      warning: 70,
+      critical: 90,
+    },
+  },
+];
