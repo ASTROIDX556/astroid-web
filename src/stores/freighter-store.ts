@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import type { StateCreator } from 'zustand';
 import { Server, TransactionBuilder, Operation, Asset, Networks, BASE_FEE } from '@stellar/stellar-sdk';
+import { z } from 'zod';
 
 export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -11,6 +12,10 @@ export type AccountBalance = {
   asset_issuer?: string;
   asset_type: string;
   balance: string;
+  limit?: string;
+  is_authorized?: boolean;
+  is_authorized_to_maintain_liabilities?: boolean;
+  is_clawback_enabled?: boolean;
 };
 
 interface FreighterWalletState {
@@ -31,6 +36,10 @@ interface FreighterWalletState {
 }
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
+const ASSET_CODE_RE = /^[A-Za-z0-9]{1,12}$/;
+
+export const stellarPublicKeySchema = z.string().regex(STELLAR_ADDRESS_RE);
+export const assetCodeSchema = z.string().regex(ASSET_CODE_RE);
 
 const withTimeout = async <T>(promise: Promise<T>, ms = 15000): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -63,7 +72,7 @@ const getFreighter = async () =>
   };
 
 const isValidStellarAddress = (value: string | null | undefined): value is string =>
-  typeof value === 'string' && STELLAR_ADDRESS_RE.test(value);
+  typeof value === 'string' && stellarPublicKeySchema.safeParse(value).success;
 
 const resolveWalletAddress = (value: unknown): string | null => {
   if (typeof value === 'string') return isValidStellarAddress(value) ? value : null;
@@ -83,10 +92,10 @@ const resolveNetwork = (value: unknown): string | null => {
 };
 
 const getHorizonUrl = (network: string): string =>
-  network === 'mainnet' || network === 'public' || network === Networks.PUBLIC ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org';
+  network === 'mainnet' || network === 'public' || network === 'PUBLIC' || network === Networks.PUBLIC ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org';
 
 const getNetworkPassphrase = (network: string): string =>
-  network === 'mainnet' || network === 'public' || network === Networks.PUBLIC ? Networks.PUBLIC : Networks.TESTNET;
+  network === 'mainnet' || network === 'public' || network === 'PUBLIC' || network === Networks.PUBLIC ? Networks.PUBLIC : Networks.TESTNET;
 
 const getServer = (network: string): Server => new Server(getHorizonUrl(network));
 
@@ -192,7 +201,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
       return signedXdr;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Signature request failed.';
-      set({ error: message, status: 'disconnected' });
+      set({ error: message });
       throw error;
     }
   },
@@ -250,6 +259,12 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     const networkPassphrase = getNetworkPassphrase(network ?? 'testnet');
 
     try {
+      const assetCodeResult = assetCodeSchema.safeParse(assetCode);
+      const issuerResult = stellarPublicKeySchema.safeParse(issuer);
+      if (!assetCodeResult.success || !issuerResult.success) {
+        throw new Error('Invalid asset code or issuer address.');
+      }
+
       const account = await server.loadAccount(publicKey);
       const transaction = new TransactionBuilder(account, {
         fee: BASE_FEE,
