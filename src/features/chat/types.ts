@@ -7,6 +7,8 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   timestamp: string;
+  isStreaming?: boolean;
+  error?: string;
   structuredBriefing?: {
     totalDailySpend: number;
     currency: string;
@@ -22,4 +24,13 @@ export interface QuickPromptChip {
   label: string;
   promptText: string;
   iconName: IconName;
+}
+
+export interface ChatPanelProps {
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+  description?: string;
+  quickPrompts?: QuickPromptChip[];
+  onSendMessage: (message: string) => void;
 }
