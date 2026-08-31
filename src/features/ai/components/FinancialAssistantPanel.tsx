@@ -101,7 +101,7 @@ export const FinancialAssistantPanel: React.FC = () => {
       const assistantMsg: ChatMessage = {
         id: `asst-${Date.now()}`,
         role: 'assistant',
-        content: MOCK_ASSISTANT_RESPONSES.default,
+        content: MOCK_ASSISTANT_RESPONSES.default || 'Unable to generate response',
         timestamp: Date.now(),
         status: 'done',
         metadata: {
