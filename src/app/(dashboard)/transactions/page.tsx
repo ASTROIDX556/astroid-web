@@ -10,30 +10,9 @@ import { XdrSignatureStatus } from '@/features/transactions/XdrSignatureStatus';
 import { FeeOptimizationPanel } from '@/features/transactions/FeeOptimizationPanel';
 import { TransactionAuditToolbar } from '@/features/transactions/TransactionAuditToolbar';
 import { TransactionHistory } from '@/features/transactions/TransactionHistory';
-const Badge: React.FC<{ children: React.ReactNode; variant?: string; className?: string }> = ({
-  children,
-  className = '',
-}) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 ${className}`}>
-    {children}
-  </span>
-);
 
-const RiskBadge: React.FC<{ risk?: string; className?: string }> = ({ risk, className = '' }) => {
-  const colorMap: Record<string, string> = {
-    low: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-    medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
-    high: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-  };
-  const color = colorMap[risk?.toLowerCase() || ''] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${color} ${className}`}>
-      {risk || 'Unknown'}
-    </span>
-  );
-};
 
-export const columns: Column<Transaction>[] = [
+const columns: Column<Transaction>[] = [
   {
     header: 'Counterparty',
     cell: (t) => (
