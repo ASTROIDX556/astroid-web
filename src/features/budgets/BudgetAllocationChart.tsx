@@ -46,7 +46,7 @@ const DEFAULT_BUDGET_DATA: BudgetDepartmentData[] = [
   { id: '5', department: 'Security Audit Pool', allocated: 30000, consumed: 21000, currency: 'USDC' },
 ];
 
-const vestingFormSchema = z
+export const vestingFormSchema = z
   .object({
     frequency: z.enum(['daily', 'weekly', 'monthly']),
     amount: z.coerce.number().positive('Amount must be greater than zero.'),
@@ -77,7 +77,7 @@ const RECURRENCE_PER_MONTH: Record<VestingFrequency, number> = {
   monthly: 1,
 };
 
-function buildProjection(values: VestingFormValues): ProjectedBalancePoint[] {
+export function buildProjection(values: VestingFormValues): ProjectedBalancePoint[] {
   const points: ProjectedBalancePoint[] = [];
   const perMonth = values.amount * RECURRENCE_PER_MONTH[values.frequency];
   let balance = 0;
