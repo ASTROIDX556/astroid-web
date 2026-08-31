@@ -1,7 +1,8 @@
-import { motion } from 'framer-motion';
+import { motion, useSpring } from 'framer-motion';
+import { useEffect, useState, type ReactNode } from 'react';
 
 // Common entrance stagger for pages
-export const PageTransition = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+export const PageTransition = ({ children, className }: { children: ReactNode, className?: string }) => {
   return (
     <motion.div
       initial="hidden"
@@ -18,7 +19,7 @@ export const PageTransition = ({ children, className }: { children: React.ReactN
   );
 };
 
-export const StaggerContainer = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+export const StaggerContainer = ({ children, className }: { children: ReactNode, className?: string }) => {
   return (
     <motion.div
       initial="hidden"
@@ -39,7 +40,7 @@ export const StaggerContainer = ({ children, className }: { children: React.Reac
   );
 };
 
-export const StaggerItem = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+export const StaggerItem = ({ children, className }: { children: ReactNode, className?: string }) => {
   return (
     <motion.div
       variants={{
@@ -61,14 +62,11 @@ export const StaggerItem = ({ children, className }: { children: React.ReactNode
 };
 
 // Animated Number Counter
-import { useEffect, useState } from 'react';
-import { useSpring } from 'framer-motion';
-
 export const AnimatedNumber = ({ value, formatter }: { value: number, formatter: (val: number) => string }) => {
   const safeValue = typeof value === 'number' && isFinite(value) ? value : 0;
   const spring = useSpring(safeValue, { mass: 0.8, stiffness: 75, damping: 15 });
   const [display, setDisplay] = useState(() => {
-    try { return formatter(safeValue); } catch { return '—'; }
+    try { return formatter(safeValue); } catch { return '-'; }
   });
 
   useEffect(() => {
@@ -77,10 +75,28 @@ export const AnimatedNumber = ({ value, formatter }: { value: number, formatter:
 
   useEffect(() => {
     return spring.on('change', (latest) => {
-      try { setDisplay(formatter(latest)); } catch { setDisplay('—'); }
+      try { setDisplay(formatter(latest)); } catch { setDisplay('-'); }
     });
   }, [spring, formatter]);
 
   return <span>{display}</span>;
 };
 
+// Chat panel slide-in animation (e.g., from right edge)
+export const chatPanelVariants = {
+  hidden: { x: '100%', opacity: 0 },
+  show: { x: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } },
+  exit: { x: '100%', opacity: 0, transition: { duration: 0.2 } },
+};
+
+// Chat message entrance animation
+export const chatMessageVariants = {
+  hidden: { opacity: 0, y: 12, scale: 0.98 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.25, ease: 'easeOut' } },
+};
+
+// Container for stagger messages
+export const chatMessagesContainerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
+};
