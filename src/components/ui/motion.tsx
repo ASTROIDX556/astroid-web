@@ -8,10 +8,10 @@ export const PageTransition = ({ children, className }: { children: React.ReactN
       initial="hidden"
       animate="show"
       exit="hidden"
-      variants={
+      variants={{
         hidden: { opacity: 0, y: 10 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.05 } }
-      }
+        show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.05 } },
+      }}
       className={className}
     >
       {children}
@@ -24,15 +24,10 @@ export const StaggerContainer = ({ children, className }: { children: React.Reac
     <motion.div
       initial="hidden"
       animate="show"
-      variants={
+      variants={{
         hidden: { opacity: 0 },
-        show: {
-          opacity: 1,
-          transition: {
-            staggerChildren: 0.05,
-          },
-        },
-      }
+        show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+      }}
       className={className}
     >
       {children}
@@ -40,20 +35,13 @@ export const StaggerContainer = ({ children, className }: { children: React.Reac
   );
 };
 
-export const StaggerItem = ({children, className }: { children: React.ReactNode; className?: string }) => {
+export const StaggerItem = ({ children, className }: { children: React.ReactNode; className?: string }) => {
   return (
     <motion.div
-      variants={
+      variants={{
         hidden: { opacity: 0, y: 15 },
-        show: {
-          opacity: 1,
-          y: 0,
-          transition: {
-            duration: 0.4,
-            ease: [0.22, 1, 0.36, 1],
-          },
-        },
-      }
+        show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+      }}
       className={className}
     >
       {children}
@@ -62,7 +50,7 @@ export const StaggerItem = ({children, className }: { children: React.ReactNode;
 };
 
 // Animated Number Counter
-export const AnimatedNumber = ({value, formatter}: { value: number; formatter: (val: number) => string }) => {
+export const AnimatedNumber = ({ value, formatter }: { value: number; formatter: (val: number) => string }) => {
   const safeValue = typeof value === 'number' && isFinite(value) ? value : 0;
   const spring = useSpring(safeValue, { mass: 0.8, stiffness: 75, damping: 15 });
   const [display, setDisplay] = useState(() => {
@@ -96,4 +84,4 @@ export const StepTransition = ({ step, children, className }: { step: string | n
       {children}
     </motion.div>
   </AnimatePresence>
-};
+);
