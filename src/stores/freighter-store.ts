@@ -71,7 +71,16 @@ const resolveNetwork = (value: unknown): string | null => {
   return null;
 };
 
-const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
+const STELLAR_NETWORK_PASSPHRASES: Record<string, string | undefined> = {
+  TESTNET: 'Test SDF Network ; September 2015',
+  testnet: 'Test SDF Network ; September 2015',
+  PUBLIC: 'Public Global Stellar Network ; September 2015',
+  public: 'Public Global Stellar Network ; September 2015',
+  MAINNET: 'Public Global Stellar Network ; September 2015',
+  mainnet: 'Public Global Stellar Network ; September 2015',
+};
+
+const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   status: 'disconnected',
   isInstalled: false,
   publicKey: null,
@@ -157,7 +166,14 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
         throw new Error('Freighter does not expose transaction signing support.');
       }
 
-      const response = await withTimeout(freighter.signTransaction(xdr));
+      const { network } = get();
+      const networkPassphrase = network
+        ? STELLAR_NETWORK_PASSPHRASES[network] ?? network
+        : undefined;
+      const options: Record<string, unknown> | undefined = networkPassphrase
+        ? { networkPassphrase }
+        : undefined;
+      const response = await withTimeout(freighter.signTransaction(xdr, options));
       const signedXdr =
         typeof response === 'string'
           ? response
@@ -320,12 +336,22 @@ export function useFreighter(options: UseFreighterOptions = {}) {
     [mockEnabled, storeRequestSignature],
   );
 
+  const notification =
+    status === 'not-installed'
+      ? 'Freighter extension is not installed. Please install it to continue.'
+      : status === 'error'
+        ? error ?? 'Freighter connection error. Please try again.'
+        : status === 'disconnected' && publicKey
+          ? 'Freighter wallet disconnected.'
+          : null;
+
   return {
     status,
     isInstalled,
     publicKey,
     network,
     error,
+    notification,
     connect,
     disconnect,
     signTransaction,
