@@ -80,11 +80,15 @@ const RECURRENCE_PER_MONTH: Record<VestingFrequency, number> = {
 export function buildProjection(values: VestingFormValues): ProjectedBalancePoint[] {
   const points: ProjectedBalancePoint[] = [];
   const perMonth = values.amount * RECURRENCE_PER_MONTH[values.frequency];
+  let accrued = 0;
   let balance = 0;
 
   for (let month = 0; month <= 12; month += 1) {
-    if (month > 0 && month >= values.cliffPeriod) {
-      balance = Math.min(values.treasuryLimit, balance + perMonth);
+    if (month > 0) {
+      accrued = Math.min(values.treasuryLimit, accrued + perMonth);
+      if (month >= values.cliffPeriod) {
+        balance = Math.min(values.treasuryLimit, accrued);
+      }
     }
 
     points.push({
