@@ -2,8 +2,16 @@
 
 import { create } from 'zustand';
 import type { StateCreator } from 'zustand';
+import { Server, TransactionBuilder, Operation, Asset, Networks, BASE_FEE } from '@stellar/stellar-sdk';
 
 export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+
+export type AccountBalance = {
+  asset_code?: string;
+  asset_issuer?: string;
+  asset_type: string;
+  balance: string;
+};
 
 interface FreighterWalletState {
   status: FreighterConnectionStatus;
@@ -16,6 +24,10 @@ interface FreighterWalletState {
   disconnect: () => void;
   requestSignature: (xdr: string) => Promise<string>;
   hydrate: () => Promise<void>;
+  balances: AccountBalance[];
+  balancesLoading: boolean;
+  loadBalances: () => Promise<void>;
+  addTrustline: (params: { assetCode: string; issuer: string }) => Promise<void>;
 }
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
@@ -70,12 +82,22 @@ const resolveNetwork = (value: unknown): string | null => {
   return null;
 };
 
-const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
+const getHorizonUrl = (network: string): string =>
+  network === 'mainnet' || network === 'public' || network === Networks.PUBLIC ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org';
+
+const getNetworkPassphrase = (network: string): string =>
+  network === 'mainnet' || network === 'public' || network === Networks.PUBLIC ? Networks.PUBLIC : Networks.TESTNET;
+
+const getServer = (network: string): Server => new Server(getHorizonUrl(network));
+
+const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   status: 'disconnected',
   isInstalled: false,
   publicKey: null,
   network: null,
   error: null,
+  balances: [],
+  balancesLoading: false,
 
   checkExtension: async () => {
     try {
@@ -141,7 +163,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
   },
 
   disconnect: () => {
-    set({ status: 'disconnected', publicKey: null, network: null, error: null });
+    set({ status: 'disconnected', publicKey: null, network: null, error: null, balances: [], balancesLoading: false });
   },
 
   requestSignature: async (xdr: string) => {
@@ -197,6 +219,54 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
       network: network ?? 'testnet',
       error: null,
     });
+  },
+
+  loadBalances: async () => {
+    const { publicKey, network } = get();
+    if (!publicKey) {
+      set({ balances: [], balancesLoading: false });
+      return;
+    }
+
+    set({ balancesLoading: true, error: null });
+    try {
+      const server = getServer(network ?? 'testnet');
+      const account = await server.loadAccount(publicKey);
+      set({ balances: account.balances as AccountBalance[], balancesLoading: false });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load account balances.';
+      set({ balances: [], balancesLoading: false, error: message });
+      throw error;
+    }
+  },
+
+  addTrustline: async ({ assetCode, issuer }: { assetCode: string; issuer: string }) => {
+    const { publicKey, network, requestSignature } = get();
+    if (!publicKey) {
+      throw new Error('No wallet connected.');
+    }
+
+    const server = getServer(network ?? 'testnet');
+    const networkPassphrase = getNetworkPassphrase(network ?? 'testnet');
+
+    try {
+      const account = await server.loadAccount(publicKey);
+      const transaction = new TransactionBuilder(account, {
+        fee: BASE_FEE,
+        networkPassphrase,
+      })
+        .addOperation(Operation.changeTrust({ asset: new Asset(assetCode, issuer) }))
+        .setTimeout(30)
+        .build();
+
+      const signedXdr = await requestSignature(transaction.toXDR());
+      await server.submitTransaction(signedXdr);
+      await get().loadBalances();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to add trustline.';
+      set({ error: message });
+      throw error;
+    }
   },
 });
 
