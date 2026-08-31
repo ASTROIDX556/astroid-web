@@ -315,6 +315,199 @@ function PolicyForm({ policyId, defaultValues }: PolicyFormProps) {
       name: defaultValues?.name ?? '',
       description: defaultValues?.description ?? '',
       enabled: defaultValues?.enabled ?? true,
+      rules: defaultValues?.rules ?? [createDefaultRule('daily_limit')],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray<PolicyFormValues>({
+    control,
+    name: 'rules',
+  });
+
+  const onSubmit = (formData: PolicyFormValues) => {
+    // TODO: Wire up to actual policy update mutation
+    console.log('Policy ID:', policyId);
+    console.log('Policy form data:', formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="policy-name" className="mb-1.5 block text-2xs font-medium uppercase tracking-wide text-foreground-secondary">
+            Policy name
+          </label>
+          <Input
+            id="policy-name"
+            {...register('name')}
+            aria-invalid={!!errors.name}
+            aria-describedby={errors.name ? 'policy-name-error' : undefined}
+          />
+          {errors.name && (
+            <p id="policy-name-error" className="mt-1 text-xs text-red-500" role="alert">
+              {errors.name.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="policy-description" className="mb-1.5 block text-2xs font-medium uppercase tracking-wide text-foreground-secondary">
+            Description (optional)
+          </label>
+          <Input
+            id="policy-description"
+            {...register('description')}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Policy rules</h3>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => append(createDefaultRule('daily_limit'))}
+          >
+            Add rule
+          </Button>
+        </div>
+
+        {fields.map((field, index) => (
+          <Card key={field.id} className="border-border p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <select
+                  className="rounded-md border border-border bg-background px-2 py-1 text-sm focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
+                  {...register(`rules.${index}.ruleType`)}
+                  aria-label={`Rule ${index + 1} type`}
+                >
+                  {RULE_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-2xs text-foreground-secondary">Rule {index + 1}</span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => remove(index)}
+                aria-label={`Remove rule ${index + 1}`}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {field.ruleType === 'daily_limit' && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor={`rules.${index}.maxAmount`} className="mb-1.5 block text-2xs font-medium uppercase tracking-wide text-foreground-secondary">
+                    Max amount
+                  </label>
+                  <Input
+                    id={`rules.${index}.maxAmount`}
+                    type="number"
+                    min="0"
+                    step="any"
+                    {...register(`rules.${index}.maxAmount`)}
+                    className={errors.rules?.[index]?.maxAmount ? 'border-red-500 focus:ring-red-500' : ''}
+                    aria-invalid={!!errors.rules?.[index]?.maxAmount}
+                    aria-describedby={errors.rules?.[index]?.maxAmount ? `rules-${index}-maxAmount-error` : undefined}
+                  />
+                  {errors.rules?.[index]?.maxAmount && (
+                    <p id={`rules-${index}-maxAmount-error`} className="mt-1 text-xs text-red-500" role="alert">
+                      {errors.rules[index].maxAmount.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor={`rules.${index}.asset`} className="mb-1.5 block text-2xs font-medium uppercase tracking-wide text-foreground-secondary">
+                    Asset
+                  </label>
+                  <Input
+                    id={`rules.${index}.asset`}
+                    {...register(`rules.${index}.asset`)}
+                    placeholder="USDC"
+                    className={errors.rules?.[index]?.asset ? 'border-red-500 focus:ring-red-500' : ''}
+                    aria-invalid={!!errors.rules?.[index]?.asset}
+                    aria-describedby={errors.rules?.[index]?.asset ? `rules-${index}-asset-error` : undefined}
+                  />
+                  {errors.rules?.[index]?.asset && (
+                    <p id={`rules-${index}-asset-error`} className="mt-1 text-xs text-red-500" role="alert">
+                      {errors.rules[index].asset.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {field.ruleType === 'token_restriction' && (
+              <div>
+                <label htmlFor={`rules.${index}.allowedTokens`} className="mb-1.5 block text-2xs font-medium uppercase tracking-wide text-foreground-secondary">
+                  Allowed tokens (comma-separated)
+                </label>
+                <Input
+                  id={`rules.${index}.allowedTokens`}
+                  {...register(`rules.${index}.allowedTokens`)}
+                  placeholder="USDC, XLM"
+                  className={errors.rules?.[index]?.allowedTokens ? 'border-red-500 focus:ring-red-500' : ''}
+                  aria-invalid={!!errors.rules?.[index]?.allowedTokens}
+                  aria-describedby={errors.rules?.[index]?.allowedTokens ? `rules-${index}-allowedTokens-error` : undefined}
+                />
+                {errors.rules?.[index]?.allowedTokens && (
+                  <p id={`rules-${index}-allowedTokens-error`} className="mt-1 text-xs text-red-500" role="alert">
+                    {errors.rules[index].allowedTokens.message}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {field.ruleType === 'recipient_whitelist' && (
+              <div>
+                <label htmlFor={`rules.${index}.allowedRecipients`} className="mb-1.5 block text-2xs font-medium uppercase tracking-wide text-foreground-secondary">
+                  Allowed recipients (comma-separated Stellar addresses)
+                </label>
+                <Input
+                  id={`rules.${index}.allowedRecipients`}
+                  {...register(`rules.${index}.allowedRecipients`)}
+                  placeholder="G..., G..."
+                  className={errors.rules?.[index]?.allowedRecipients ? 'border-red-500 focus:ring-red-500' : ''}
+                  aria-invalid={!!errors.rules?.[index]?.allowedRecipients}
+                  aria-describedby={errors.rules?.[index]?.allowedRecipients ? `rules-${index}-allowedRecipients-error` : undefined}
+                />
+                {errors.rules?.[index]?.allowedRecipients && (
+                  <p id={`rules-${index}-allowedRecipients-error`} className="mt-1 text-xs text-red-500" role="alert">
+                    {errors.rules[index].allowedRecipients.message}
+                  </p>
+                )}
+              </div>
+            )}
+          </Card>
+        ))}
+
+        {errors.rules && typeof errors.rules.message === 'string' && (
+          <p className="text-xs text-red-500" role="alert">
+            {errors.rules.message}
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button type="submit" variant="gold" leftIcon={<Check className="h-4 w-4" />}>
+          Save policy
+        </Button>
+        <span className="text-2xs text-foreground-secondary">
+          {policyId ? `Editing policy ${policyId}` : 'Creating new policy'}
+        </span>
+      </div>
+    </form>
+  );
+}
+      enabled: defaultValues?.enabled ?? true,
       rules: defaultValues?.rules?.length ? defaultValues.rules : [createDefaultRule()],
     },
   });
