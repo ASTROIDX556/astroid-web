@@ -12,8 +12,9 @@ import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '@/types/domain';
 
 const defaultSuggestions = [
-  { label: 'Financial summary', prompt: 'Summarize treasury health and any anomaly alerts.' },
-  { label: 'Budget check', prompt: 'Check budget health and flag any risks before close.' },
+  { label: 'Financial briefing', prompt: "Provide today's financial briefing and treasury health summary." },
+  { label: 'Portfolio health', prompt: 'Summarize portfolio health and highlight any risk signals.' },
+  { label: 'Agent activity log', prompt: 'What did agents do recently? Summarize the latest activity log.' },
   { label: 'Stellar transfer explainer', prompt: 'Explain the most recent high-value Stellar transfer in plain English.' },
 ];
 
@@ -35,6 +36,7 @@ export function AssistantDrawer() {
   const [draft, setDraft] = useState('');
   const [seeded, setSeeded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -70,6 +72,10 @@ export function AssistantDrawer() {
   useEffect(() => {
     if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [open, messages]);
+
+  useEffect(() => {
+    if (open) composerRef.current?.focus();
+  }, [open]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -230,7 +236,7 @@ export function AssistantDrawer() {
                   )}
                 >
                   {msg.role === 'assistant' ? (
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    <ReactMarkdown>{msg.content || '_Thinking…_'}</ReactMarkdown>
                   ) : (
                     msg.content
                   )}
@@ -248,7 +254,10 @@ export function AssistantDrawer() {
                     <button
                       key={s.label}
                       type="button"
-                      onClick={() => setDraft(s.prompt)}
+                      onClick={() => {
+                        setDraft(s.prompt);
+                        composerRef.current?.focus();
+                      }}
                       className="group flex items-center justify-between gap-2 rounded-button border border-border bg-surface p-3 text-left text-xs text-foreground-secondary transition-all duration-fast hover:border-gold hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
                     >
                       <span className="truncate">{s.label}</span>
@@ -269,6 +278,7 @@ export function AssistantDrawer() {
           >
             <div className="flex items-end gap-2 rounded-button border border-border bg-surface px-3 py-2 focus-within:border-gold focus-within:ring-1 focus-within:ring-gold transition-colors">
               <textarea
+                ref={composerRef}
                 aria-label="Chat message"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
