@@ -18,7 +18,7 @@ const validAddressList = (value: string) =>
     .map((entry) => entry.trim())
     .filter(Boolean);
 
-const spendingPolicySchema = z.object({
+export const spendingPolicySchema = z.object({
   name: z.string().trim().min(3, 'Policy name must be at least 3 characters.'),
   rules: z.array(
     z.discriminatedUnion('type', [
@@ -45,19 +45,23 @@ const spendingPolicySchema = z.object({
           .trim()
           .refine((value) => {
             const addresses = validAddressList(value);
-            if (addresses.length === 0) return true;
+            if (addresses.length === 0) return false;
             return addresses.every((address) => isValidStellarPublicKey(address));
-          }, 'Whitelist addresses must be valid Stellar public keys.'),
+          }, 'At least one valid Stellar public key is required.'),
       }),
     ])
   ).min(1, 'At least one rule is required.'),
 });
 
-export type SpendingPolicyFormValues = z.infer<typeof spendingPolicySchema>;
+export type SpendingPolicy = z.infer<typeof spendingPolicySchema>;
+export type SpendingPolicyRule = SpendingPolicy['rules'][number];
+export type SpendingPolicyFormValues = SpendingPolicy;
 
 export function SpendingPolicyBuilder() {
   const form = useForm<SpendingPolicyFormValues>({
     resolver: zodResolver(spendingPolicySchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       name: 'Treasury burn guard',
       rules: [
