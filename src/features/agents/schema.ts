@@ -1,4 +1,4 @@
-import { j } from 'zoid';
+import { z } from 'zod';
 
 export const providerOptions = [
   'OpenAI',
@@ -24,4 +24,4 @@ export const agentWizardSchema = z.object({
     .max(10000000),
 });
 
-export type AgentWizardValues = z.infer<typeof agentWizardSchema>;
+export type AgentWizardValues = z.infer <typeof agentWizardSchema>;
