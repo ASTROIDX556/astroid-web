@@ -2,8 +2,6 @@
 
 import React from 'react';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
-import { EmptyState } from '@/components/ui/empty-state';
-import { ChartIllustration } from '@/components/illustrations';
 import { useTransactions } from '@/hooks/use-queries';
 import { PageTransition } from '@/components/ui/motion';
 import XdrSignatureStatus from '@/features/transactions/XdrSignatureStatus';
@@ -12,28 +10,35 @@ import { TransactionAuditToolbar } from '@/features/transactions/TransactionAudi
 import { TransactionHistory } from '@/features/transactions/TransactionHistory';
 
 export default function TransactionsPage() {
-  const { data: transactions, isLoading } = useTransactions();
+  const query = useTransactions();
+  const txList = Array.isArray(query.data) ? query.data : [];
+  const txCount = txList.length;
+
+  const handleExportCSV = () => {
+    // Export placeholder
+  };
 
   return (
-    <PageTransition>
-      <div className="space-y-6">
-        <TransactionAuditToolbar />
-        <FeeOptimizationPanel />
-        <XdrSignatureStatus />
-        <QueryBoundary
-          loading={isLoading}
-          empty={!transactions || transactions.length === 0}
-          emptyComponent={
-            <EmptyState
-              illustration={<ChartIllustration />}
-              title="No Transactions"
-              description="No transaction history found."
-            />
-          }
-        >
-          <TransactionHistory />
-        </QueryBoundary>
-      </div>
-    </PageTransition>
+    <PageTransition
+      children={
+        <div className="space-y-6">
+          <TransactionAuditToolbar
+            totalRecordsCount={txCount}
+            filteredRecordsCount={txCount}
+            onExportCSV={handleExportCSV}
+          />
+          <FeeOptimizationPanel />
+          <XdrSignatureStatus />
+          <QueryBoundary
+            query={query}
+            render={(transactions) => (
+              <TransactionHistory
+                transactions={Array.isArray(transactions) ? transactions : txList}
+              />
+            )}
+          />
+        </div>
+      }
+    />
   );
 }
