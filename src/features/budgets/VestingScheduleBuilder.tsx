@@ -24,9 +24,18 @@ import {
   type VestingScheduleFormValues,
 } from './schema';
 
+function getPeriodsPerMonth(frequency: VestingScheduleFormValues['frequency']) {
+  return frequency === 'daily' ? 30 : frequency === 'weekly' ? 4 : 1;
+}
+
+function getTotalReplenishment(values: VestingScheduleFormValues) {
+  const periodsPerMonth = getPeriodsPerMonth(values.frequency);
+  return values.amount * Math.max(0, 12 * periodsPerMonth - values.cliffPeriod);
+}
+
 function buildVestingProjection(values: VestingScheduleFormValues) {
   const months = 12;
-  const periodsPerMonth = values.frequency === 'daily' ? 30 : values.frequency === 'weekly' ? 4 : 1;
+  const periodsPerMonth = getPeriodsPerMonth(values.frequency);
   const data: Array<{ month: number; available: number }> = [];
 
   for (let month = 0; month <= months; month++) {
@@ -53,7 +62,15 @@ export default function VestingScheduleBuilder({
   const [savedSchedule, setSavedSchedule] = useState<VestingScheduleFormValues | null>(null);
 
   const form = useForm<VestingScheduleFormValues>({
-    resolver: zodResolver(vestingScheduleFormSchema),
+    resolver: zodResolver(
+      vestingScheduleFormSchema.refine(
+        (values) => getTotalReplenishment(values) <= values.treasuryLimit,
+        {
+          message: 'Projected replenishments exceed the treasury limit',
+          path: ['treasuryLimit'],
+        }
+      )
+    ),
     defaultValues: {
       frequency: 'monthly',
       amount: 1000,
@@ -77,7 +94,7 @@ export default function VestingScheduleBuilder({
   };
 
   const totalProjected = watchedValues.amount
-    ? watchedValues.amount * 12 * (watchedValues.frequency === 'daily' ? 30 : watchedValues.frequency === 'weekly' ? 4 : 1)
+    ? getTotalReplenishment(watchedValues as VestingScheduleFormValues)
     : 0;
 
   return (
@@ -201,7 +218,7 @@ export default function VestingScheduleBuilder({
                   width={70}
                 />
                 <Tooltip
-                  formatter={(value: number) => formatCurrency(value, 'USDC')}
+                  formatter={(value) => formatCurrency(Number(value), 'USDC')}
                   labelFormatter={(label) => `Month ${label}`}
                 />
                 <Line
