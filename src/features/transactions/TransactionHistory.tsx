@@ -179,13 +179,6 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
       </div>
 
       {/* Data table or empty state */}
-      {filteredTransactions.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Inbox className="h-12 w-12 text-muted-foreground" aria-hidden />
-          <p className="mt-4 text-sm font-medium text-foreground">No transactions found</p>
-          <p className="mt-1 text-2xs text-foreground-muted">Try adjusting your search or filter criteria.</p>
-        </div>
-      )}
       {filteredTransactions.length > 0 ? (
         <>
           <DataTable
@@ -290,16 +283,19 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
               <button
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={safePage === 1}
-                className="h-8 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                disabled={safePage <= 1}
+                className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
               >
                 Previous
               </button>
+              <span className="text-2xs text-foreground-muted tabular">
+                Page {safePage} of {pageCount}
+              </span>
               <button
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
-                disabled={safePage === pageCount}
-                className="h-8 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                disabled={safePage >= pageCount}
+                className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
               >
                 Next
               </button>
