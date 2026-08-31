@@ -1,6 +1,6 @@
 import type { DepartmentBudget } from './types';
 
-export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
+export const MOCK_DEPARTMENT_BUGGETS: DepartmentBudget[] = [
   {
     id: 'dept-eng',
     departmentName: 'Engineering & Infrastructure',
@@ -164,5 +164,89 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
       },
     ],
+  },
+];
+
+export const MOCK_BUDGET_SCHEDULES = [
+  {
+    id: 'schedule-1',
+    agentId: 'agt-soroban-relayer',
+    departmentId: 'dept-eng',
+    frequency: 'monthly',
+    amount: 100000,
+    cliff: 3,
+    duration: 12,
+  },
+  {
+    id: 'schedule-2',
+    agentId: 'agt-ci-bot',
+    departmentId: 'dept-eng',
+    frequency: 'monthly',
+    amount: 80000,
+    cliff: 3,
+    duration: 12,
+  },
+  {
+    id: 'schedule-3',
+    agentId: 'agt-infra-monitor',
+    departmentId: 'dept-eng',
+    frequency: 'monthly',
+    amount: 70000,
+    cliff: 3,
+    duration: 12,
+  },
+  {
+    id: 'schedule-4',
+    agentId: 'agt-amm-arb',
+    departmentId: 'dept-mktg',
+    frequency: 'monthly',
+    amount: 90000,
+    cliff: 3,
+    duration: 12,
+  },
+  {
+    id: 'schedule-5',
+    agentId: 'agt-campaign',
+    departmentId: 'dept-mktg',
+    frequency: 'monthly',
+    amount: 60000,
+    cliff: 3,
+    duration: 12,
+  },
+  {
+    id: 'schedule-6',
+    agentId: 'agt-sweep-bot',
+    departmentId: 'dept-ops',
+    frequency: 'monthly',
+    amount: 300000,
+    cliff: 3,
+    duration: 12,
+  },
+  {
+    id: 'schedule-7',
+    agentId: 'agt-payroll',
+    departmentId: 'dept-ops',
+    frequency: 'monthly',
+    amount: 200000,
+    cliff: 3,
+    duration: 12,
+  },
+  {
+    id: 'schedule-8',
+    agentId: 'agt-nim-briefing',
+    departmentId: 'dept-ai',
+    frequency: 'monthly',
+    amount: 60000,
+    cliff: 3,
+    duration: 12,
+  },
+  {
+    id: 'schedule-9',
+    agentId: 'agt-risk-eval',
+    departmentId: 'dept-ai',
+    frequency: 'monthly',
+    amount: 40000,
+    cliff: 3,
+    duration: 12,
   },
 ];
