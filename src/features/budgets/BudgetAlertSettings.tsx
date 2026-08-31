@@ -57,15 +57,15 @@ export function BudgetAlertSettings({
   };
 
   const gaugeColor = useMemo(() => {
-    if (utilization >= critical) return 'text-rose-500';
-    if (utilization >= warning) return 'text-amber-500';
-    return 'text-emerald-500';
+    if (utilization >= critical) return 'text-destructive';
+    if (utilization >= warning) return 'text-warning';
+    return 'text-success';
   }, [utilization, warning, critical]);
 
   const gaugeBackground = useMemo(() => {
-    if (utilization >= critical) return 'bg-rose-500';
-    if (utilization >= warning) return 'bg-amber-500';
-    return 'bg-emerald-500';
+    if (utilization >= critical) return 'bg-destructive';
+    if (utilization >= warning) return 'bg-warning';
+    return 'bg-success';
   }, [utilization, warning, critical]);
 
   const barWidth = Math.min(100, Math.max(0, utilization));
@@ -90,7 +90,7 @@ export function BudgetAlertSettings({
           <div className="rounded-card border border-border p-3">
             <div className="flex items-center justify-between gap-3">
               <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-                <Gauge className="h-4 w-4 text-amber-500" aria-hidden />
+                <Gauge className="h-4 w-4 text-warning" aria-hidden />
                 Warning threshold
               </span>
               <span className="text-xs font-semibold text-foreground">{warning}</span>
@@ -102,7 +102,7 @@ export function BudgetAlertSettings({
               step={1}
               value={warning}
               onChange={(e) => handleWarningChange(Number(e.target.value))}
-              className="mt-3 h-2 w-full accent-amber-500"
+              className="mt-3 h-2 w-full accent-warning"
               aria-label="Warning threshold"
             />
           </div>
@@ -110,7 +110,7 @@ export function BudgetAlertSettings({
           <div className="rounded-card border border-border p-3">
             <div className="flex items-center justify-between gap-3">
               <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-                <Gauge className="h-4 w-4 text-rose-500" aria-hidden />
+                <Gauge className="h-4 w-4 text-destructive" aria-hidden />
                 Critical threshold
               </span>
               <span className="text-xs font-semibold text-foreground">{critical}</span>
@@ -122,7 +122,7 @@ export function BudgetAlertSettings({
               step={1}
               value={critical}
               onChange={(e) => handleCriticalChange(Number(e.target.value))}
-              className="mt-3 h-2 w-full accent-rose-500"
+              className="mt-3 h-2 w-full accent-destructive"
               aria-label="Critical threshold"
             />
           </div>
@@ -182,17 +182,17 @@ export function BudgetAlertSettings({
               {warnings.map((warningItem) => (
                 <li
                   key={warningItem.id}
-                  className={`flex items-center justify-between gap-2 rounded-card border p-2 ${warningItem.severity === 'critical' ? 'border-rose-500/30 bg-rose-500/10' : 'border-amber-500/30 bg-amber-500/10'}`}
+                  className={`flex items-center justify-between gap-2 rounded-card border p-2 ${warningItem.severity === 'critical' ? 'border-destructive/30 bg-destructive/10' : 'border-warning/30 bg-warning/10'}`}
                 >
                   <div className="flex items-center gap-2">
                     {warningItem.severity === 'critical' ? (
-                      <AlertOctagon className="h-3.5 w-3.5 text-rose-500" aria-hidden />
+                      <AlertOctagon className="h-3.5 w-3.5 text-destructive" aria-hidden />
                     ) : (
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+                      <AlertTriangle className="h-3.5 w-3.5 text-warning" aria-hidden />
                     )}
                     <span className="text-xs font-medium text-foreground">{warningItem.department}</span>
                   </div>
-                  <span className={`text-xs font-semibold ${warningItem.severity === 'critical' ? 'text-rose-500' : 'text-amber-500'}`}>
+                  <span className={`text-xs font-semibold ${warningItem.severity === 'critical' ? 'text-destructive' : 'text-warning'}`}>
                     {warningItem.used}% used
                   </span>
                 </li>
