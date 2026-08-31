@@ -16,6 +16,7 @@ import { formatCurrency, formatNumber, formatDateTime } from '@/lib/format';
 import type { PolicySimulationResult } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { TransactionSimulator } from '@/features/policies/TransactionSimulator';
+import { PolicyForm } from '@/features/policies/components/PolicyForm';
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -39,6 +40,7 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
   const policy = usePolicy(params.id);
   const sim = usePolicySimulation();
   const [amount, setAmount] = useState(1000);
+  const [isPolicyBuilderOpen, setIsPolicyBuilderOpen] = useState(false);
 
   return (
     <PageTransition className="space-y-8">
@@ -67,9 +69,20 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                 title={data.name}
                 description={data.description}
                 actions={
-                  <Badge variant={data.enabled ? 'success' : 'neutral'} dot>
-                    {data.enabled ? 'Enabled' : 'Disabled'}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={data.enabled ? 'success' : 'neutral'} dot>
+                      {data.enabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsPolicyBuilderOpen((open) => !open)}
+                      aria-expanded={isPolicyBuilderOpen}
+                      leftIcon={<ShieldAlert className="h-4 w-4" aria-hidden />}
+                    >
+                      {isPolicyBuilderOpen ? 'Close builder' : 'Policy builder'}
+                    </Button>
+                  </div>
                 }
               />
 
@@ -109,6 +122,15 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                         </KeyValue>
                       ))}
                     </dl>
+                  </Card>
+                </div>
+              )}
+
+              {isPolicyBuilderOpen && (
+                <div className="space-y-4">
+                  <SectionLabel>Policy builder</SectionLabel>
+                  <Card className="p-5">
+                    <PolicyForm />
                   </Card>
                 </div>
               )}
