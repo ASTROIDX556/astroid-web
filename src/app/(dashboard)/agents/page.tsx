@@ -12,7 +12,7 @@ import { SkeletonCard } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AgentClusterIllustration } from '@/components/illustrations';
 import { useAgents } from '@/hooks/use-queries';
-import { agentStatus } from '@/lib/status';
+import { agentStatus, riskFor } from '@/lib/status';
 import { formatCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { AgentTemplateWizard } from '@/features/agents/components/AgentTemplateWizard';
@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-default function AgentsPage() {
+export default function AgentsPage() {
   const agents = useAgents();
 
   return (
@@ -193,17 +193,17 @@ function AgentCreationWizard() {
       <!-- Stepper -->
       <div className="flex items-center gap-2 mb-6">
         {steps.map((s, i) => (
-          <div key={"s.title} className="flex items-center gap-2">
+          <div key={s.title} className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => i < step && setStep(i)}
-              className={flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
                 i === step ? 'bg-foreground text-background' : i < step ? 'bg-gold-soft text-gold-strong' : 'bg-muted text-foreground-muted'
-              }}
+              }`}
             >
               {i < step ? '✓' : i + 1}
             </button>
-            <span className={text-xs ${i === step ? 'text-foreground' : 'text-foreground-muted'}>{s.title}</span>
+            <span className={`text-xs ${i === step ? 'text-foreground' : 'text-foreground-muted'}`}>{s.title}</span>
           </div>
         ))}
       </div>
@@ -211,10 +211,10 @@ function AgentCreationWizard() {
       <AnimatePresence mode="wait">
         <motion.div
           key={step}
-          initial={ opacity: 0, x: 40 }
-          animate={ opacity: 1, x: 0 }
-          exit={ opacity: 0, x: -40 }
-          transition={ duration: 0.2 }
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -40 }}
+          transition={{ duration: 0.2 }}
         >
           {step === 0 && (
             <div className="space-y-4">
@@ -232,7 +232,7 @@ function AgentCreationWizard() {
                 <Input id="department" name="department" value={formData.department} onChange={handleChange} placeholder="e.g. Marketing" />
               </div>
             </div>
-          )
+          )}
           {step === 1 && (
             <div className="space-y-4">
               <div>
@@ -252,7 +252,7 @@ function AgentCreationWizard() {
                 <Input id="temperature" name="temperature" type="number" min="0" max="1" step="0.1" value={formData.temperature} onChange={handleChange} />
               </div>
             </div>
-          )
+          )}
           {step === 2 && (
             <div className="space-y-4">
               <div>
@@ -263,16 +263,36 @@ function AgentCreationWizard() {
               <div>
                 <Label htmlFor="transactionLimit">Transaction Limit (USDC)</Label>
                 <Input id="transactionLimit" name="transactionLimit" type="number" value={formData.transactionLimit} onChange={handleChange} placeholder="e.g. 100" />
-                {errors.transactionLimit && <p className="mt-1 text-xs ltext-red-500">{errors.transactionLimit}</p>}
+                {errors.transactionLimit && <p className="mt-1 text-xs text-red-500">{errors.transactionLimit}</p>}
               </div>
             </div>
-          )
+          )}
           {step === 3 && (
             <div className="space-y-2 text-sm">
               <h3 className="font-semibold">Review and confirm</h3>
               <p><span className="font-medium">Name:</span> {formData.name}</p>
               <p><span className="font-medium">Description:</span> {formData.description || '—'}</p>
               <p><span className="font-medium">Department:</span> {formData.department || '—'}</p>
+              <p><span className="font-medium">Provider:</span> {formData.provider}</p>
+              <p><span className="font-medium">Model:</span> {formData.model}</p>
+              <p><span className="font-medium">Temperature:</span> {formData.temperature}</p>
+              <p><span className="font-medium">Daily Limit:</span> {formData.dailyLimit || '—'}</p>
+              <p><span className="font-medium">Transaction Limit:</span> {formData.transactionLimit || '—'}</p>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+      <div className="mt-6 flex justify-between">
+        <Button variant="outline" onClick={back} disabled={step === 0}>Back</Button>
+        {step === steps.length - 1 ? (
+          <Button onClick={handleSubmit}>Create Agent</Button>
+        ) : (
+          <Button onClick={next}>Next</Button>
+        )}
+      </div>
+    </Card>
+  );
+}'}</p>
               <p><span className="font-medium">Provider:</span> {formData.provider}</p>
               <p><span className="font-medium">Model:</span> {formData.model}</p>
               <p><span className="font-medium">Temperature:</span> {formData.temperature}</p>
