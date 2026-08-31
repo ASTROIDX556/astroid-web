@@ -72,8 +72,8 @@ interface ProjectedBalancePoint {
 }
 
 const RECURRENCE_PER_MONTH: Record<VestingFrequency, number> = {
-  daily: 30,
-  weekly: 4,
+  daily: 365 / 12,
+  weekly: 52 / 12,
   monthly: 1,
 };
 
@@ -83,7 +83,7 @@ export function buildProjection(values: VestingFormValues): ProjectedBalancePoin
   let balance = 0;
 
   for (let month = 0; month <= 12; month += 1) {
-    if (month > values.cliffPeriod) {
+    if (month > 0 && month >= values.cliffPeriod) {
       balance = Math.min(values.treasuryLimit, balance + perMonth);
     }
 
@@ -388,6 +388,7 @@ export function VestingScheduleBuilder({ className = '' }: { className?: string 
     formState: { errors },
   } = useForm<VestingFormValues>({
     resolver: zodResolver(vestingFormSchema),
+    mode: 'onChange',
     defaultValues: {
       frequency: 'monthly',
       amount: 5000,
