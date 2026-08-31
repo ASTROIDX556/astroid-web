@@ -44,8 +44,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {...props}
       />
     );
-  },
-);
+  }, );
 Input.displayName = 'Input';
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextareaElement> {
@@ -56,7 +55,7 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextarea
 
 export const Textarea = forwardRef<HTMLTextareaElement, TextareaProps>(
   { className, invalid, autoResize, maxHeight = 200, ...props }, ref => {
-    const internalRef = useRef<HTMLTextareaElement | null>(null);
+    const internalRef = useRef<HTMLTextareaElement|(null);
 
     const setRefs = (node: HTMLTextareaElement | null) => {
       internalRef.current = node;
@@ -87,16 +86,13 @@ export const Textarea = forwardRef<HTMLTextareaElement, TextareaProps>(
         {...props}
       />
     );
-  },
-);
+  }, );
 Textarea.displayName = 'Textarea';
 
 export const Select = forwardRef<
   HTMLSelectElement,
   React.SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }
->((
-  { className, invalid, children, ...props },
-ref) => (
+>(({ className, invalid, children, ...props }, ref) => (
   <select
     ref={ref}
     className={cn(fieldBase, 'h-10 pr-8', invalid && 'border-danger', className)}
@@ -105,7 +101,7 @@ ref) => (
   >
     {children}
   </select>
-);
+));
 Select.displayName = 'Select';
 
 export interface FormFieldProps {
