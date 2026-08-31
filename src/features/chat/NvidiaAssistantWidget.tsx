@@ -8,6 +8,7 @@ import {
   Zap,
   Maximize2,
   Minimize2,
+  Send,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -169,7 +170,9 @@ export function NvidiaAssistantWidget() {
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="grid h-7 w-7 place-items-center rounded-button text-foreground-muted hover:text-foreground hover:bg-surface-secondary transition-colors"
+            className="grid h-7 w-7 place-items-center rounded-button text-foreground-muted transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+            aria-label={isExpanded ? 'Collapse panel' : 'Expand panel'}
+            aria-expanded={isExpanded}
             title={isExpanded ? 'Collapse panel' : 'Expand panel'}
           >
             {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
@@ -186,7 +189,7 @@ export function NvidiaAssistantWidget() {
             type="button"
             onClick={() => setInputText(chip.promptText)}
             disabled={isStreaming}
-            className="flex items-center gap-1.5 rounded-button border border-border bg-surface-secondary px-2.5 py-1 text-2xs text-foreground-secondary hover:border-gold hover:text-foreground transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-button border border-border bg-surface-secondary px-2.5 py-1 text-2xs text-foreground-secondary hover:border-gold hover:text-foreground transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
           >
             <Zap className="h-3 w-3 text-gold" />
             <span>{chip.label}</span>
@@ -197,6 +200,8 @@ export function NvidiaAssistantWidget() {
       {/* Chat Messages Stream */}
       <div
         className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs"
+        role="log"
+        aria-label="Chat messages"
         aria-live="polite"
         aria-relevant="additions"
       >
@@ -302,13 +307,15 @@ export function NvidiaAssistantWidget() {
             onKeyDown={handleKeyDown}
             placeholder="Ask Nvidia NIM Assistant (e.g. 'Summarize daily agent spending')... (Enter to send)"
             disabled={isStreaming}
-            className="w-full resize-none rounded-button border border-border bg-surface pl-3 pr-12 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
+            className="w-full resize-none rounded-button border border-border bg-surface pl-3 pr-12 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+            aria-label="Message input"
           />
           <button
             type="button"
             onClick={() => handleSendMessage()}
             disabled={!inputText.trim() || isStreaming}
-            className="absolute right-2 grid h-7 w-7 place-items-center rounded-button bg-gold text-surface-dark disabled:opacity-40 transition-opacity"
+            className="absolute right-2 grid h-7 w-7 place-items-center rounded-button bg-gold text-surface-dark disabled:opacity-40 transition-opacity focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+            aria-label="Send message"
             title="Send message"
           >
             <Send className="h-3.5 w-3.5" />
