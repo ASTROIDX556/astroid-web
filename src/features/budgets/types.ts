@@ -1,4 +1,4 @@
-export type AssetCode = 'XLM' | 'USDC' | 'EURC' | 'ASTRO'';
+export type AssetCode = 'XLM' | 'USDC' | 'EURC' | 'ASTRO';
 
 export interface LedgerEntry {
   id: string;
