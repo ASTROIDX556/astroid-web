@@ -1,6 +1,6 @@
 import type { DepartmentBudget } from './types';
 
-export const MOCK_DEPARTMENT_BuDGETS: DepartmentBudget[] = [
+export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
   {
     id: 'dept-eng',
     departmentName: 'Engineering & Infrastructure',
