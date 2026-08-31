@@ -68,7 +68,8 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
       if (query) {
         const assetMatch = tx.asset.toLowerCase().includes(query);
         const addressMatch = tx.counterpartyAddress.toLowerCase().includes(query);
-        if (!assetMatch && !addressMatch) return false;
+        const publicKeyMatch = tx.publicKey ? tx.publicKey.toLowerCase().includes(query) : false;
+        if (!assetMatch && !addressMatch && !publicKeyMatch) return false;
       }
 
       return true;
@@ -82,6 +83,10 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
     const start = (safePage - 1) * pageSize;
     return filteredTransactions.slice(start, start + pageSize);
   }, [filteredTransactions, safePage, pageSize]);
+
+  useEffect(() => {
+    if (currentPage > pageCount) setCurrentPage(pageCount);
+  }, [currentPage, pageCount]);
 
   if (isLoading) {
     return (
@@ -174,6 +179,13 @@ export function TransactionHistory({ transactions, isLoading = false }: { transa
       </div>
 
       {/* Data table or empty state */}
+      {filteredTransactions.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Inbox className="h-12 w-12 text-muted-foreground" aria-hidden />
+          <p className="mt-4 text-sm font-medium text-foreground">No transactions found</p>
+          <p className="mt-1 text-2xs text-foreground-muted">Try adjusting your search or filter criteria.</p>
+        </div>
+      )}
       {filteredTransactions.length > 0 ? (
         <>
           <DataTable
