@@ -115,7 +115,7 @@ function Gauge({ percent = 0, label, spent, allocated, currency }: BudgetMeterPr
           <circle
             cx="70"
             cy="70"
-            r=radius
+            r={radius}
             fill="none"
             stroke={colors.stroke}
             strokeWidth="10"
@@ -339,7 +339,7 @@ export function BudgetWarningsCard({
             <p className="text-2xs font-semibold uppercase tracking-[0.2em] text-foreground-muted">
               Active warnings
             </p>
-            <h3 className="mt-1 font-display text-xl justify-between">Department budgets</h3>
+            <h3 className="mt-1 font-display text-xl">Department budgets</h3>
           </div>
           <Badge variant="outline" size="sm">
             {warnings.length}
