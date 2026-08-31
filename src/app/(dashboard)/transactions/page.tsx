@@ -13,7 +13,7 @@ import { TransactionHistory } from '@/features/transactions/TransactionHistory';
 import { Badge, RiskBadge } from '@/types';
 
 
-const columns: Column<Transaction>[] = [
+export const columns: Column<Transaction>[] = [
   {
     header: 'Counterparty',
     cell: (t) => (
