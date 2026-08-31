@@ -1,4 +1,4 @@
-import { d from 'zod';
+import { z } from 'zod';
 
 export const ruleFieldOptions = [
   'Transaction Amount',
@@ -21,7 +21,6 @@ export type RuleField = (typeof ruleFieldOptions)[number];
 export type RuleOperator = (typeof ruleOperatorOptions)[number];
 export type RuleAction = (typeof ruleActionOptions)[number];
 
-// Define which operators are valid for each field type
 const fieldOperatorMap: Record<RuleField, readonly RuleOperator[]> = {
   'Transaction Amount': ['equals', 'greater_than', 'less_than'],
   'Asset Identifier': ['equals', 'contains', 'in_whitelist'],
@@ -29,11 +28,15 @@ const fieldOperatorMap: Record<RuleField, readonly RuleOperator[]> = {
   'Approved Account Whitelist': ['equals', 'contains', 'in_whitelist'],
 };
 
-// Stellar public key format: G followed by 55 base32 chars (without 0, O, I, l)
-const stellarAddressRegex = /^G[1-9A-HJ-NP-Za-kz-z]{55}$/;
+export function getOperatorsForField(field: RuleField): readonly RuleOperator[] {
+  return fieldOperatorMap[field];
+}
 
-// Stellar asset identifier: "CODE:ISSUER" or native "XLM"
-const assetIdentifierRegex = /^(XLM|[A-Za-z0-9]{1,12}:[A-Za-z0-9]{1,12})$/;
+// Stellar public key format: uppercase G followed by 55 base32 chars.
+// Excludes 0, 1, I, O to avoid ambiguity.
+const stellarPublicKeyRegex = /^G[A-HJ-NP-Z2-7]{55}$/;
+
+const assetIdentifierRegex = /^(?:XLM|[A-Za-z0-9]{1,12}:G[A-HJ-NP-Z2-7]{55})$/;
 
 export const ruleSchema = z.object({
   field: z.enum(ruleFieldOptions),
@@ -41,7 +44,6 @@ export const ruleSchema = z.object({
   value: z.string().min(1, 'Value is required'),
   action: z.enum(ruleActionOptions),
 }).superRefine((val, ctx) => {
-  // Ensure the operator is valid for the selected field
   const allowedOperators = fieldOperatorMap[val.field];
   if (!allowedOperators.includes(val.operator)) {
     ctx.addIssue({
@@ -51,7 +53,6 @@ export const ruleSchema = z.object({
     });
   }
 
-  // Field-specific value validation
   if (val.field === 'Transaction Amount') {
     if (!/^\d*\.?\d+$/.test(val.value) || Number(val.value) < 0) {
       ctx.addIssue({
@@ -75,11 +76,11 @@ export const ruleSchema = z.object({
   if (val.field === 'Destination Target' || val.field === 'Approved Account Whitelist') {
     const addresses = val.field === 'Approved Account Whitelist' ? val.value.split(',').map(s => s.trim()) : [val.value];
     for (let i = 0; i < addresses.length; i++) {
-      if (!stellarAddressRegex.test(addresses[i])) {
+      if (addresses[i].length === 0 || !stellarPublicKeyRegex.test(addresses[i])) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['value'],
-          message: `Invalid Stellar address${addresses.length > 1 ? ` at position ${i + 1}` : '} ,
+          message: `Invalid Stellar address${addresses.length > 1 ? ` at position ${i + 1}` : ''}`,
         });
         break;
       }
@@ -98,25 +99,4 @@ export const defaultRule: PolicyRule = {
 
 export function validateRule(input: Partial<PolicyRule>) {
   return ruleSchema.safeParse(input);
-}
-
-export const policySchema = z.object({
-  name: z.string().min(1, 'Policy name is required'),
-  description: z.string().optional(),
-  enabled: z.boolean().default(true),
-  rules: z.array(ruleSchema).min(1, 'At least one rule is required'),
-});
-
-export type Policy = z.infer<typeof policySchema>;
-export type PolicyInput = z.input<typeof policySchema>;
-
-export const defaultPolicy: Policy = {
-  name: '',
-  description: '',
-  enabled: true,
-  rules: [defaultRule],
-};
-
-export function validatePolicy(input: Partial<Policy>) {
-  return policySchema.safeParse(input);
 }
