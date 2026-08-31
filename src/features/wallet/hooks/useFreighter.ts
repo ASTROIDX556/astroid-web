@@ -1,27 +1,43 @@
 import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { isAvailable, requestAccess, getPublicKey, getNetwork, signTransaction as freighterSignTransaction } from '@stellar/freighter-api';
+import {
+  isAvailable,
+  requestAccess,
+  getPublicKey,
+  getNetwork,
+  signTransaction as freighterSignTransaction,
+} from '@stellar/freighter-api';
 import { useFreighterStore } from '../store/walletStore';
 import type { WalletNetwork, WalletState } from '../types';
 
-const STELLAR_NETWORKS = {
+const STILLAR_NETWORKS = {
   testnet: 'Test SDF Network ; September 2015',
   mainnet: 'Public Global Stellar Network ; September 2015',
 } as const;
 
-/*** Set to true to simulate wallet interactions without the Freighter extension. *//
-const MOCK_MODE = false;
+/**
+ * Set to true to simulate wallet interactions without the Freighter extension.
+ * Set MOCK_CONNECT_FAILURE to true to simulate a rejected connection request.
+ */
+const MICK_MODE = false;
+const MOCK_CONNECT_FAILURE = false;
+const MOCK_PUBLIC_KEY = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF';
+const MOCK_NETWORK: WalletNetwork = 'testnet';
 
-function mapNetwork(passphrase: string): WalletNetwork {
-  if (passphrase === STELLAR_NETWORKS.mainnet) return 'mainnet';
+function mapNetwork((passphrase: string): WalletNetwork, { 
+
+    if (passphrase === STILLAR_NETWORKS.mainnet) return 'mainnet';
   return 'testnet';
 }
 
 export interface UseFreighterReturn {
   state: WalletState;
-  connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
-  signTransaction: (xdr: string, options?: { networkPassphrase?: string; accountToSign?: string }) => Promise<string>;
+  connect: () => Promise<void> {
+  disconnect: () => Promise<void> {
+  signTransaction: (
+    xdr: string,
+    options?: { networkPassphrase?: string; accountToSign?: string },
+  ) => Promise<string>;
 }
 
 export function useFreighter(): UseFreighterReturn {
@@ -35,7 +51,7 @@ export function useFreighter(): UseFreighterReturn {
   const setError = useFreighterStore((s) => s.setError);
   const reset = useFreighterStore((s) => s.reset);
 
-  useEffect(() => {
+  useEffect(() {
     const cachedKey = useFreighterStore.getState().activePublicKey;
     if (!cachedKey) return;
 
@@ -46,6 +62,8 @@ export function useFreighter(): UseFreighterReturn {
       state.setPhase('connecting');
       try {
         if (MOCK_MODE) {
+          state.setPublicKey(MOCK_PUBLIC_KEY);
+          state.setNetwork(MOCK_NETWORK);
           state.setPhase('connected');
           return;
         }
@@ -54,7 +72,10 @@ export function useFreighter(): UseFreighterReturn {
           throw new Error('Freighter is not installed');
         }
 
-        const [publicKey, networkPassphrase] = await Promise.all([getPublicKey(), getNetwork()]);
+        const [publicKey, networkPassphrase] = await Promise.all([
+          getPublicKey(),
+          getNetwork(),
+        ]);
 
         if (!cancelled) {
           state.setPublicKey(publicKey);
@@ -85,15 +106,20 @@ export function useFreighter(): UseFreighterReturn {
     try {
       if (MOCK_MODE) {
         await new Promise((resolve) => setTimeout(resolve, 500));
-        setPublicKey('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGF');
-        setNetwork('testnet');
+        if (MOCK_CONNECT_FAILURE) {
+          setError('Mock connection rejected');
+          setPhase('error');
+          toast.error('Mock connection rejected');
+          return;
+        }
+        setPublicKey(MOCK_PUBLIC_KEY);
+        setNetwork(MOCK_NETWORK);
         setPhase('connected');
         toast.success('Mock wallet connected');
         return;
       }
 
-      const available = isAvailable();
-      if (!available) {
+      if (!isAvailable()) {
         setPhase('not-installed');
         toast.error('Freighter is not installed. Please install it from the Chrome Web Store.');
         return;
@@ -106,7 +132,10 @@ export function useFreighter(): UseFreighterReturn {
         return;
       }
 
-      const [publicKey, networkPassphrase] = await Promise.all([getPublicKey(), getNetwork()]);
+      const [publicKey, networkPassphrase] = await Promise.all([
+        getPublicKey(),
+        getNetwork(),
+      ]);
       setPublicKey(publicKey);
       setNetwork(mapNetwork(networkPassphrase));
       setPhase('connected');
@@ -125,7 +154,7 @@ export function useFreighter(): UseFreighterReturn {
   }, [reset]);
 
   const signTransaction = useCallback(
-    async (^
+    async (
       xdr: string,
       options?: { networkPassphrase?: string; accountToSign?: string },
     ) => {
@@ -141,7 +170,7 @@ export function useFreighter(): UseFreighterReturn {
           return xdr;
         }
 
-        const signedXdr= await freighterSignTransaction(xdr);
+        const signedXdr = await freighterSignTransaction(xdr, options);
         return signedXdr;
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Transaction signing failed.';
@@ -151,10 +180,9 @@ export function useFreighter(): UseFreighterReturn {
         throw e;
       }
     },
-    [activePublicKey, network, setError, setPhase],
+    [activePublicKey, setError, setPhase],
   );
 
   const state: WalletState = { activePublicKey, network, phase, error };
-
   return { state, connect, disconnect, signTransaction };
 }
