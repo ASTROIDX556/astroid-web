@@ -92,7 +92,8 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
       const freighter = await getFreighter();
       const connectedResult = typeof freighter.isConnected === 'function' ? await withTimeout(freighter.isConnected()) : false;
       const connected = typeof connectedResult === 'boolean' ? connectedResult : Boolean((connectedResult as { isConnected?: boolean } | undefined)?.isConnected);
-      set({ isInstalled: typeof freighter.isConnected === 'function', status: typeof freighter.isConnected === 'function' ? (connected ? 'connected' : 'disconnected') : 'not-installed' });
+      const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
+      set({ isInstalled: installed, status: installed ? (connected ? 'connected' : 'disconnected') : 'not-installed' });
       return Boolean(connected);
     } catch {
       set({ isInstalled: false, status: 'not-installed', error: 'Freighter extension is not installed or unavailable.' });
@@ -106,7 +107,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     try {
       const freighter = await getFreighter();
       const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
-      if (!installed && typeof freighter.isConnected !== 'function') {
+      if (!installed) {
         set({ isInstalled: false, status: 'not-installed', error: 'Freighter extension is not installed.' });
         return null;
       }
