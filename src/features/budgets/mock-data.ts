@@ -198,3 +198,9 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
     ],
   },
 ];
+
+export const MOCK_BUDGET_ALERT_THRESHOLDS = {
+  warning: 80,
+  critical: 95,
+};
+
