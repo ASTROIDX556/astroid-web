@@ -96,6 +96,7 @@ export type WalletStatus = 'active' | 'frozen' | 'paused' | 'archived';
 
 export interface AssetBalance {
   asset: Asset;
+  assetIssuer?: StellarAddress;
   balance: number;
   usdValue: number;
 }
@@ -109,6 +110,18 @@ export interface Trustline {
   limit: number;
   status: TrustlineStatus;
   isNative: boolean;
+}
+
+export interface StellarAsset {
+  assetCode: AssetCode;
+  assetIssuer?: StellarAddress;
+  isNative: boolean;
+}
+
+export interface TrustlineRequest {
+  assetCode: AssetCode;
+  assetIssuer: StellarAddress;
+  limit: number;
 }
 
 export interface Wallet {
