@@ -1,45 +1,36 @@
-import React, { useReducer, useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const INITIAL_STATE = {
-  name: '',
-  description: '',
-  department: '',
-  provider: 'openai',
-  temperature: 0.7,
-  dailyLimit: 100,
-  transactionLimit: 10,
-};
+import { useAgentWizardStore } from './store';
+import { providerOptions } from './schema';
 
 const totalSteps = 4;
 const stepLabels = ['Identity & Role', 'Engine Settings', 'Spend Constraints', 'Final Review'];
 
 export default function AgentCreationWizard() {
-  const [reducer], dispatch = useReducer((state, action) => {
-    if (action.type === 'UPDATE_FIELD') {
-      return { ...state, [action.field]: action.value };
-    }
-    return state;
-  }, INITIAL_STATE);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const { currentStep, values, setCurrentStep, setValues, nextStep, prevStep } = useAgentWizardStore();
   const [direction, setDirection] = useState(1);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const updateField = (field: keyof typeof InitialState, value: string | number) =>
-    dispatch({ type: 'UPDATE_FIELD', field, value });
+  const updateField = (field: keyof typeof values, value: string | number) => {
+    setValues({ [field]: value } as Partial<typeof values>);
+  };
 
-  const validateStep = (step: number): booean => {
+  const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
     if (step === 0) {
-      if (!reducer.name.trim()) newErrors.name = 'Name is required.';
-      if (!reducer.description.trim()) newErrors.description = 'Description is required.';
-      if (!reducer.department.trim()) newErrors.department = 'Department is required.';
+      if (!values.name || values.name.trim().length < 2) newErrors.name = 'Agent name is required (min 2 characters).';
+      if (!values.description || values.description.trim().length < 10) newErrors.description = 'Description must be at least 10 characters.';
+      if (!values.ownerDepartment || values.ownerDepartment.trim().length < 2) newErrors.ownerDepartment = 'Department is required (min 2 characters).';
     } else if (step === 1) {
-      if (!reducer.provider) newErrors.provider = 'Provider is required.';
-      if (Number.isNaN(reducer.temperature) || reducer.temperature < 0 || reducer.temperature > 1) newErrors.temperature = 'Temperature must be between 0 and 1.';
+      if (!values.provider) newErrors.provider = 'Provider is required.';
+      if (!values.model || values.model.trim().length < 2) newErrors.model = 'Model name is required (min 2 characters).';
+      const temp = Number(values.temperature);
+      if (Number.isNaN(temp) || temp < 0 || temp > 2) newErrors.temperature = 'Temperature must be between 0 and 2.';
     } else if (step === 2) {
-      if (Number.isNaN(reducer.dailyLimit) || reducer.dailyLimit <= 0) newErrors.dailyLimit = 'Daily limit must be positive.';
-      if (Number.isNaN(reducer.transactionLimit) || reducer.transactionLimit <= 0) newErrors.transactionLimit = 'Transaction limit must be positive.';
+      const budget = Number(values.budget);
+      const cap = Number(values.singleTransactionCap);
+      if (Number.isNaN(budget) || budget < 0) newErrors.budget = 'Daily limit must be zero or greater.';
+      if (Number.isNaN(cap) || cap < 0) newErrors.singleTransactionCap = 'Single-transaction cap must be zero or greater.';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -49,7 +40,7 @@ export default function AgentCreationWizard() {
     if (validateStep(currentStep)) {
       if (currentStep < totalSteps - 1) {
         setDirection(1);
-        setCurrentStep(currentStep + 1);
+        nextStep();
       }
     }
   };
@@ -57,23 +48,23 @@ export default function AgentCreationWizard() {
   const handleBack = () => {
     if (currentStep > 0) {
       setDirection(-1);
-      setCurrentStep(currentStep - 1);
+      prevStep();
     }
   };
 
   const handleConfirm = () => {
-    const payload = JSON.stringify(reducer, null, 2);
-    alert(`Configuration payload:` + payload);
+    const payload = JSON.stringify(values, null, 2);
+    alert(`Configuration payload:\n${payload}`);
   };
 
   const variants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 100 : -100,
+    enter: (dir: number) => ({
+      x: dir > 0 ? 100 : -100,
       opacity: 0,
     }),
     center: { x: 0, opacity: 1 },
-    exit: (direction: number) => ({
-      x: direction > 0 ? -100 : 100,
+    exit: (dir: number) => ({
+      x: dir > 0 ? -100 : 100,
       opacity: 0,
     }),
   };
@@ -84,7 +75,7 @@ export default function AgentCreationWizard() {
         {stepLabels.map((label, index) => (
           <div
             key={label}
-            className={`step-progress ${index === currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}`}
+            className={step-progress ${index === currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}'}
             onClick={() => index < currentStep && setCurrentStep(index)}
           >
             <span className="step-bubble">{index + 1}</span>
@@ -102,92 +93,99 @@ export default function AgentCreationWizard() {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={ duration: 0.3, ease: 'easeInOut' }
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
             {currentStep === 0 && (
               <div className="step">
                 <h2>Identity & Role</h2>
                 <label>
                   Name:
-                  <input type="text" value={reducer.name} onChange={(e) => updateField('name', e.target.value)} />
+                  <input type="text" value={values.name} onChange={(e) => updateField('name', e.target.value)} />
                   {errors.name && <span className="error">{errors.name}</span>}
                 </label>
                 <label>
                   Description:
-                  <textarea value={reducer.description} onChange={(e) => updateField('description', e.target.value)} />
+                  <textarea value={values.description} onChange={(e) => updateField('description', e.target.value)} />
                   {errors.description && <span className="error">{errors.description}</span>}
                 </label>
                 <label>
                   Department:
-                  <input type="text" value={reducer.department} onChange={(e) => updateField('department', e.target.value)} />
-                  {errors.department && <span className="error">{errors.department}</span>}
+                  <input type="text" value={values.ownerDepartment} onChange={(e) => updateField('ownerDepartment', e.target.value)} />
+                  {errors.ownerDepartment && <span className="error">{errors.ownerDepartment}</span>}
                 </label>
               </div>
-            )}
+            )
             {currentStep === 1 && (
               <div className="step">
                 <h2>Engine Settings</h2>
                 <label>
                   Provider:
-                  <select value={reducer.provider} onChange={(e) => updateField('provider', e.target.value)}>
-                    <option value="nvidia">Nvidia</option>
-                    <option value="openai">OpenAI</option>
-                    <option value="ollama">Ollama</option>
+                  <select value={values.provider} onChange={(e) => updateField('provider', e.target.value)}>
+                    {providerOptions.map((p) => (
+                      <option key={p} value={p>
+                        {p}
+                      </option>
+                    ))}
                   </select>
                   {errors.provider && <span className="error">{errors.provider}</span>}
                 </label>
                 <label>
+                  Model:
+                  <input type="text" value={values.model} onChange={(e) => updateField('model', e.target.value)} />
+                  {errors.model && <span className="error">{errors.model}</span>}
+                </label>
+                <label>
                   Temperature:
-                  <input type="number" min="0" max="1" step="0.1" value={Number.isNaN(reducer.temperature) ? '' : reducer.temperature} onChange={(e) => updateField('temperature', e.target.value === '' ? NaN : parseFloat(e.target.value))} />
+                  <input type="number" min="0" max="2" step="0.1" value={Number.isNaN(Number(values.temperature)) ? '' : Number(values.temperature)} onChange={(e) => updateField('temperature', e.target.value === '' ? NaN : parseFloat(e.target.value))} />
                   {errors.temperature && <span className="error">{errors.temperature}</span>}
                 </label>
+                <label>
+                  API Key (optional):
+                  <input type="password" value={values.apiKey} onChange={(e) => updateField('apiKey', e.target.value)} />
+                </label>
               </div>
-            )}
+            )
             {currentStep === 2 && (
               <div className="step">
                 <h2>Spend Constraints</h2>
                 <label>
-                  Daily Limit:
-                  <input type="number" min="0" value={Number.isNaN(reducer.dailyLimit) ? '' : reducer.dailyLimit} onChange={(e) => updateField('dailyLimit', e.target.value === '' ? NaN : parseFloat(e.target.value))} />
-                  {errors.dailyLimit && <span className="error">{errors.dailyLimit}</span>}
+                  Daily Limit (budget):
+                  <input type="number" min="0" value={Number.isNaN(Number(values.budget)) ? '' : Number(values.budget)} onChange={(e) => updateField('budget', e.target.value === '' ? NaN : parseFloat(e.target.value))} />
+                  {errors.budget && <span className="error">{errors.budget}</span>}
                 </label>
                 <label>
-                  Transaction Limit:
-                  <input type="number" min="0" value={Number.isNaN(reducer.transactionLimit) ? '' : reducer.transactionLimit} onChange={(e) => updateField('transactionLimit', e.target.value === '' ? NaN : parseFloat(e.target.value))} />
-                  {errors.transactionLimit && <span className="error">{errors.transactionLimit}</span>}
+                  Single Transaction Cap:
+                  <input type="number" min="0" value={Number.isNaN(Number(values.singleTransactionCap)) ? '' : Number(values.singleTransactionCap)} onChange={(e) => updateField('singleTransactionCap', e.target.value === '' ? NaN : parseFloat(e.target.value))} />
+                  {errors.singleTransactionCap && <span className="error">{errors.singleTransactionCap}</span>}
                 </label>
               </div>
-            )}
+            )
             {currentStep === 3 && (
               <div className="step">
                 <h2>Final Review</h2>
-                <p><strong>Name:</strong> {reducer.name}</p>
-                <p><strong>Description:</strong> {reducer.description}</p>
-                <p><strong>Department:</strong> {reducer.department}</p>
-                <p><strong>Provider:</strong> {reducer.provider}</p>
-                <p><strong>Temperature:</strong> {Number.isNaN(reducer.temperature) ? '' : reducer.temperature}</p>
-                <p><strong>Daily Limit:</strong> {Number.isNaN(reducer.dailyLimit) ? '' : reducer.dailyLimit}</p>
-                <p><strong>Transaction Limit:</strong> {Number.isNaN(reducer.transactionLimit) ? '' : reducer.transactionLimit}</p>
+                <p><strong>Name:</strong> {values.name}</p>
+                <p><strong>Description:</strong> {values.description}</p>
+                <p><strong>Department:</strong> {values.ownerDepartment}</p>
+                <p><strong>Provider:</strong> {values.provider}</p>
+                <p><strong>Model:</strong> {values.model}</p>
+                <p><strong>Temperature:</strong> {Number.isNaN(Number(values.temperature)) ? '' : values.temperature}</p>
+                <p><strong>Daily Limit:</strong> {Number.isNaN(Number(values.budget)) ? '' : values.budget}</p>
+                <p><strong>Single Transaction Cap:</strong> {Number.isNaN(Number(values.singleTransactionCap)) ? '' : values.singleTransactionCap}</p>
+                {values.apiKey && <p><strong>API Key:</strong> •••••••••••••</p>}
               </div>
-            )}
+            )
           </motion.div>
         </AnimatePresence>
       </div>
 
       <div className="navigation">
         {currentStep > 0 && (
-          <button className="button button-secondary" onClick={handleBack}>
-            Back
-          </button>
+          <button className="button button-secondary" onClick={handleBack}>Back</button>
         )}
         {currentStep < totalSteps - 1 ? (
-          <button className="button button-primary" onClick={handleNext}>
-            Next
-          </button>
+          <button className="button button-primary" onClick={handleNext}>Next</button>
         ) : (
-          <button className="button button-primary" onClick={handleConfirm}>
-            Confirm
-          </button>
+          <button className="button button-primary" onClick={handleConfirm}>Confirm</button>
         )}
       </div>
     </div>
