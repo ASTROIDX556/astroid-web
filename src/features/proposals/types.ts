@@ -47,6 +47,8 @@ export interface ApprovalEvent {
   timestamp: string;
   /** Approver or actor who triggered the event, if applicable. */
   actor?: string;
+  /** The vote direction, if this is a vote_cast event. */
+  vote?: VoteType;
   /** Optional human-readable details about the event. */
   details?: string;
 }
@@ -78,6 +80,8 @@ export interface Proposal {
 export interface ProposalTimelineProps {
   /** The proposal to render the approval flow for. */
   proposal: Proposal;
+  /** Identifier of the approver representing the current user, if any. */
+  currentApproverId?: string;
   /** Whether the current user is in the process of approving/rejecting. */
   isSubmitting?: boolean;
   /** Callback invoked when an approver clicks approve/reject. */
