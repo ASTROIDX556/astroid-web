@@ -6,10 +6,12 @@ import { Dropdown, type DropdownItem } from '@/components/ui/dropdown';
 import { Avatar } from '@/components/ui/avatar';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { useOrganizations, useCurrentUser } from '@/hooks/use-queries';
+import { useAgentTelemetrySubscription } from '@/hooks/useAgentTelemetrySubscription';
 import { usePreferencesStore } from '@/stores/preferences-store';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
 import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
 import { CircuitBreakerControl } from '@/features/security';
+import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
 
 interface TopbarProps {
   /** Opens the mobile navigation drawer. */
@@ -24,6 +26,7 @@ interface TopbarProps {
 export function Topbar({ onOpenNav }: TopbarProps) {
   const orgsQuery = useOrganizations();
   const userQuery = useCurrentUser();
+  const telemetry = useAgentTelemetrySubscription();
 
   const activeOrgId = usePreferencesStore((s) => s.activeOrgId);
   const setActiveOrg = usePreferencesStore((s) => s.setActiveOrg);
@@ -98,6 +101,9 @@ export function Topbar({ onOpenNav }: TopbarProps) {
             ⌘K
           </kbd>
         </button>
+
+        {/* Live agent telemetry connection status */}
+        <TelemetryStatusIndicator status={telemetry.status} />
 
         {/* Stellar Network Health & RPC Latency Widget */}
         <NetworkHealthWidget />
