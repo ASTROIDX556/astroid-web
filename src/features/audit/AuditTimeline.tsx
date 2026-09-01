@@ -504,6 +504,7 @@ export function AuditTimeline() {
                         key={header.id}
                         scope="col"
                         className={`px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary ${meta?.className ?? ''}`}
+                        aria-sort={canSort ? (header.column.getIsSorted() === 'asc' ? 'ascending' : header.column.getIsSorted() === 'desc' ? 'descending' : 'none') : undefined}
                       >
                         {header.isPlaceholder ? null : (
                           <button
@@ -512,7 +513,6 @@ export function AuditTimeline() {
                             disabled={!canSort}
                             className={`inline-flex items-center gap-1.5 text-left font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded ${!canSort ? 'cursor-default' : 'cursor-pointer'}`}
                             aria-label={canSort ? `Sort by ${header.column.columnDef.header?.toString()}, ${header.column.getIsSorted() === 'asc' ? 'ascending' : header.column.getIsSorted() === 'desc' ? 'descending' : 'unsorted'}` : undefined}
-                            aria-sort={canSort ? (header.column.getIsSorted() === 'asc' ? 'ascending' : header.column.getIsSorted() === 'desc' ? 'descending' : 'none') : undefined}
                           >
                             <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
                             {canSort && (
