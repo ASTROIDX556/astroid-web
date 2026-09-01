@@ -25,3 +25,24 @@ export interface PermissionDefinition {
 }
 
 export type RolePermissionMatrix = Record<UserRole, Record<PermissionKey, boolean>>;
+
+export interface SignerKey {
+  id: string;
+  publicKey: string;
+  name: string;
+  weight: number;
+  addedAt: string;
+}
+
+export interface ThresholdConfig {
+  lowThreshold: number;
+  medThreshold: number;
+  highThreshold: number;
+}
+
+export interface MultiSigWallet {
+  id: string;
+  name: string;
+  signers: SignerKey[];
+  thresholds: ThresholdConfig;
+}

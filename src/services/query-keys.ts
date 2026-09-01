@@ -4,6 +4,7 @@ export const queryKeys = {
   organizations: ['organizations'] as const,
   team: ['team'] as const,
   overview: ['analytics', 'overview'] as const,
+  activity: ['analytics', 'activity'] as const,
   briefing: ['ai', 'briefing'] as const,
   assistantSeed: ['ai', 'assistant-seed'] as const,
   wallets: ['wallets'] as const,
