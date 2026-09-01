@@ -15,6 +15,21 @@ import { formatCurrency, formatNumber, formatDateTime, truncateHash } from '@/li
 import { TransactionHistoryTable } from '@/features/wallet/components/TransactionHistoryTable';
 import type { AssetBalance } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
+import { XdrInspector } from '@/features/wallet/components/XdrInspector';
+import { SigningQueue, type SigningQueueItem } from '@/features/wallet/SigningQueue';
+
+const signingQueueItems: SigningQueueItem[] = [
+  {
+    id: 'agent-payment-001',
+    title: 'Orion payroll transfer',
+    description: 'Agent-proposed USDC payment requiring an operator signature.',
+    amount: '1,250.00 USDC',
+    sourceAccount: 'GCFQ4I7ZTW5W3K7CSW2USSQK6AZW5KTQH7QA2S5JS5EIUJF2EZRD3E6E',
+    network: 'Testnet',
+    status: 'pending',
+    xdr: 'AAAAAgAAAABOcm90LWEtdmFsaWQtc3RlbGxhci14ZHItZm9yLWRlbW8=',
+  },
+];
 
 const balanceColumns: Column<AssetBalance>[] = [
   { header: 'Asset', cell: (b) => <span className="font-medium">{b.asset}</span> },

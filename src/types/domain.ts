@@ -1,6 +1,19 @@
 /** Core domain models mirroring the Astroid API entities (PRD Doc 5 / Doc 6). */
 
+import { z } from 'zod';
+
 export type Asset = 'XLM' | 'USDC' | string;
+
+export type StellarAddress = string;
+export type AssetCode = string;
+
+export const stellarAddressSchema = z
+  .string()
+  .regex(/^G[A-Z2-7]{55}$/, 'Invalid Stellar public key');
+
+export const assetCodeSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9]{1,12}$/, 'Invalid asset code');
 
 export type StellarNetwork = 'testnet' | 'public';
 
@@ -93,8 +106,32 @@ export type WalletStatus = 'active' | 'frozen' | 'paused' | 'archived';
 
 export interface AssetBalance {
   asset: Asset;
+  assetIssuer?: StellarAddress;
   balance: number;
   usdValue: number;
+}
+
+export type TrustlineStatus = 'active' | 'inactive' | 'pending';
+
+export interface Trustline {
+  assetCode: AssetCode;
+  assetIssuer?: StellarAddress;
+  balance: number;
+  limit: number;
+  status: TrustlineStatus;
+  isNative: boolean;
+}
+
+export interface StellarAsset {
+  assetCode: AssetCode;
+  assetIssuer?: StellarAddress;
+  isNative: boolean;
+}
+
+export interface TrustlineRequest {
+  assetCode: AssetCode;
+  assetIssuer: StellarAddress;
+  limit: number;
 }
 
 export interface Wallet {
@@ -102,11 +139,12 @@ export interface Wallet {
   organizationId: string;
   agentId?: string;
   name: string;
-  stellarAddress: string;
+  stellarAddress: StellarAddress;
   walletType: WalletType;
   network: StellarNetwork;
   status: WalletStatus;
   balances: AssetBalance[];
+  trustlines?: Trustline[];
   totalUsdValue: number;
   riskScore: number;
   createdAt: string;
@@ -344,6 +382,15 @@ export interface TimeseriesPoint {
   net: number;
 }
 
+export interface ActivityPoint {
+  /** ISO timestamp of the observation window start. */
+  timestamp: string;
+  /** Number of transactions in the window. */
+  count: number;
+  /** Total spend (USDC) in the window. */
+  spend: number;
+}
+
 export interface SpendingByCategory {
   category: string;
   amount: number;
@@ -408,4 +455,19 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Asset Rates & Conversion
+// ---------------------------------------------------------------------------
+export interface AssetRate {
+  asset: Asset;
+  /** Price in USD (e.g. 0.12 for XLM) */
+  priceUsd: number;
+  /** 24-hour percentage change */
+  change24h: number;
+  /** ISO 8601 timestamp of the last update */
+  updatedAt: string;
+  /** Source feed identifier */
+  source: string;
 }
