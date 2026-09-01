@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowDownLeft, ArrowUpRight, SearchX } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +14,10 @@ interface TransactionTableProps {
   transactions: Transaction[];
   onSelect?: (transaction: Transaction) => void;
   className?: string;
+  isLoading?: boolean;
 }
 
-export function TransactionTable({ transactions, className }: TransactionTableProps) {
+export function TransactionTable({ transactions, className, isLoading = false }: TransactionTableProps) {
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
       {
@@ -92,22 +93,142 @@ export function TransactionTable({ transactions, className }: TransactionTablePr
     [],
   );
 
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [assetFilter, setAssetFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(handler);
+  }, [query]);
+
+  const assets = useMemo(() => Array.from(new Set(transactions.map(tx => tx.asset))), [transactions]);
+  const statuses = useMemo(() => Array.from(new Set(transactions.map(tx => tx.status))), [transactions]);
+
+  const filteredTransactions = useMemo(() => {
+    const terms = debouncedQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    return transactions.filter((tx) => {
+      const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;
+      const matchesAsset = assetFilter === 'all' || tx.asset === assetFilter;
+      const searchable = [tx.id, tx.counterparty, tx.counterpartyAddress, tx.purpose, tx.asset, tx.agentName].join(' ').toLowerCase();
+      const matchesQuery = terms.every((term) => searchable.includes(term));
+      return matchesStatus && matchesAsset && matchesQuery;
+    });
+  }, [transactions, debouncedQuery, statusFilter, assetFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedTransactions = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredTransactions.slice(start, start + pageSize);
+  }, [filteredTransactions, safePage, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery]);
+
   return (
-    <DataTable
-      data={transactions}
-      columns={columns}
-      getRowId={(row) => row.id}
-      searchable
-      searchPlaceholder="Search counterparty, purpose, or asset"
-      pageSize={8}
-      className={className}
-      caption="Transactions"
-      emptyState={
-        <div className="rounded-card border border-dashed border-border bg-surface p-8 text-center text-sm text-foreground-secondary">
-          No matching transactions.
+    <div className={className}>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search asset, public key, or agent"
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Search transactions"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Filter by status"
+        >
+          <option value="all">All statuses</option>
+          {statuses.map((status) => (
+            <option key={status} value={status}>{transactionStatus(status).label}</option>
+          ))}
+        </select>
+        <select
+          value={assetFilter}
+          onChange={(e) => { setAssetFilter(e.target.value); setPage(1); }}
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Filter by asset"
+        >
+          <option value="all">All assets</option>
+          {assets.map((asset) => (
+            <option key={asset} value={asset}>{asset}</option>
+          ))}
+        </select>
+        <select
+          value={pageSize}
+          onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Page size"
+        >
+          {[8, 16, 24].map((size) => (
+            <option key={size} value={size}>{size} per page</option>
+          ))}
+        </select>
+      </div>
+
+      {isLoading ? (
+        <div
+          role="status"
+          className="flex flex-col items-center justify-center rounded-card border border-border bg-surface p-8 text-center text-sm text-foreground-secondary"
+        >
+          <div className="mb-2 h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" aria-hidden />
+          Loading transactions…
         </div>
-      }
-    />
+      ) : (
+        <DataTable
+          data={pagedTransactions}
+          columns={columns}
+          getRowId={(row) => row.id}
+          className={className}
+          caption="Transactions"
+          emptyState={
+            <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-border bg-surface p-8 text-center text-sm text-foreground-secondary">
+              <SearchX className="mb-2 h-8 w-8 text-foreground-muted" aria-hidden />
+              No matching transactions.
+            </div>
+          }
+          searchable={false}
+          pageSize={Number.MAX_SAFE_INTEGER}
+        />
+      )}
+
+      {!isLoading && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-foreground-muted" aria-live="polite">
+            Page {safePage} of {totalPages} · {filteredTransactions.length} results
+          </p>
+          <nav className="flex gap-2" aria-label="Pagination">
+            <button
+              type="button"
+              onClick={() => setPage(Math.max(1, safePage - 1))}
+              disabled={safePage <= 1}
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Previous page"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage(Math.min(totalPages, safePage + 1))}
+              disabled={safePage >= totalPages}
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Next page"
+            >
+              Next
+            </button>
+          </nav>
+        </div>
+      )}
+    </div>
   );
 }
 

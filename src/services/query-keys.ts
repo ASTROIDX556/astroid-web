@@ -21,6 +21,7 @@ export const queryKeys = {
   proposal: (id: string) => ['proposals', id] as const,
   memory: ['memory'] as const,
   memoryRecord: (id: string) => ['memory', id] as const,
+  rates: ['rates'] as const,
   notifications: ['notifications'] as const,
   apiKeys: ['developer', 'keys'] as const,
   webhooks: ['developer', 'webhooks'] as const,
