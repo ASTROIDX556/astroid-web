@@ -1,11 +1,10 @@
 'use client';
 
 import { create } from 'zustand';
-import type { StateCreator } from 'zustand';
-import { Server, TransactionBuilder, Operation, Asset, Networks, BASE_FEE } from '@stellar/stellar-sdk';
-import { z } from 'zod';
+import { persist } from 'zustand/middleware';import type { StateCreator } from 'zustand';
+import { useCallback } from 'react';
 
-export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+export type FreighterConnectionStatus = 'not-installed' | 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export type AccountBalance = {
   asset_code?: string;
@@ -93,13 +92,14 @@ const resolveNetwork = (value: unknown): string | null => {
   return null;
 };
 
-const getHorizonUrl = (network: string): string =>
-  network === 'mainnet' || network === 'public' || network === 'PUBLIC' || network === Networks.PUBLIC ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org';
-
-const getNetworkPassphrase = (network: string): string =>
-  network === 'mainnet' || network === 'public' || network === 'PUBLIC' || network === Networks.PUBLIC ? Networks.PUBLIC : Networks.TESTNET;
-
-const getServer = (network: string): Server => new Server(getHorizonUrl(network));
+const STELLAR_NETWORK_PASSPHRASES: Record<string, string | undefined> = {
+  TESTNET: 'Test SDF Network ; September 2015',
+  testnet: 'Test SDF Network ; September 2015',
+  PUBLIC: 'Public Global Stellar Network ; September 2015',
+  public: 'Public Global Stellar Network ; September 2015',
+  MAINNET: 'Public Global Stellar Network ; September 2015',
+  mainnet: 'Public Global Stellar Network ; September 2015',
+};
 
 const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   status: 'disconnected',
@@ -113,12 +113,13 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   checkExtension: async () => {
     try {
       const freighter = await getFreighter();
-      const connectedResult = typeof freighter.isConnected === 'function' ? await withTimeout(freighter.isConnected()) : { isConnected: true };
+      const connectedResult = typeof freighter.isConnected === 'function' ? await withTimeout(freighter.isConnected()) : false;
       const connected = typeof connectedResult === 'boolean' ? connectedResult : Boolean((connectedResult as { isConnected?: boolean } | undefined)?.isConnected);
-      set({ isInstalled: true, status: connected ? 'connected' : 'disconnected' });
+      const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
+      set({ isInstalled: installed, status: installed ? (connected ? 'connected' : 'disconnected') : 'not-installed' });
       return Boolean(connected);
     } catch {
-      set({ isInstalled: false, status: 'disconnected', error: 'Freighter extension is not installed or unavailable.' });
+      set({ isInstalled: false, status: 'not-installed', error: 'Freighter extension is not installed or unavailable.' });
       return false;
     }
   },
@@ -129,10 +130,13 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
     try {
       const freighter = await getFreighter();
-      if (!installed && typeof freighter.isConnected !== 'function') {
-        set({ isInstalled: false, status: 'disconnected', error: 'Freighter extension is not installed.' });
+      const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
+      if (!installed) {
+        set({ isInstalled: false, status: 'not-installed', error: 'Freighter extension is not installed.' });
         return null;
       }
+
+      set({ isInstalled: true });
 
       if (typeof freighter.setAllowed === 'function') {
         const allowed = await withTimeout(freighter.setAllowed());
@@ -173,8 +177,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to connect to the Freighter wallet.';
       set({
-        status: 'disconnected',
-        isInstalled: installed,
+        status: 'error',
         publicKey: null,
         network: null,
         error: message,
@@ -199,9 +202,13 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
       }
 
       const { network } = get();
-      const response = await withTimeout(
-        freighter.signTransaction(xdr, { networkPassphrase: getNetworkPassphrase(network ?? 'testnet') }),
-      );
+      const networkPassphrase = network
+        ? STELLAR_NETWORK_PASSPHRASES[network] ?? network
+        : undefined;
+      const options: Record<string, unknown> | undefined = networkPassphrase
+        ? { networkPassphrase }
+        : undefined;
+      const response = await withTimeout(freighter.signTransaction(xdr, options));
       const signedXdr =
         typeof response === 'string'
           ? response
@@ -315,5 +322,142 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   },
 });
 
-export const useFreighterStore = create<FreighterWalletState>()(storeCreator);
+export const useFreighterStore = create<FreighterWalletState>()(
+  persist(storeCreator, {
+    name: 'freighter-wallet-storage',
+    partialize: (state) => ({
+      publicKey: state.publicKey,
+      network: state.network
+    }),
+    onRehydrateStorage: () => (state) => {
+      if (state?.publicKey) {
+        state.status = 'connecting';
+        void state.hydrate();
+      } else {
+        state.status = 'disconnected';
+      }
+    },
+  }),
+);
+
 export const isValidStellarPublicKey = isValidStellarAddress;
+
+export interface UseFreighterOptions {
+  mock?:
+    | boolean
+    | {
+        address?: string;
+        network?: string;
+        reject?: boolean;
+        delayMs?: number;
+      };
+}
+
+export const MOCK_PUBLIC_KEY = `G${'A'.repeat(55)}`;
+
+export function useFreighter(options: UseFreighterOptions = {}) {
+  const status = useFreighterStore((state) => state.status);
+  const isInstalled = useFreighterStore((state) => state.isInstalled);
+  const publicKey = useFreighterStore((state) => state.publicKey);
+  const network = useFreighterStore((state) => state.network);
+  const error = useFreighterStore((state) => state.error);
+  const storeConnect = useFreighterStore((state) => state.connect);
+  const storeDisconnect = useFreighterStore((state) => state.disconnect);
+  const storeRequestSignature = useFreighterStore((state) => state.requestSignature);
+
+  const { mock = false } = options;
+  const mockConfig = typeof mock === 'object' ? mock : {};
+  const mockEnabled = mock !== false;
+  const mockAddress = mockConfig.address ?? MOCK_PUBLIC_KEY;
+  const mockNetwork = mockConfig.network ?? 'testnet';
+  const mockReject = mockConfig.reject ?? false;
+  const mockDelay = mockConfig.delayMs ?? 500;
+
+  const connect = useCallback(
+    async () => {
+      if (!mockEnabled) {
+        return storeConnect();
+      }
+
+      useFreighterStore.setState({
+        status: 'connecting',
+        error: null,
+        isInstalled: true,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, mockDelay));
+
+      if (mockReject) {
+        useFreighterStore.setState({
+          status: 'error',
+          publicKey: null,
+          network: null,
+          error: 'Mock connection rejected by user.',
+          isInstalled: true,
+        });
+        return null;
+      }
+
+      useFreighterStore.setState({
+        status: 'connected',
+        publicKey: mockAddress,
+        network: mockNetwork,
+        error: null,
+        isInstalled: true,
+      });
+
+      return mockAddress;
+    },
+    [mockEnabled, mockAddress, mockNetwork, mockReject, mockDelay, storeConnect],
+  );
+
+  const disconnect = useCallback(
+    () => {
+      if (!mockEnabled) {
+        storeDisconnect();
+        return;
+      }
+      useFreighterStore.setState({
+        status: 'disconnected',
+        publicKey: null,
+        network: null,
+        error: null,
+        isInstalled: true,
+      });
+    },
+    [mockEnabled, storeDisconnect],
+  );
+
+  const signTransaction = useCallback(
+    async (xdr: string) => {
+      if (!mockEnabled) {
+        return storeRequestSignature(xdr);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return xdr;
+    },
+    [mockEnabled, storeRequestSignature],
+  );
+
+  const notification =
+    status === 'not-installed'
+      ? 'Freighter extension is not installed. Please install it to continue.'
+      : status === 'error'
+        ? error ?? 'Freighter connection error. Please try again.'
+        : status === 'disconnected' && publicKey
+          ? 'Freighter wallet disconnected.'
+          : null;
+
+  return {
+    status,
+    isInstalled,
+    publicKey,
+    network,
+    error,
+    notification,
+    connect,
+    disconnect,
+    signTransaction,
+  };
+}
