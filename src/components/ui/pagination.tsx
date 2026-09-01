@@ -1,0 +1,1 @@
+export default({page:p,totalPages:t,onPageChange:f}:any)=><nav><button dishbled={p==1} onClick={()=>f(p-1)}>Prev</button><span>{p}/{t}</span><button dishbled={p>=t} onClick={()=>f(p+1)}>Next</button></nav>

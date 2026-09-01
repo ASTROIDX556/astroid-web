@@ -11,11 +11,17 @@ import {
   CartesianGrid,
   Cell,
   Legend,
+  Line,
+  LineChart,
 } from 'recharts';
 import { AlertTriangle, ShieldAlert, BarChart3, Table as TableIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/format';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from '@/components/ui/use-toast';
 
 export interface BudgetDepartmentData {
   id: string;
@@ -39,6 +45,61 @@ const DEFAULT_BUDGET_DATA: BudgetDepartmentData[] = [
   { id: '4', department: 'Marketing & Bounties', allocated: 10000, consumed: 4200, currency: 'USDC' },
   { id: '5', department: 'Security Audit Pool', allocated: 30000, consumed: 21000, currency: 'USDC' },
 ];
+
+export const vestingFormSchema = z
+  .object({
+    frequency: z.enum(['daily', 'weekly', 'monthly']),
+    amount: z.coerce.number().positive('Amount must be greater than zero.'),
+    cliffPeriod: z.coerce
+      .number()
+      .min(0, 'Cliff period cannot be negative.')
+      .max(12, 'Cliff period cannot exceed 12 months.'),
+    treasuryLimit: z.coerce.number().positive('Treasury limit must be greater than zero.'),
+  })
+  .refine((data) => data.amount <= data.treasuryLimit, {
+    message: 'Recurring amount cannot exceed the treasury limit.',
+    path: ['amount'],
+  });
+
+type VestingFormValues = z.infer<typeof vestingFormSchema>;
+
+type VestingFrequency = VestingFormValues['frequency'];
+
+interface ProjectedBalancePoint {
+  month: number;
+  label: string;
+  balance: number;
+}
+
+const RECURRENCE_PER_MONTH: Record<VestingFrequency, number> = {
+  daily: 365 / 12,
+  weekly: 52 / 12,
+  monthly: 1,
+};
+
+export function buildProjection(values: VestingFormValues): ProjectedBalancePoint[] {
+  const points: ProjectedBalancePoint[] = [];
+  const perMonth = values.amount * RECURRENCE_PER_MONTH[values.frequency];
+  let accrued = 0;
+  let balance = 0;
+
+  for (let month = 0; month <= 12; month += 1) {
+    if (month > 0) {
+      accrued = Math.min(values.treasuryLimit, accrued + perMonth);
+      if (month >= values.cliffPeriod) {
+        balance = Math.min(values.treasuryLimit, accrued);
+      }
+    }
+
+    points.push({
+      month,
+      label: month === 0 ? 'Start' : `M${month}`,
+      balance: Math.round(balance),
+    });
+  }
+
+  return points;
+}
 
 export function getThresholdColor(utilizationPercent: number): {
   color: string;
@@ -317,6 +378,174 @@ export function BudgetAllocationChart({
             </table>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function VestingScheduleBuilder({ className = '' }: { className?: string }) {
+  const [savedSchedule, setSavedSchedule] = useState<VestingFormValues | null>(null);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<VestingFormValues>({
+    resolver: zodResolver(vestingFormSchema),
+    mode: 'onChange',
+    defaultValues: {
+      frequency: 'monthly',
+      amount: 5000,
+      cliffPeriod: 0,
+      treasuryLimit: 100000,
+    },
+  });
+
+  const watchedValues = watch();
+  const projection = useMemo(() => {
+    const parsed = vestingFormSchema.safeParse(watchedValues);
+    return parsed.success ? buildProjection(parsed.data) : [];
+  }, [watchedValues]);
+
+  const onSubmit = handleSubmit((values) => {
+    setSavedSchedule(values);
+    toast({
+      title: 'Vesting schedule saved',
+      description: `${values.frequency.charAt(0).toUpperCase() + values.frequency.slice(1)} replenishment of ${formatCurrency(values.amount, 'USDC')} with a ${values.cliffPeriod}-month cliff.`,
+    });
+  });
+
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">Agent Vesting Schedule Builder</CardTitle>
+        <CardDescription className="text-xs">
+          Configure recurring budget replenishments and preview projected availability.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" noValidate>
+          <div className="space-y-1.5">
+            <label htmlFor="frequency" className="text-xs font-medium text-foreground-secondary">Frequency</label>
+            <select
+              id="frequency"
+              className="h-9 w-full rounded-md border border-border bg-surface-primary px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              {...register('frequency')}
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+            {errors.frequency && (
+              <p className="text-2xs text-danger" role="alert">{errors.frequency.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="amount" className="text-xs font-medium text-foreground-secondary">Replenishment Amount</label>
+            <input
+              id="amount"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              placeholder="5000"
+              className="h-9 w-full rounded-md border border-border bg-surface-primary px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              {...register('amount')}
+            />
+            {errors.amount && (
+              <p className="text-2xs text-danger" role="alert">{errors.amount.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="cliffPeriod" className="text-xs font-medium text-foreground-secondary">Cliff Period (months)</label>
+            <input
+              id="cliffPeriod"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max="12"
+              placeholder="0"
+              className="h-9 w-full rounded-md border border-border bg-surface-primary px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              {...register('cliffPeriod')}
+            />
+            {errors.cliffPeriod && (
+              <p className="text-2xs text-danger" role="alert">{errors.cliffPeriod.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="treasuryLimit" className="text-xs font-medium text-foreground-secondary">Treasury Limit</label>
+            <input
+              id="treasuryLimit"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              placeholder="100000"
+              className="h-9 w-full rounded-md border border-border bg-surface-primary px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              {...register('treasuryLimit')}
+            />
+            {errors.treasuryLimit && (
+              <p className="text-2xs text-danger" role="alert">{errors.treasuryLimit.message}</p>
+            )}
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center justify-end gap-3">
+            {savedSchedule && (
+              <span className="text-2xs font-medium text-success">
+                Active schedule: {savedSchedule.frequency} · {formatCurrency(savedSchedule.amount, 'USDC')}
+              </span>
+            )}
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 rounded-md bg-gold px-3 py-2 text-xs font-semibold text-black transition-colors hover:bg-gold/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Save Vesting Schedule
+            </button>
+          </div>
+        </form>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground">12-Month Projected Availability</h3>
+            <span className="text-2xs text-foreground-secondary">Treasury limit: {formatCurrency(Number(watchedValues.treasuryLimit) || 0, 'USDC')}</span>
+          </div>
+          {projection.length > 0 ? (
+            <div className="h-72 w-full" role="region" aria-label="Projected fund availability line graph">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={projection} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                  <XAxis dataKey="label" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+                  <YAxis
+                    tickFormatter={(val) => `$${(Number(val) / 1000).toFixed(0)}k`}
+                    stroke="var(--text-muted)"
+                    fontSize={11}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value) => [formatCurrency(Number(value), 'USDC'), 'Available']}
+                    labelFormatter={(label) => `Horizon: ${label}`}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="balance"
+                    name="Projected Available"
+                    stroke="var(--chart-1)"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="rounded-md border border-dashed border-border px-4 py-8 text-center text-xs text-foreground-secondary">
+              Adjust form values to preview the projected vesting curve.
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

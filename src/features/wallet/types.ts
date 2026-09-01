@@ -1,4 +1,4 @@
-/** An asset entry in the Stellar Asset Directory. */
+export type AssetCode = 'XLM' | 'USDC' | 'EURC' | 'ASTRO';
 
 export type AssetVerificationStatus = 'verified' | 'unverified';
 
@@ -11,15 +11,17 @@ export interface StellarAsset {
   issuer: string;
   /** Human-readable name, e.g. "USD Coin". */
   name: string;
-  /** Whether the issuer has been verified by the directory. */
-  verification: AssetVerificationStatus;
-  /** Whether the current wallet holds a trustline for this asset. */
-  trustline: AssetTrustlineStatus;
+  balance: number;
+  usdPrice: number;
+  iconUrl?: string;
+  issuer?: string;
+  decimals: number;
 }
 
-export interface AddAssetFormValues {
-  code: string;
-  issuer: string;
+export interface WalletSummary {
+  totalUsdValue: number;
+  assets: AssetBalance[];
+  lastUpdated: string;
 }
 
 /** Wallet connection phase for the Freighter integration. */
