@@ -20,7 +20,6 @@ export interface AgentAllocation {
   asset: AssetCode;
   velocity24h: number; // e.g. amount spent in last 24h
   lastTransactionAt: string;
-  /** Recent ledger history for the sub-department drill-down modal. */
   ledger?: LedgerEntry[];
 }
 
