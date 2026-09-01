@@ -418,3 +418,18 @@ export interface ChatMessage {
   content: string;
   createdAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// Asset Rates & Conversion
+// ---------------------------------------------------------------------------
+export interface AssetRate {
+  asset: Asset;
+  /** Price in USD (e.g. 0.12 for XLM) */
+  priceUsd: number;
+  /** 24-hour percentage change */
+  change24h: number;
+  /** ISO 8601 timestamp of the last update */
+  updatedAt: string;
+  /** Source feed identifier */
+  source: string;
+}
