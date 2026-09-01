@@ -9,11 +9,27 @@ import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { DataTable, type Column } from '@/components/dashboard/data-table';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useWallet } from '@/hooks/use-queries';
+import { useWallet, useTransactions } from '@/hooks/use-queries';
 import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatNumber, formatDateTime, truncateHash } from '@/lib/format';
+import { TransactionHistoryTable } from '@/features/wallet/components/TransactionHistoryTable';
 import type { AssetBalance } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
+import { XdrInspector } from '@/features/wallet/components/XdrInspector';
+import { SigningQueue, type SigningQueueItem } from '@/features/wallet/SigningQueue';
+
+const signingQueueItems: SigningQueueItem[] = [
+  {
+    id: 'agent-payment-001',
+    title: 'Orion payroll transfer',
+    description: 'Agent-proposed USDC payment requiring an operator signature.',
+    amount: '1,250.00 USDC',
+    sourceAccount: 'GCFQ4I7ZTW5W3K7CSW2USSQK6AZW5KTQH7QA2S5JS5EIUJF2EZRD3E6E',
+    network: 'Testnet',
+    status: 'pending',
+    xdr: 'AAAAAgAAAABOcm90LWEtdmFsaWQtc3RlbGxhci14ZHItZm9yLWRlbW8=',
+  },
+];
 
 const balanceColumns: Column<AssetBalance>[] = [
   { header: 'Asset', cell: (b) => <span className="font-medium">{b.asset}</span> },
@@ -33,6 +49,7 @@ const balanceColumns: Column<AssetBalance>[] = [
 
 export default function WalletDetailPage({ params }: { params: { id: string } }) {
   const wallet = useWallet(params.id);
+  const allTransactions = useTransactions();
 
   return (
     <PageTransition className="space-y-8">
@@ -114,6 +131,28 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
                   rowKey={(b) => b.asset}
                 />
               </div>
+
+              {/* Transaction history for this wallet */}
+              <QueryBoundary
+                query={allTransactions}
+                loading={<div className="skeleton h-48 w-full rounded-card" />}
+              >
+                {(txns) => {
+                  const walletTxns = txns.filter((t) => t.walletId === data.id);
+                  return (
+                    <div className="space-y-4">
+                      <SectionLabel>Transaction history</SectionLabel>
+                      {walletTxns.length === 0 ? (
+                        <p className="text-sm text-foreground-secondary">
+                          No transactions recorded for this wallet yet.
+                        </p>
+                      ) : (
+                        <TransactionHistoryTable transactions={walletTxns} />
+                      )}
+                    </div>
+                  );
+                }}
+              </QueryBoundary>
             </div>
           );
         }}

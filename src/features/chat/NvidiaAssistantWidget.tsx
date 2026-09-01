@@ -9,10 +9,13 @@ import {
   Zap,
   Maximize2,
   Minimize2,
+  AlertTriangle,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
+import { useChatStore } from '@/stores/chat-store';
 import type { ChatMessage, QuickPromptChip } from './types';
 
 const PRESET_CHIPS: QuickPromptChip[] = [
@@ -24,14 +27,14 @@ const PRESET_CHIPS: QuickPromptChip[] = [
   },
   {
     id: 'chip-2',
-    label: 'Low Balance Wallets',
-    promptText: 'Identify any agent wallets approaching minimum reserve or threshold balance.',
+    label: 'Audit High-Value Transactions',
+    promptText: 'Audit pending high-value transactions and flag anything requiring approval.',
     iconName: 'AlertCircle',
   },
   {
     id: 'chip-3',
-    label: 'Gas Fee Optimization',
-    promptText: 'Analyze current Soroban contract RPC gas fees and recommend priority fee settings.',
+    label: 'Portfolio Briefing',
+    promptText: 'Give me a concise portfolio briefing with agent health, reserves, and key risks.',
     iconName: 'TrendingDown',
   },
 ];
@@ -61,12 +64,60 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   },
 ];
 
+function MessageContent({ message }: { message: ChatMessage }) {
+  const lines = message.content.split('\n');
+  let inCodeBlock = false;
+
+  return (
+    <div className="space-y-1 whitespace-pre-wrap break-words">
+      {lines.map((line, index) => {
+        if (line.trim().startsWith('```')) {
+          inCodeBlock = !inCodeBlock;
+          return null;
+        }
+
+        if (inCodeBlock) {
+          return (
+            <code key={index} className="block overflow-x-auto rounded-md bg-background-secondary px-2 py-1 font-mono text-2xs text-foreground-secondary">
+              {line}
+            </code>
+          );
+        }
+
+        const parts = line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+        return (
+          <p key={index}>
+            {parts.map((part, partIndex) => {
+              if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
+              }
+              if (part.startsWith('`') && part.endsWith('`')) {
+                return <code key={partIndex} className="rounded bg-background-secondary px-1 font-mono text-2xs">{part.slice(1, -1)}</code>;
+              }
+              return part;
+            })}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export function NvidiaAssistantWidget() {
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const messages = useChatStore((state) => state.messages);
+  const isStreaming = useChatStore((state) => state.isTyping);
+  const hasError = useChatStore((state) => state.hasError);
+  const appendMessage = useChatStore((state) => state.appendMessage);
+  const setTyping = useChatStore((state) => state.setTyping);
+  const setError = useChatStore((state) => state.setError);
+  const reset = useChatStore((state) => state.reset);
   const [inputText, setInputText] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (messages.length === 0) reset(INITIAL_MESSAGES);
+  }, [messages.length, reset]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -85,12 +136,13 @@ export function NvidiaAssistantWidget() {
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    appendMessage(userMsg);
     setInputText('');
-    setIsStreaming(true);
+    setTyping(true);
+    setError(false);
 
     // Mock response fallback simulating Nvidia NIM LLM response
-    setTimeout(() => {
+    window.setTimeout(() => {
       let replyText = `Nvidia NIM LLM Insights: Analyzed query "${text}". On-chain telemetry indicates normal agent activity across Stellar Testnet.`;
       let briefing;
 
@@ -121,8 +173,8 @@ export function NvidiaAssistantWidget() {
         structuredBriefing: briefing,
       };
 
-      setMessages((prev) => [...prev, assistantMsg]);
-      setIsStreaming(false);
+      appendMessage(assistantMsg);
+      setTyping(false);
     }, 1000);
   };
 
@@ -192,12 +244,29 @@ export function NvidiaAssistantWidget() {
         aria-live="polite"
         aria-relevant="additions"
       >
+        {messages.length === 0 && !isStreaming && (
+          <div className="rounded-button border border-dashed border-border p-4 text-xs text-foreground-secondary">
+            Ask for a portfolio briefing, agent spend summary, or transaction audit.
+          </div>
+        )}
+
+        {hasError && (
+          <div role="status" className="flex items-start gap-2 rounded-button border border-warning/40 bg-warning-soft p-3 text-xs text-foreground">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+            <span>Live NIM is unavailable. Showing the latest local financial briefing.</span>
+          </div>
+        )}
+
+        <AnimatePresence initial={false}>
         {messages.map((msg) => {
           const isAssistant = msg.role === 'assistant';
 
           return (
-            <div
+            <motion.div
               key={msg.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
               className={`flex items-start gap-3 ${isAssistant ? 'justify-start' : 'justify-end'}`}
             >
               {isAssistant && (
@@ -214,7 +283,7 @@ export function NvidiaAssistantWidget() {
                       : 'bg-gold text-surface-dark font-medium'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <MessageContent message={msg} />
 
                   {/* Structured Briefing Widget */}
                   {msg.structuredBriefing && (
@@ -265,15 +334,18 @@ export function NvidiaAssistantWidget() {
                   <User className="h-4 w-4" />
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
+        </AnimatePresence>
 
         {isStreaming && (
-          <div className="flex items-center gap-2 text-2xs text-foreground-muted animate-pulse">
-            <Bot className="h-4 w-4 text-gold animate-spin" />
-            <span>Nvidia NIM LLM is formulating insight...</span>
-          </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-2xs text-foreground-muted">
+            <span className="flex gap-1" aria-label="Assistant is typing">
+              {[0, 1, 2].map((dot) => <motion.i key={dot} className="h-1.5 w-1.5 rounded-full bg-gold" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 0.9, repeat: Infinity, delay: dot * 0.15 }} />)}
+            </span>
+            <span>Preparing your financial briefing...</span>
+          </motion.div>
         )}
 
         <div ref={chatBottomRef} />
@@ -288,6 +360,7 @@ export function NvidiaAssistantWidget() {
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask Nvidia NIM Assistant (e.g. 'Summarize daily agent spending')... (Enter to send)"
+            aria-label="Message Nvidia NIM Assistant"
             disabled={isStreaming}
             className="w-full resize-none rounded-button border border-border bg-surface pl-3 pr-12 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
           />
@@ -295,6 +368,7 @@ export function NvidiaAssistantWidget() {
             type="button"
             onClick={() => handleSendMessage()}
             disabled={!inputText.trim() || isStreaming}
+            aria-label="Send message"
             className="absolute right-2 grid h-7 w-7 place-items-center rounded-button bg-gold text-surface-dark disabled:opacity-40 transition-opacity"
             title="Send message"
           >
