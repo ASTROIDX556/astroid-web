@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowLeft, ArrowUpRight, Check, Clock, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { KeyValue, SectionLabel } from '@/components/dashboard/stat-card';
@@ -48,6 +49,23 @@ function DecisionIcon({ decision }: { decision: ApprovalDecision['decision'] }) 
 
 export default function ApprovalDetailPage({ params }: { params: { id: string } }) {
   const proposal = useProposal(params.id);
+  const [priority, setPriority] = useState<'standard' | 'priority' | 'urgent'>('priority');
+
+  const feeEstimate = useMemo(() => {
+    const ledgerCongestion = 68;
+    const baseFee = 100;
+    const priorityProfiles = {
+      standard: { label: 'Standard', multiplier: 1.1, inclusion: '3–8 min' },
+      priority: { label: 'Priority', multiplier: 1.7, inclusion: '1–3 min' },
+      urgent: { label: 'Urgent', multiplier: 2.4, inclusion: '30–90 sec' },
+    } as const;
+
+    const selected = priorityProfiles[priority];
+    const adjustedFee = Math.round(baseFee * (1 + ledgerCongestion / 100) * selected.multiplier);
+    const feeBump = adjustedFee - baseFee;
+
+    return { ledgerCongestion, baseFee, selected, adjustedFee, feeBump };
+  }, [priority]);
 
   return (
     <PageTransition className="space-y-8">
@@ -232,9 +250,55 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
 
               <Card className="border-dashed">
                 <CardHeader>
-                  <CardTitle className="text-sm">Powered by the Astroid governance stack</CardTitle>
+                  <CardTitle className="text-sm">Stellar fee estimator</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between gap-4 text-2xs uppercase tracking-[0.12em] text-foreground-secondary">
+                    <span>Ledger congestion</span>
+                    <span className="font-medium text-gold-strong">{feeEstimate.ledgerCongestion}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-surface-secondary">
+                    <div
+                      className="h-full rounded-full bg-gold"
+                      style={{ width: `${feeEstimate.ledgerCongestion}%` }}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-[1.2fr_0.8fr]">
+                    <label className="space-y-2 text-sm text-foreground">
+                      <span className="text-xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
+                        Dispatch priority
+                      </span>
+                      <select
+                        value={priority}
+                        onChange={(event) => setPriority(event.target.value as typeof priority)}
+                        className="h-10 w-full rounded-sm border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <option value="standard">Standard</option>
+                        <option value="priority">Priority</option>
+                        <option value="urgent">Urgent</option>
+                      </select>
+                    </label>
+
+                    <div className="space-y-2 rounded-md border border-border bg-surface-secondary p-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
+                        Suggested fee bump
+                      </p>
+                      <p className="font-display text-2xl font-semibold tracking-tight tabular">
+                        {feeEstimate.adjustedFee} stroops
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface-secondary/70 p-3 text-sm">
+                    <span className="text-foreground-secondary">
+                      {feeEstimate.selected.label} lane · {feeEstimate.selected.inclusion}
+                    </span>
+                    <span className="font-medium text-gold-strong">
+                      +{feeEstimate.feeBump} stroops vs base
+                    </span>
+                  </div>
+
                   <p className="max-w-prose text-xs leading-relaxed text-foreground-secondary">
                     This proposal was evaluated against {data.requiredApprovals}{' '}
                     {data.requiredApprovals === 1 ? 'policy' : 'policies'} and carries a

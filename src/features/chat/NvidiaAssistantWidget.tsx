@@ -137,7 +137,6 @@ function pacingMs(chunk: string): number {
 export function NvidiaAssistantWidget() {
   const [messages, setMessages] = useState<ChatMessageType[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -360,6 +359,7 @@ export function NvidiaAssistantWidget() {
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask Nvidia NIM Assistant (e.g. 'Summarize daily agent spending')... (Enter to send)"
+            aria-label="Message Nvidia NIM Assistant"
             disabled={isStreaming}
             className="pr-12 w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
           />
