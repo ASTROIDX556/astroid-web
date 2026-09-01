@@ -9,6 +9,7 @@ import { FeeOptimizationPanel } from '@/features/transactions/FeeOptimizationPan
 import { TransactionAuditToolbar } from '@/features/transactions/TransactionAuditToolbar';
 import { TransactionHistory } from '@/features/transactions/TransactionHistory';
 
+
 export default function TransactionsPage() {
   const query = useTransactions();
   const txList = Array.isArray(query.data) ? query.data : [];
