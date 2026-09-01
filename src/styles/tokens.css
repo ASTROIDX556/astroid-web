@@ -1,6 +1,6 @@
 /**
  * Astroid design tokens — the single source of truth for color.
- *
+*
  * Values are stored as space-separated RGB channels so Tailwind can apply opacity
  * modifiers via `rgb(var(--token) / <alpha-value>)`. Theme switching swaps the
  * channel values only; every component reads through the semantic token.
@@ -20,7 +20,7 @@
   --border: 216 204 188; /* #D8CCBC */
   --border-strong: 201 187 166; /* #C9BBA6 */
 
-  /* Signature accent — Electric Indigo-Violet (AI Intelligence / Stellar Network) */
+  /* Signature accent - Electric Indigo-Violet (AI Intelligence / Stellar Network) */
   --gold: 91 80 214; /* #5B50D6 — deep electric indigo, warm-tone harmonious */
   --gold-soft: 236 234 252; /* #ECEAFC — barely-there indigo tint */
   --gold-strong: 68 58 178; /* #443AB2 — pressed state */
@@ -35,6 +35,9 @@
   --danger-soft: 243 218 216;
   --info: 43 127 255; /* #2B7FFF */
   --info-soft: 217 231 255;
+  --step-active: 91 80 214;
+  --step-completed: 47 143 99;
+  --step-inactive: 216 204 188;
 
   /* Focus ring — Indigo */
   --ring: 91 80 214;
@@ -67,7 +70,7 @@
   --border: 38 38 38; /* #262626 */
   --border-strong: 55 55 55; /* #373737 */
 
-  --gold: 139 127 255; /* #8B7FFF — luminous indigo-violet on dark, warm-adjacent */
+  --gold: 139 127 255; /* #8B7FFF — Luminous indigo-violet on dark, warm-adjacent */
   --gold-soft: 28 26 56; /* #1C1A38 — very dark indigo surface */
   --gold-strong: 167 157 255; /* #A79DFF — bright hover state */
   --gold-foreground: 13 11 9;
@@ -80,6 +83,9 @@
   --danger-soft: 46 27 27;
   --info: 76 147 255;
   --info-soft: 20 32 58;
+  --step-active: 139 127 255;
+  --step-completed: 63 169 120;
+  --step-inactive: 38 38 38;
 
   --ring: 139 127 255;
   --shadow-color: 0 0 0;
@@ -90,7 +96,7 @@
   --chart-2: 217 89 38; /* #d95926 */
   --chart-3: 25 158 112; /* #199e70 */
   --chart-4: 201 133 0; /* #c98500 */
-  --chart-5: 213 81 129; /* #d55181 */
+  --chart-5: 213 81 129; /* #d51581 */
   --chart-6: 0 131 0; /* #008300 */
   --chart-7: 144 133 233; /* #9085e9 */
   --chart-8: 230 103 103; /* #e66767 */

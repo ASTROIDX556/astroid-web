@@ -14,7 +14,9 @@ import { usePolicies } from '@/hooks/use-queries';
 import { formatNumber } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { PolicyRulesBuilder } from '@/features/policies/PolicyRulesBuilder';
+import { PolicySimulationSandbox } from '@/features/policies/PolicySimulationSandbox';
 import { BudgetSimulator } from '@/features/policies/BudgetSimulator';
+import { PolicySandboxWidget } from '@/features/policies/PolicySandboxWidget';
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -52,8 +54,13 @@ export default function PoliciesPage() {
       >
         {(data) => (
           <div className="space-y-6">
+            <PolicySandboxWidget policies={data} />
+
             <SectionLabel>Spending rule designer</SectionLabel>
             <PolicyRulesBuilder />
+
+            <SectionLabel>Policy simulation sandbox</SectionLabel>
+            <PolicySimulationSandbox />
 
             <SectionLabel>{data.length} policies</SectionLabel>
             <div className="grid gap-4 lg:grid-cols-2">
