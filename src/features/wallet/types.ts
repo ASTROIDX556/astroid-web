@@ -1,23 +1,18 @@
-/** An asset entry in the Stellar Asset Directory. */
+export type AssetCode = 'XLM' | 'USDC' | 'EURC' | 'ASTRO';
 
-export type AssetVerificationStatus = 'verified' | 'unverified';
-
-export type AssetTrustlineStatus = 'trusted' | 'untrusted';
-
-export interface StellarAsset {
-  /** Short code, e.g. "USDC", "EURC", "yXLM". Max 12 alphanumeric chars. */
-  code: string;
-  /** Stellar issuer public key (starts with 'G', 56 characters). */
-  issuer: string;
-  /** Human-readable name, e.g. "USD Coin". */
+export interface AssetBalance {
+  id: string;
+  code: AssetCode;
   name: string;
-  /** Whether the issuer has been verified by the directory. */
-  verification: AssetVerificationStatus;
-  /** Whether the current wallet holds a trustline for this asset. */
-  trustline: AssetTrustlineStatus;
+  balance: number;
+  usdPrice: number;
+  iconUrl?: string;
+  issuer?: string;
+  decimals: number;
 }
 
-export interface AddAssetFormValues {
-  code: string;
-  issuer: string;
+export interface WalletSummary {
+  totalUsdValue: number;
+  assets: AssetBalance[];
+  lastUpdated: string;
 }
