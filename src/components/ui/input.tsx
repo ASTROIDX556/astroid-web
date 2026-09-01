@@ -1,16 +1,18 @@
-import { forwardRef, useId } from 'react';
+import { forwardRef, useId, useEffect, useRef, type InputHTMLAttributes, type TextareaHTMLAttributes, type SelectHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 const fieldBase =
   'w-full rounded-sm border border-border bg-surface px-3 text-sm text-foreground placeholder:text-foreground-muted transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean;
-  leftIcon?: React.ReactNode;
+  leftIcon?: ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, invalid, leftIcon, ...props }, ref) => {
+  { className, invalid, leftIcon, ...props },
+  ref,
+	)=> {
     if (leftIcon) {
       return (
         <div className="relative">
@@ -48,28 +50,55 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 Input.displayName = 'Input';
 
-export const Textarea = forwardRef<
-  HTMLTextAreaElement,
-  React.TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }
->(({ className, invalid, ...props }, ref) => (
-  <textarea
-    ref={ref}
-    className={cn(
-      fieldBase,
-      'min-h-[96px] py-2.5 leading-relaxed',
-      invalid && 'border-danger focus-visible:ring-danger',
-      className,
-    )}
-    aria-invalid={invalid}
-    {...props}
-  />
-));
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextareaElement> {
+  invalid?: boolean;
+  autoResize?: boolean;
+  maxHeight?: number;
+}
+
+export const Textarea = forwardRef<HTMLTextareaElement, TextareaProps>(
+  { className, invalid, autoResize, maxHeight = 200, ...props },
+  ref,
+) => {
+    const internalRef = useRef<HTMLTextareaElement | null>(null);
+
+    const setRefs = (node: HTMLTextareaElement | null) => {
+      internalRef.current = node;
+      if (typeof ref === 'function') ref(node);
+      else if (ref) ref.current = node;
+    };
+
+    useEffect(() => {
+      if (!autoResize) return;
+      const el = internalRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px$;
+    }, [props.value, autoResize, maxHeight]);
+
+    return (
+      <textarea
+        ref={setRefs}
+        rows={autoResize ? 1 : undefined}
+        className={cn(
+          fieldBase,
+          'py-2.5 leading-relaxed',
+          autoResize && 'min-h-[40px] resize-none overflow-y-auto',
+          invalid && 'border-danger focus-visible:ring-danger',
+          className,
+        )}
+        aria-invalid={invalid}
+        {...props}
+      />
+    );
+  },
+);
 Textarea.displayName = 'Textarea';
 
 export const Select = forwardRef<
   HTMLSelectElement,
-  React.SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }
->(({ className, invalid, children, ...props }, ref) => (
+  SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }
+>(({className, invalid, children, ...props}, ref) => (
   <select
     ref={ref}
     className={cn(fieldBase, 'h-10 pr-8', invalid && 'border-danger', className)}
@@ -87,11 +116,11 @@ export interface FormFieldProps {
   hint?: string;
   error?: string;
   required?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
-/** Labelled form field with hint + accessible error messaging. */
+/** Labelled form field with hint + accessible error messaging. **/
 export function FormField({
   label,
   htmlFor,
@@ -129,7 +158,7 @@ export interface SwitchProps {
   disabled?: boolean;
 }
 
-/** Accessible toggle switch. */
+/** Accessible toggle switch. **/
 export function Switch({ checked, onCheckedChange, label, id, disabled }: SwitchProps) {
   const generatedId = useId();
   const switchId = id ?? generatedId;
@@ -160,7 +189,7 @@ export function Switch({ checked, onCheckedChange, label, id, disabled }: Switch
           )}
         />
       </button>
-      {label && <span>{label}</span>}
+      {label && <span>{label}</span>
     </label>
   );
 }

@@ -1,8 +1,8 @@
-import { motion, AnimatePresence, useSpring } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { motion, useSpring } from 'framer-motion';
+import { useEffect, useState, type ReactNode } from 'react';
 
 // Common entrance stagger for pages
-export const PageTransition = ({ children, className }: { children: React.ReactNode; className?: string }) => {
+export const PageTransition = ({ children, className }: { children: ReactNode, className?: string }) => {
   return (
     <motion.div
       initial="hidden"
@@ -19,7 +19,7 @@ export const PageTransition = ({ children, className }: { children: React.ReactN
   );
 };
 
-export const StaggerContainer = ({ children, className }: { children: React.ReactNode; className?: string }) => {
+export const StaggerContainer = ({ children, className }: { children: ReactNode, className?: string }) => {
   return (
     <motion.div
       initial="hidden"
@@ -35,7 +35,7 @@ export const StaggerContainer = ({ children, className }: { children: React.Reac
   );
 };
 
-export const StaggerItem = ({ children, className }: { children: React.ReactNode; className?: string }) => {
+export const StaggerItem = ({ children, className }: { children: ReactNode, className?: string }) => {
   return (
     <motion.div
       variants={{
@@ -50,11 +50,11 @@ export const StaggerItem = ({ children, className }: { children: React.ReactNode
 };
 
 // Animated Number Counter
-export const AnimatedNumber = ({ value, formatter }: { value: number; formatter: (val: number) => string }) => {
+export const AnimatedNumber = ({ value, formatter }: { value: number, formatter: (val: number) => string }) => {
   const safeValue = typeof value === 'number' && isFinite(value) ? value : 0;
   const spring = useSpring(safeValue, { mass: 0.8, stiffness: 75, damping: 15 });
   const [display, setDisplay] = useState(() => {
-    try { return formatter(safeValue); } catch { return '—'; }
+    try { return formatter(safeValue); } catch { return '-'; }
   });
 
   useEffect(() => {
@@ -63,25 +63,66 @@ export const AnimatedNumber = ({ value, formatter }: { value: number; formatter:
 
   useEffect(() => {
     return spring.on('change', (latest) => {
-      try { setDisplay(formatter(latest)); } catch { setDisplay('—'); }
+      try { setDisplay(formatter(latest)); } catch { setDisplay('-'); }
     });
   }, [spring, formatter]);
 
   return <span>{display}</span>;
 };
 
-// Slide transition for multi-step forms/wizards
-export const StepTransition = ({ step, children, className }: { step: string | number; children: React.ReactNode; className?: string }) => (
-  <AnimatePresence mode="wait" initial={false}>
+// Chat panel slide-in animation (e.g., from right edge)
+export const chatPanelVariants = {
+  hidden: { x: '100%', opacity: 0 },
+  show: { x: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } },
+  exit: { x: '100%', opacity: 0, transition: { duration: 0.2 } },
+};
+
+// Chat message entrance animation
+export const chatMessageVariants = {
+  hidden: { opacity: 0, y: 12, scale: 0.98 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.25, ease: 'easeOut' } },
+};
+
+// Container for stagger messages
+export const chatMessagesContainerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
+};
+
+// Chat panel component (drawer)
+export function ChatPanel({ children, className }: { children: ReactNode, className?: string }) {
+  return (
     <motion.div
-      key={step}
-      initial={{ opacity: 0, x: 30 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+      variants={chatPanelVariants}
+      initial="hidden"
+      animate="show"
+      exit="exit"
       className={className}
     >
       {children}
     </motion.div>
-  </AnimatePresence>
-);
+  );
+}
+
+// Chat message item
+export function ChatMessage({ children, className }: { children: ReactNode, className?: string }) {
+  return (
+    <motion.div variants={chatMessageVariants} className={className}>
+      {children}
+    </motion.div>
+  );
+}
+
+// Container for chat messages with stagger
+export function ChatMessagesContainer({ children, className }: { children: ReactNode, className?: string }) {
+  return (
+    <motion.div
+      variants={chatMessagesContainerVariants}
+      initial="hidden"
+      animate="show"
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
