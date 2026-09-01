@@ -18,6 +18,7 @@ import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
 import { DepartmentBudgetBreakdown } from '@/features/budgets/DepartmentBudgetBreakdown';
 import { BudgetBreakdownChart } from '@/features/budgets/BudgetBreakdownChart';
+import { BudgetAllocationDashboard } from '@/features/budgets/components/BudgetAllocationDashboard';
 import { BudgetMatrix } from '@/features/budgets/BudgetMatrix';
 import { BudgetMeterCard } from '@/features/budgets/BudgetMeters';
 
@@ -158,6 +159,11 @@ export default function BudgetsPage() {
                   <SectionLabel>Alert configuration</SectionLabel>
                   <BudgetAlertSettings />
                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-border space-y-4">
+                <SectionLabel>Real-Time Agent Allocation Control</SectionLabel>
+                <BudgetAllocationDashboard />
               </div>
 
               <div className="pt-4 border-t border-border space-y-4">
