@@ -19,6 +19,7 @@ export function PolicyRulesBuilder() {
   const [draft, setDraft] = useState<PolicyRule>(defaultRule);
   const [rules, setRules] = useState<PolicyRule[]>(defaultPolicyRules);
   const [error, setError] = useState<string | null>(null);
+  const [simulationAmount, setSimulationAmount] = useState(500);
 
   const summary = useMemo(
     () =>
@@ -43,6 +44,19 @@ export function PolicyRulesBuilder() {
   const removeRule = (index: number) => {
     setRules((current) => current.filter((_, ruleIndex) => ruleIndex !== index));
   };
+
+  const simulationResults = useMemo(
+    () => rules.map((rule) => {
+      if (rule.field !== 'Transaction Amount') return true;
+      const threshold = Number(rule.value);
+      if (!Number.isFinite(threshold)) return false;
+      if (rule.operator === 'greater_than') return simulationAmount > threshold;
+      if (rule.operator === 'less_than') return simulationAmount < threshold;
+      if (rule.operator === 'equals') return simulationAmount === threshold;
+      return true;
+    }),
+    [rules, simulationAmount],
+  );
 
   return (
     <Card>
@@ -140,6 +154,36 @@ export function PolicyRulesBuilder() {
             </div>
           ))}
         </div>
+
+        <aside aria-label="Policy simulation" className="rounded-card border border-border bg-surface-secondary/40 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Live simulator</h3>
+              <p className="text-xs text-foreground-muted">Test a transaction amount against the active rules.</p>
+            </div>
+            <output aria-live="polite" className="text-xs text-foreground-secondary">{simulationAmount} XLM</output>
+          </div>
+          <label className="mt-3 block text-xs text-foreground-secondary">
+            <span>Transaction amount</span>
+            <input
+              aria-label="Simulated transaction amount"
+              type="range"
+              min="0"
+              max="10000"
+              step="1"
+              value={simulationAmount}
+              onChange={(event) => setSimulationAmount(Number(event.target.value))}
+              className="mt-2 w-full accent-gold focus:outline-none focus:ring-2 focus:ring-gold"
+            />
+          </label>
+          <div className="mt-3 space-y-2">
+            {rules.map((rule, index) => (
+              <div key={`simulation-${index}`} className={simulationResults[index] ? 'rounded border border-success/40 bg-success/10 p-2 text-xs text-success' : 'rounded border border-danger/40 bg-danger/10 p-2 text-xs text-danger'}>
+                {simulationResults[index] ? 'Pass' : 'Fail'}: {rule.field} {rule.operator.replace(/_/g, ' ')} {rule.value}
+              </div>
+            ))}
+          </div>
+        </aside>
       </CardContent>
     </Card>
   );
