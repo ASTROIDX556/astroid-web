@@ -8,6 +8,7 @@ import type {
   AnalyticsOverview,
   ApiKey,
   AppNotification,
+  AssetRate,
   Budget,
   ChatMessage,
   MemoryRecord,
@@ -184,6 +185,10 @@ export const resources = {
       mock.memoryRecords.find((m) => m.id === id) ?? notFound('Memory record'),
       () => one<MemoryRecord>(`/memory/${id}`),
     ),
+
+  // -- asset rates ---------------------------------------------------------
+  getAssetRates: (): Promise<AssetRate[]> =>
+    resolve(mock.assetRates, () => list<AssetRate[]>('/rates')),
 
   // -- notifications ------------------------------------------------------
   getNotifications: (): Promise<AppNotification[]> =>

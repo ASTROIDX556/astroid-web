@@ -5,6 +5,8 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   timestamp: string;
+  /** True while the assistant response is still streaming word-by-word. */
+  isPartial?: boolean;
   structuredBriefing?: {
     totalDailySpend: number;
     currency: string;
@@ -20,4 +22,12 @@ export interface QuickPromptChip {
   label: string;
   promptText: string;
   iconName: string;
+}
+
+/** Parsed action card extracted from [ACTION: ...] markers in assistant text. */
+export interface ActionCard {
+  type: string;
+  label: string;
+  /** Original raw marker string for display. */
+  raw: string;
 }

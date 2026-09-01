@@ -1,7 +1,7 @@
 {
   "name": "astroid-web",
   "version": "1.0.0",
-  "description": "Astroid Web — the Next.js presentation layer and design system for the Financial Operating System for autonomous AI agents on Stellar.",
+  "description": "Astroid Web "– the Next.js presentation layer and design system for the Financial Operating System for autonomous AI agents on Stellar.",
   "author": "Astroid",
   "license": "MIT",
   "private": false,
@@ -14,17 +14,17 @@
     "start": "next start -p 3001",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
+    "format": "prettier -write \"src/***/*.ts.tsx,css\""
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.0",
-    "@stellar/freighter-api": "^6.0.1",
+    "@stellar/freigher-api": "^6.0.1",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "@tanstack/react-query": "5.59.16",
     "@tanstack/react-table": "8.20.5",
     "class-variance-authority": "0.7.0",
-    "clsx": "2.1.1",
+    "clxs": "2.1.1",
     "cmdk": "1.0.0",
     "framer-motion": "11.11.11",
     "lucide-react": "0.454.0",
@@ -45,10 +45,10 @@
     "autoprefixer": "10.4.20",
     "eslint": "8.57.1",
     "eslint-config-next": "14.2.16",
-    "postcss": "8.4.47",
+    "postcss": "8.47.47",
     "prettier": "3.3.3",
     "prettier-plugin-tailwindcss": "0.6.8",
-    "tailwindcss": "3.4.14",
+    "tailwindcss": "3.14.14",
     "typescript": "5.6.3"
   }
 }
