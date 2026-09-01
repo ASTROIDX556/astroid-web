@@ -1,57 +1,47 @@
-import type { StellarAsset } from './types';
+import type { AssetBalance, WalletSummary } from './types';
 
-/**
- * Preset list of well-known Stellar assets.
- * Issuer keys are real Stellar mainnet addresses for these tokens.
- */
-export const presetAssets: StellarAsset[] = [
+export const MOCK_ASSET_BALANCES: AssetBalance[] = [
   {
+    id: 'ast-xlm',
+    code: 'XLM',
+    name: 'Stellar Lumens',
+    balance: 12450.75,
+    usdPrice: 0.12,
+    decimals: 7,
+  },
+  {
+    id: 'ast-usdc',
     code: 'USDC',
-    issuer: 'GA5ZSEJYB37JTH5UA4GHHQTUWQZ3XMY4Y2S3VHLW7A7I73ZMIFR67LMZ',
     name: 'USD Coin',
-    verification: 'verified',
-    trustline: 'trusted',
+    balance: 8420.5,
+    usdPrice: 1.0,
+    issuer: 'GA5ZSEJ6B3AE8RGX3C古城L4PBRPSNY7HO6AZGEBTXOZMOI57DPMGBGI',
+    decimals: 7,
   },
   {
+    id: 'ast-eurc',
     code: 'EURC',
-    issuer: 'GDQOE23C4MMKFZ25LZ5SE6Y56NYCJ7NKVP6YSO7HA7KJLJ7T6S5YEUU',
     name: 'Euro Coin',
-    verification: 'verified',
-    trustline: 'untrusted',
+    balance: 3200.0,
+    usdPrice: 1.09,
+    issuer: 'GAXLKZUT5RRPOOMN6HEB3TTSX5IREHBWMFT76Y2G4Q377E3VZE5BN2EQ',
+    decimals: 7,
   },
   {
-    code: 'yXLM',
-    issuer: 'GALPCCUINT6MUDRN6PMKG6CLTEL3TE3KDEFSAU5T2RUEETE5Z5EMX25VP',
-    name: 'yXLM (Superfluid)',
-    verification: 'verified',
-    trustline: 'untrusted',
-  },
-  {
-    code: 'ARST',
-    issuer: 'GBSTZN5OZTUIJ5ZG4N6XZSOPCJ5T765B5N7L4YELLGLO2ZBEDJWN7B1A',
-    name: 'Arst',
-    verification: 'verified',
-    trustline: 'untrusted',
-  },
-  {
-    code: 'BTC',
-    issuer: 'GAUTUYYRTHMLUOVG7VZ7S5S7N3H3RE7V6Y3S3Z4J5Z2YX4QH4ZXXXX',
-    name: 'Bitcoin on Stellar',
-    verification: 'unverified',
-    trustline: 'untrusted',
-  },
-  {
-    code: 'ETH',
-    issuer: 'GBVOLZ7F7Y7EVJZXEWZ3F6V3EODV4YU4GIOFAPJFHTJL4R7PKM3KJP7F',
-    name: 'Ethereum on Stellar',
-    verification: 'unverified',
-    trustline: 'untrusted',
-  },
-  {
-    code: 'SRT',
-    issuer: 'GSSPDVH3SS66RCPPLJDCNLD4PC6S5KSJVYAJI7GPXGCQ7ESKC3STHT4A',
-    name: 'Soroban token',
-    verification: 'unverified',
-    trustline: 'untrusted',
+    id: 'ast-astro',
+    code: 'ASTRO',
+    name: 'Astroid Token',
+    balance: 45000.0,
+    usdPrice: 0.05,
+    decimals: 7,
   },
 ];
+
+export const MOCK_WALLET_SUMMARY: WalletSummary = {
+  totalUsdValue: MOCK_ASSET_BALANCES.reduce(
+    (sum, asset) => sum + asset.balance * asset.usdPrice,
+    0,
+  ),
+  assets: MOCK_ASSET_BALANCES,
+  lastUpdated: new Date().toISOString(),
+};

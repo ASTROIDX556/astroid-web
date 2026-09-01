@@ -1,4 +1,3 @@
 export * from './api';
 export * from './domain';
-export * from './budget';
-export * from './audit';
+export { ChatMessage as AiChatMessage, SendMessagePayloadSchema, SendMessagePayload } from './ai';
