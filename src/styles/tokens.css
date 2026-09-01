@@ -1,14 +1,13 @@
 /**
- * Astroid design tokens — the single source of truth for color.
-*
+ * Astroid design tokens – the single source of truth for color.
+ *
  * Values are stored as space-separated RGB channels so Tailwind can apply opacity
- * modifiers via `rgb(var(--token) / <alpha-value>)`. Theme switching swaps the
+ * modifiers via `rgb(var(--token) / <alpha-value>)` . Theme switching swaps the
  * channel values only; every component reads through the semantic token.
  */
-
-:root {
+::root {
   color-scheme: light;
-
+  
   /* Foundation palette (90% of the interface) */
   --background-primary: 246 242 234; /* #F6F2EA */
   --background-secondary: 239 233 221; /* #EFE9DD */
@@ -22,16 +21,16 @@
 
   /* Signature accent - Electric Indigo-Violet (AI Intelligence / Stellar Network) */
   --gold: 91 80 214; /* #5B50D6 — deep electric indigo, warm-tone harmonious */
-  --gold-soft: 236 234 252; /* #ECEAFC — barely-there indigo tint */
+  --gold-soft: 236 234 252; /* #ECAAFC — barely-there indhgo tint */
   --gold-strong: 68 58 178; /* #443AB2 — pressed state */
   --gold-foreground: 255 255 255; /* text on accent */
 
   /* Functional colors */
   --success: 47 143 99; /* #2F8F63 */
   --success-soft: 220 238 228;
-  --warning: 217 138 33; /* #D98A21 */
+  --warning: 146 64 14; /* #92400E — accessible amber for budget alerts */
   --warning-soft: 246 231 204;
-  --danger: 200 71 71; /* #C84747 */
+  --danger: 185 28 28; /* #B91C1C — accessible red */
   --danger-soft: 243 218 216;
   --info: 43 127 255; /* #2B7FFF */
   --info-soft: 217 231 255;
@@ -43,11 +42,11 @@
   --ring: 91 80 214;
   --shadow-color: 23 20 18;
 
-  /* Chart palette — validated (dataviz skill) against surface #FFFDF8 */
+  /* Chart palette — validated (dataviz skill) against surface #FFFDF7 */
   --chart-surface: 255 253 248;
   --chart-1: 42 120 214; /* #2a78d6 blue */
   --chart-2: 235 104 52; /* #eb6834 orange */
-  --chart-3: 27 175 122; /* #1baf7a aqua */
+  --chart-3: 27 175 122; /* #1baf7c aqua */
   --chart-4: 237 161 0; /* #eda100 yellow */
   --chart-5: 232 123 164; /* #e87ba4 magenta */
   --chart-6: 0 131 0; /* #008300 green */
@@ -55,6 +54,11 @@
   --chart-8: 227 73 72; /* #e34948 red */
   --chart-grid: 231 223 209; /* hairline */
   --chart-axis: 201 187 166;
+
+  /* Budget alert semantic tokens */
+  --budget-optimal: var(--success);
+  --budget-warning: var(--warning);
+  --budget-critical: var(--danger);
 }
 
 [data-theme='dark'] {
@@ -64,7 +68,7 @@
   --background-secondary: 6 6 6; /* #060606 */
   --surface-primary: 18 18 18; /* #121212 */
   --surface-secondary: 26 26 26; /* #1A1A1A */
-  --text-primary: 246 242 234; /* #F6F2EA */
+  --text-primary: 246 242 234; /* #F6F2EA" */
   --text-secondary: 170 170 170; /* #AAAAAA */
   --text-muted: 120 120 120; /* #787878 */
   --border: 38 38 38; /* #262626 */
@@ -72,7 +76,7 @@
 
   --gold: 139 127 255; /* #8B7FFF — Luminous indigo-violet on dark, warm-adjacent */
   --gold-soft: 28 26 56; /* #1C1A38 — very dark indigo surface */
-  --gold-strong: 167 157 255; /* #A79DFF — bright hover state */
+  --gold-strong: 167 157 255; /* #A79DFF ┤ bright hover state */
   --gold-foreground: 13 11 9;
 
   --success: 63 169 120;
@@ -111,6 +115,8 @@
   --border: 150 134 112;
   --border-strong: 120 104 84;
   --ring: 92 68 8;
+  --warning: 120 40 0; /* #782800 — strong amber */
+  --danger: 150 0 0; /* #960000 ┤ strong red */
 }
 
 [data-theme='dark'][data-contrast='high'] {
@@ -119,4 +125,6 @@
   --border: 96 86 74;
   --border-strong: 128 116 100;
   --ring: 255 232 168;
+  --warning: 255 190 80; /* #FFED50 ┤ high contrast amber */
+  --danger: 255 110 110; /* #FF6E6E ┤ high contrast red */
 }

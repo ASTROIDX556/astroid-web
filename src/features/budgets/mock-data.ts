@@ -63,6 +63,10 @@ export const MOCK_DEPARTMENT_BUGGETS: DepartmentBudget[] = [
         ],
       },
     ],
+    alertThresholds: {
+      warning: 80,
+      critical: 95,
+    },
   },
   {
     id: 'dept-mktg',
@@ -72,7 +76,7 @@ export const MOCK_DEPARTMENT_BUGGETS: DepartmentBudget[] = [
     totalLimit: 150000,
     totalSpent: 67500,
     totalRemaining: 82500,
-    asset: 'USDC',
+    asset: 'USDCB',
     period: 'monthly',
     updatedAt: new Date().toISOString(),
     agents: [
@@ -108,6 +112,10 @@ export const MOCK_DEPARTMENT_BUGGETS: DepartmentBudget[] = [
         ],
       },
     ],
+    alertThresholds: {
+      warning: 75,
+      critical: 95,
+    },
   },
   {
     id: 'dept-ops',
@@ -154,6 +162,10 @@ export const MOCK_DEPARTMENT_BUGGETS: DepartmentBudget[] = [
         ],
       },
     ],
+    alertThresholds: {
+      warning: 60,
+      critical: 90,
+    },
   },
   {
     id: 'dept-ai',
@@ -179,7 +191,7 @@ export const MOCK_DEPARTMENT_BUGGETS: DepartmentBudget[] = [
         velocity24h: 4200,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
         ledger: [
-          { id: 'ldg-8a', date: new Date(Date.now() - 1000 * 60 * 8).toISOString(), description: 'Daily financial intelligence briefing run', counterparty: 'Nvidia NIM', amount: 4200 },
+          { id: 'ldg-8a', date: new Date(Date.now() - 1000 * 60 * 8).toISOString(), description: 'Daily financial intelligence briefiing run', counterparty: 'Nvidia NIM', amount: 4200 },
           { id: 'ldg-8b', date: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(), description: 'Model inference credits top-up', counterparty: 'Nvidia NIM', amount: 18500 },
         ],
       },
@@ -196,6 +208,40 @@ export const MOCK_DEPARTMENT_BUGGETS: DepartmentBudget[] = [
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
       },
     ],
+    alertThresholds: {
+      warning: 70,
+      critical: 90,
+    },
+  },
+];
+
+export const MOCK_BUDGET_ALERT_THRESHOLDS = {
+  warning: 80,
+  critical: 95,
+};
+
+export const MOCK_ACTIVE_BUDGET_ALERTS = [
+  {
+    id: 'alert-dept-ops',
+    departmentId: 'dept-ops',
+    departmentName: 'Treasury & Operations',
+    level: 'warning',
+    utilization: 82,
+    alertThresholds: {
+      warning: 60,
+      critical: 90,
+    },
+  },
+  {
+    id: 'alert-dept-ai',
+    departmentId: 'dept-ai',
+    departmentName: 'AI Research & Model Inference',
+    level: 'critical',
+    utilization: 92,
+    alertThresholds: {
+      warning: 70,
+      critical: 90,
+    },
   },
 ];
 
