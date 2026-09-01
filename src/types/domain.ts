@@ -344,6 +344,15 @@ export interface TimeseriesPoint {
   net: number;
 }
 
+export interface ActivityPoint {
+  /** ISO timestamp of the observation window start. */
+  timestamp: string;
+  /** Number of transactions in the window. */
+  count: number;
+  /** Total spend (USDC) in the window. */
+  spend: number;
+}
+
 export interface SpendingByCategory {
   category: string;
   amount: number;

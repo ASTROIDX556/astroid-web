@@ -2,6 +2,7 @@ import { isMockMode } from '@/lib/env';
 import { apiClient } from '@/services/client';
 import * as mock from '@/services/mock';
 import type {
+  ActivityPoint,
   Agent,
   AiBriefing,
   AnalyticsOverview,
@@ -81,6 +82,8 @@ export const resources = {
   // -- analytics ----------------------------------------------------------
   getOverview: (): Promise<AnalyticsOverview> =>
     resolve(mock.analyticsOverview, () => one<AnalyticsOverview>('/analytics/overview')),
+  getActivity: (): Promise<ActivityPoint[]> =>
+    resolve(mock.activityData, () => list<ActivityPoint[]>('/analytics/activity')),
 
   // -- ai assistant -------------------------------------------------------
   getBriefing: (): Promise<AiBriefing> =>
