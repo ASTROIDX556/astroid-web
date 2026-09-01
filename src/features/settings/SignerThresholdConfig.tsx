@@ -62,22 +62,6 @@ const INITIAL_THRESHOLDS: ThresholdConfig = {
   highThreshold: 4,
 };
 
-function validateStellarKey(key: string): { valid: boolean; error?: string } {
-  if (!key.trim()) {
-    return { valid: false, error: 'Public key is required' };
-  }
-  if (key.length !== 56) {
-    return { valid: false, error: 'Stellar public key must be exactly 56 characters' };
-  }
-  if (!key.startsWith('G')) {
-    return { valid: false, error: 'Stellar public key must start with G' };
-  }
-  if (!STELLAR_KEY_REGEX.test(key)) {
-    return { valid: false, error: 'Invalid characters in Stellar public key' };
-  }
-  return { valid: true };
-}
-
 export function SignerThresholdConfig() {
   const [signers, setSigners] = useState<SignerKey[]>(INITIAL_SIGNERS);
   const [thresholds, setThresholds] = useState<ThresholdConfig>(INITIAL_THRESHOLDS);
@@ -99,6 +83,19 @@ export function SignerThresholdConfig() {
 
   const totalWeight = useMemo(() => signers.reduce((sum, s) => sum + s.weight, 0), [signers]);
 
+  const minSignersForHigh = useMemo(() => {
+    if (signers.length === 0) return Infinity;
+    const sortedWeights = [...signers].sort((a, b) => b.weight - a.weight);
+    let accumulated = 0;
+    let count = 0;
+    for (const signer of sortedWeights) {
+      accumulated += signer.weight;
+      count++;
+      if (accumulated >= thresholds.highThreshold) return count;
+    }
+    return Infinity;
+  }, [signers, thresholds.highThreshold]);
+
   const quorumStatus = useMemo(() => {
     const reachable = {
       low: totalWeight >= thresholds.lowThreshold,
@@ -106,21 +103,8 @@ export function SignerThresholdConfig() {
       high: totalWeight >= thresholds.highThreshold,
     };
 
-    const minSignersForHigh = useMemo(() => {
-      if (signers.length === 0) return Infinity;
-      const sortedWeights = [...signers].sort((a, b) => b.weight - a.weight);
-      let accumulated = 0;
-      let count = 0;
-      for (const signer of sortedWeights) {
-        accumulated += signer.weight;
-        count++;
-        if (accumulated >= thresholds.highThreshold) return count;
-      }
-      return Infinity;
-    }, [signers, thresholds.highThreshold]);
-
     return { reachable, minSignersForHigh };
-  }, [totalWeight, thresholds, signers]);
+  }, [totalWeight, thresholds, minSignersForHigh]);
 
   const handleAddSigner = useCallback((values: SignerFormValues) => {
     const existingKey = signers.find((s) => s.publicKey === values.publicKey);
