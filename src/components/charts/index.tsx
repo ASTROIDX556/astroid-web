@@ -55,7 +55,7 @@ const axisTick = {
   fontFamily: 'var(--font-mono)',
 };
 
-interface TooltipPayloadItem {
+export interface TooltipPayloadItem {
   name?: string | number;
   value?: number | string;
   color?: string;
@@ -63,7 +63,7 @@ interface TooltipPayloadItem {
   payload?: Record<string, unknown>;
 }
 
-function ChartTooltipShell({
+export function ChartTooltipShell({
   label,
   children,
 }: {

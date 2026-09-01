@@ -1,6 +1,16 @@
 import { useMemo, useState } from 'react';
+import type { Policy, PolicyType } from '@/types/domain';
 
-export type PolicyRuleType = 'max_amount' | 'allowed_assets' | 'multi_sig';
+export type PolicyRuleType =
+  | 'max_amount'
+  | 'allowed_assets'
+  | 'multi_sig'
+  | 'allowed_recipients'
+  | 'blocked_recipients'
+  | 'rate_limit'
+  | 'time_window'
+  | 'budget_limit'
+  | 'emergency_lock';
 
 export interface PolicyRule {
   id: string;
@@ -11,6 +21,104 @@ export interface PolicyRule {
   threshold?: number;
   allowedAssets?: string[];
   requiredCoSigners?: number;
+  allowedRecipients?: string[];
+  blockedRecipients?: string[];
+  rateLimitPerHour?: number;
+  windowStart?: string;
+  windowEnd?: string;
+  budgetLimitUsd?: number;
+  emergencyActive?: boolean;
+}
+
+/**
+ * Map a domain Policy type string to a sandbox PolicyRuleType.
+ */
+function mapPolicyType(type: PolicyType): PolicyRuleType {
+  switch (type) {
+    case 'max_spend':
+      return 'max_amount';
+    case 'allowed_assets':
+      return 'allowed_assets';
+    case 'approval_required':
+      return 'multi_sig';
+    case 'allowed_recipients':
+      return 'allowed_recipients';
+    case 'blocked_recipients':
+      return 'blocked_recipients';
+    case 'rate_limit':
+      return 'rate_limit';
+    case 'time_window':
+      return 'time_window';
+    case 'daily_budget':
+    case 'weekly_budget':
+    case 'monthly_budget':
+      return 'budget_limit';
+    case 'emergency_lock':
+      return 'emergency_lock';
+    case 'min_spend':
+      return 'max_amount'; // closest analog — lower-bound is evaluated inversely
+  }
+}
+
+/**
+ * Convert live Policy records from the API into sandbox-evaluable PolicyRule objects.
+ */
+export function mapPoliciesToSandboxRules(policies: Policy[]): PolicyRule[] {
+  return policies
+    .filter((p) => p.enabled)
+    .map((p) => {
+      const rule: PolicyRule = {
+        id: p.id,
+        name: p.name,
+        type: mapPolicyType(p.type),
+        description: p.description,
+        enabled: p.enabled,
+      };
+
+      const cfg = p.configuration;
+
+      switch (p.type) {
+        case 'max_spend':
+          rule.threshold = typeof cfg.maxAmount === 'number' ? cfg.maxAmount : undefined;
+          break;
+        case 'min_spend':
+          rule.threshold = typeof cfg.minAmount === 'number' ? cfg.minAmount : undefined;
+          break;
+        case 'allowed_assets':
+          rule.allowedAssets = Array.isArray(cfg.assets) ? cfg.assets : undefined;
+          break;
+        case 'approval_required':
+          rule.requiredCoSigners = typeof cfg.requiredApprovals === 'number' ? cfg.requiredApprovals : 2;
+          break;
+        case 'allowed_recipients':
+          rule.allowedRecipients = Array.isArray(cfg.recipients)
+            ? cfg.recipients.map(String)
+            : undefined;
+          break;
+        case 'blocked_recipients':
+          rule.blockedRecipients = Array.isArray(cfg.recipients)
+            ? cfg.recipients.map(String)
+            : undefined;
+          break;
+        case 'rate_limit':
+          rule.rateLimitPerHour = typeof cfg.maxPerHour === 'number' ? cfg.maxPerHour : undefined;
+          break;
+        case 'time_window':
+          rule.windowStart = typeof cfg.start === 'string' ? cfg.start : undefined;
+          rule.windowEnd = typeof cfg.end === 'string' ? cfg.end : undefined;
+          break;
+        case 'daily_budget':
+        case 'weekly_budget':
+        case 'monthly_budget':
+          rule.budgetLimitUsd = typeof cfg.limit === 'number' ? cfg.limit : undefined;
+          break;
+        case 'emergency_lock':
+          rule.emergencyActive = cfg.active === true;
+          break;
+      }
+
+      return rule;
+    });
 }
 
 export interface ParsedOperation {

@@ -14,6 +14,7 @@ import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatNumber, formatDateTime, truncateHash } from '@/lib/format';
 import type { AssetBalance } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
+import { XdrInspector } from '@/features/wallet/components/XdrInspector';
 
 const balanceColumns: Column<AssetBalance>[] = [
   { header: 'Asset', cell: (b) => <span className="font-medium">{b.asset}</span> },
@@ -113,6 +114,11 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
                   rows={data.balances}
                   rowKey={(b) => b.asset}
                 />
+              </div>
+
+              <div className="space-y-4">
+                <SectionLabel>Transaction inspector</SectionLabel>
+                <XdrInspector />
               </div>
             </div>
           );
