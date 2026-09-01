@@ -10,6 +10,7 @@ import type {
   AnalyticsOverview,
   ApiKey,
   AppNotification,
+  AssetRate,
   Budget,
   ChatMessage,
   MemoryRecord,
@@ -135,6 +136,14 @@ export const useMemoryRecord = (id: string): UseQueryResult<MemoryRecord> =>
     queryKey: queryKeys.memoryRecord(id),
     queryFn: () => resources.getMemoryRecord(id),
     enabled: Boolean(id),
+  });
+
+// -- asset rates -------------------------------------------------------------
+export const useAssetRates = (): UseQueryResult<AssetRate[]> =>
+  useQuery({
+    queryKey: queryKeys.rates,
+    queryFn: resources.getAssetRates,
+    refetchInterval: 30_000,
   });
 
 // -- notifications ----------------------------------------------------------

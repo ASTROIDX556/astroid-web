@@ -16,7 +16,9 @@ import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
+import { DepartmentBudgetBreakdown } from '@/features/budgets/DepartmentBudgetBreakdown';
 import { BudgetBreakdownChart } from '@/features/budgets/BudgetBreakdownChart';
+import { BudgetAllocationDashboard } from '@/features/budgets/components/BudgetAllocationDashboard';
 import { BudgetMatrix } from '@/features/budgets/BudgetMatrix';
 import { BudgetMeterCard } from '@/features/budgets/BudgetMeters';
 
@@ -90,6 +92,8 @@ export default function BudgetsPage() {
               {/* Recharts Budget Allocation & Threshold Chart */}
               <BudgetAllocationChart data={chartData} />
 
+              <DepartmentBudgetBreakdown />
+
               <SectionLabel>{data.length} budgets</SectionLabel>
               <div className="grid gap-4 sm:grid-cols-2">
                 {data.map((budget) => {
@@ -158,10 +162,18 @@ export default function BudgetsPage() {
               </div>
 
               <div className="pt-4 border-t border-border space-y-4">
+                <SectionLabel>Real-Time Agent Allocation Control</SectionLabel>
+                <BudgetAllocationDashboard />
+              </div>
+
+              <div className="pt-4 border-t border-border space-y-4">
                 <SectionLabel>Department Allocation & Drill-Down Matrix</SectionLabel>
                 <BudgetMatrix />
               </div>
-
+              <div className="pt-4 border-t border-border space-y-4">
+                <SectionLabel>Department Budget Breakdown</SectionLabel>
+                <DepartmentBudgetBreakdown />
+              </div>
               <div className="pt-4 border-t border-border space-y-4">
                 <SectionLabel>Department Spend Breakdown</SectionLabel>
                 <BudgetBreakdownChart />

@@ -37,3 +37,11 @@ export interface ChatPanelProps {
   quickPrompts?: QuickPromptChip[];
   onSendMessage: (message: string) => void;
 }
+
+/** Parsed action card extracted from [ACTION: ...] markers in assistant text. */
+export interface ActionCard {
+  type: string;
+  label: string;
+  /** Original raw marker string for display. */
+  raw: string;
+}

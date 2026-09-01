@@ -1,0 +1,1 @@
+export const mockProposals=[{id:"1",status:"voting",threshold:1,approvers:[{id:"a",address:"G".repeat(56),weight:1,status:"approved"}]}];

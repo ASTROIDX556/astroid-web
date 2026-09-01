@@ -1,6 +1,6 @@
 import type { DepartmentBudget } from './types';
 
-export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
+export const MOCK_DEPARTMENT_BUGGETS: DepartmentBudget[] = [
   {
     id: 'dept-eng',
     departmentName: 'Engineering & Infrastructure',
@@ -63,6 +63,10 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         ],
       },
     ],
+    alertThresholds: {
+      warning: 80,
+      critical: 95,
+    },
   },
   {
     id: 'dept-mktg',
@@ -72,7 +76,7 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
     totalLimit: 150000,
     totalSpent: 67500,
     totalRemaining: 82500,
-    asset: 'USDC',
+    asset: 'USDCB',
     period: 'monthly',
     updatedAt: new Date().toISOString(),
     agents: [
@@ -108,6 +112,10 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         ],
       },
     ],
+    alertThresholds: {
+      warning: 75,
+      critical: 95,
+    },
   },
   {
     id: 'dept-ops',
@@ -154,6 +162,10 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         ],
       },
     ],
+    alertThresholds: {
+      warning: 60,
+      critical: 90,
+    },
   },
   {
     id: 'dept-ai',
@@ -179,7 +191,7 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         velocity24h: 4200,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
         ledger: [
-          { id: 'ldg-8a', date: new Date(Date.now() - 1000 * 60 * 8).toISOString(), description: 'Daily financial intelligence briefing run', counterparty: 'Nvidia NIM', amount: 4200 },
+          { id: 'ldg-8a', date: new Date(Date.now() - 1000 * 60 * 8).toISOString(), description: 'Daily financial intelligence briefiing run', counterparty: 'Nvidia NIM', amount: 4200 },
           { id: 'ldg-8b', date: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(), description: 'Model inference credits top-up', counterparty: 'Nvidia NIM', amount: 18500 },
         ],
       },
@@ -196,5 +208,141 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
       },
     ],
+    alertThresholds: {
+      warning: 70,
+      critical: 90,
+    },
+  },
+];
+
+export const MOCK_BUDGET_ALERT_THRESHOLDS = {
+  warning: 80,
+  critical: 95,
+};
+
+export const MOCK_ACTIVE_BUDGET_ALERTS = [
+  {
+    id: 'alert-dept-ops',
+    departmentId: 'dept-ops',
+    departmentName: 'Treasury & Operations',
+    level: 'warning',
+    utilization: 82,
+    alertThresholds: {
+      warning: 60,
+      critical: 90,
+    },
+  },
+  {
+    id: 'alert-dept-ai',
+    departmentId: 'dept-ai',
+    departmentName: 'AI Research & Model Inference',
+    level: 'critical',
+    utilization: 92,
+    alertThresholds: {
+      warning: 70,
+      critical: 90,
+    },
+  },
+];
+
+export const MOCK_BUDGET_SCHEDULES = [
+  {
+    id: 'schedule-1',
+    agentId: 'agt-soroban-relayer',
+    departmentId: 'dept-eng',
+    frequency: 'monthly',
+    amount: 100000,
+    cliff: 3,
+    duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
+  },
+  {
+    id: 'schedule-2',
+    agentId: 'agt-ci-bot',
+    departmentId: 'dept-eng',
+    frequency: 'weekly',
+    amount: 20000,
+    cliff: 1,
+    duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
+  },
+  {
+    id: 'schedule-3',
+    agentId: 'agt-infra-monitor',
+    departmentId: 'dept-eng',
+    frequency: 'monthly',
+    amount: 70000,
+    cliff: 3,
+    duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
+  },
+  {
+    id: 'schedule-4',
+    agentId: 'agt-amm-arb',
+    departmentId: 'dept-mktg',
+    frequency: 'monthly',
+    amount: 90000,
+    cliff: 3,
+    duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
+  },
+  {
+    id: 'schedule-5',
+    agentId: 'agt-campaign',
+    departmentId: 'dept-mktg',
+    frequency: 'daily',
+    amount: 2000,
+    cliff: 0,
+    duration: 12,
+    asset: 'USDC',
+    startDate: new Date().toISOString(),
+  },
+  {
+    id: 'schedule-6',
+    agentId: 'agt-sweep-bot',
+    departmentId: 'dept-ops',
+    frequency: 'monthly',
+    amount: 300000,
+    cliff: 3,
+    duration: 12,
+    asset: 'XLM',
+    startDate: new Date().toISOString(),
+  },
+  {
+    id: 'schedule-7',
+    agentId: 'agt-payroll',
+    departmentId: 'dept-ops',
+    frequency: 'monthly',
+    amount: 200000,
+    cliff: 3,
+    duration: 12,
+    asset: 'XLM',
+    startDate: new Date().toISOString(),
+  },
+  {
+    id: 'schedule-8',
+    agentId: 'agt-nim-briefing',
+    departmentId: 'dept-ai',
+    frequency: 'monthly',
+    amount: 60000,
+    cliff: 3,
+    duration: 12,
+    asset: 'ASTRO',
+    startDate: new Date().toISOString(),
+  },
+  {
+    id: 'schedule-9',
+    agentId: 'agt-risk-eval',
+    departmentId: 'dept-ai',
+    frequency: 'monthly',
+    amount: 40000,
+    cliff: 6,
+    duration: 12,
+    asset: 'ASTRO',
+    startDate: new Date().toISOString(),
   },
 ];

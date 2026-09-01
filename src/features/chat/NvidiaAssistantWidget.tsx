@@ -15,8 +15,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency, formatRelativeTime } from '@/lib/format';
-import type { ChatMessage, QuickPromptChip } from './types';
+import { ChatMessage } from './ChatMessage';
+import type { ChatMessage as ChatMessageType, QuickPromptChip } from './types';
+
+/* ──────────────────────────────────────────────
+ * Constants
+ * ────────────────────────────────────────────── */
 
 const MotionCard = motion(Card);
 
@@ -30,18 +34,20 @@ const PRESET_CHIPS: QuickPromptChip[] = [
   {
     id: 'chip-2',
     label: 'Low Balance Wallets',
-    promptText: 'Identify any agent wallets approaching minimum reserve or threshold balance.',
+    promptText:
+      'Identify any agent wallets approaching minimum reserve or threshold balance.',
     iconName: 'AlertCircle',
   },
   {
     id: 'chip-3',
     label: 'Gas Fee Optimization',
-    promptText: 'Analyze current Soroban contract RPC gas fees and recommend priority fee settings.',
+    promptText:
+      'Analyze current Soroban contract RPC gas fees and recommend priority fee settings.',
     iconName: 'TrendingDown',
   },
 ];
 
-const INITIAL_MESSAGES: ChatMessage[] = [
+const INITIAL_MESSAGES: ChatMessageType[] = [
   {
     id: 'msg-1',
     role: 'assistant',
@@ -74,26 +80,26 @@ export function NvidiaAssistantWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isStreaming]);
-
-  // Send message handler
-  const handleSendMessage = (textToSend?: string) => {
-    const text = (textToSend || inputText).trim();
-    if (!text || isStreaming) return;
-
-    const userMsg: ChatMessage = {
-      id: `usr-${Date.now()}`,
-      role: 'user',
-      content: text,
-      timestamp: new Date().toISOString(),
+  if (q.includes('daily') || q.includes('spend')) {
+    return {
+      text: 'Daily spend summary analysis completed. All 8 active agents are operating within established daily budget envelopes.',
+      briefing: {
+        totalDailySpend: 24500,
+        currency: 'USDC',
+        activeAgentsCount: 8,
+        lowBalanceWalletsCount: 0,
+        topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
+        recommendation:
+          'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
+      },
     };
+  }
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInputText('');
-    setIsStreaming(true);
+  if (q.includes('balance') || q.includes('wallet')) {
+    return {
+      text: 'Wallet balance audit: 7 of 8 agent wallets are fully funded. 1 wallet (`agt-ci-bot`) is at **15.5%** capacity.\n\n[ACTION: APPROVE_TRANSFER: Replenish 500 USDC to agt-ci-bot wallet from Treasury Reserve]',
+    };
+  }
 
     // Mock response fallback simulating streaming Nvidia NIM LLM response
     let replyText = `Nvidia NIM LLM Insights: Analyzed query "${text}". On-chain telemetry indicates normal agent activity across Stellar Testnet.`;
@@ -165,14 +171,42 @@ export function NvidiaAssistantWidget() {
     }, 40);
   };
 
-  // Keyboard shortcut listener
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
+  /* ── Send message ── */
+  const handleSendMessage = useCallback(
+    (textToSend?: string) => {
+      const text = (textToSend || inputText).trim();
+      if (!text || isStreaming) return;
 
+      const userMsg: ChatMessageType = {
+        id: `usr-${Date.now()}`,
+        role: 'user',
+        content: text,
+        timestamp: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, userMsg]);
+      setInputText('');
+      setIsStreaming(true);
+      userScrolledRef.current = false;
+
+      const { text: replyText, briefing } = buildReply(text);
+      simulateStream(replyText, briefing);
+    },
+    [inputText, isStreaming, simulateStream],
+  );
+
+  /* ── Keyboard shortcut ── */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+    },
+    [handleSendMessage],
+  );
+
+  /* ── Render ── */
   return (
     <>
       <AnimatePresence>
@@ -196,17 +230,18 @@ export function NvidiaAssistantWidget() {
               <h3 className="font-display text-sm font-semibold tracking-tight text-foreground">
                 Nvidia NIM Financial AI Assistant
               </h3>
-              <Badge variant="gold" size="sm" className="font-mono text-3xs">
+              <Badge variant="gold" size="sm" className="text-3xs font-mono">
                 LLM v2.4
               </Badge>
             </div>
             <p className="text-2xs text-foreground-muted">
-              Conversational intelligence & executive briefings on Stellar on-chain telemetry
+              Conversational intelligence &amp; executive briefings on Stellar on-chain
+              telemetry
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="gap-1.5 flex items-center">
           <button
             type="button"
             onClick={() => setIsOpen(false)}
@@ -224,14 +259,20 @@ export function NvidiaAssistantWidget() {
             aria-expanded={isExpanded}
             title={isExpanded ? 'Collapse panel' : 'Expand panel'}
           >
-            {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            {isExpanded ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Preset Quick Chips */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 p-3 bg-surface/80">
-        <span className="text-3xs uppercase tracking-wider font-bold text-foreground-muted">Quick Prompts:</span>
+      {/* ── Preset Quick Chips ── */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-surface/80 p-3">
+        <span className="text-3xs font-bold uppercase tracking-wider text-foreground-muted">
+          Quick Prompts:
+        </span>
         {PRESET_CHIPS.map((chip) => (
           <button
             key={chip.id}
@@ -246,7 +287,7 @@ export function NvidiaAssistantWidget() {
         ))}
       </div>
 
-      {/* Chat Messages Stream */}
+      {/* ── Chat Messages Stream ── */}
       <div
         className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs"
         role="log"
@@ -255,8 +296,9 @@ export function NvidiaAssistantWidget() {
         aria-relevant="additions"
         aria-busy={isStreaming}
       >
-        {messages.map((msg) => {
-          const isAssistant = msg.role === 'assistant';
+        {messages.map((msg) => (
+          <ChatMessage key={msg.id} message={msg} />
+        ))}
 
           return (
             <motion.div
@@ -347,8 +389,8 @@ export function NvidiaAssistantWidget() {
         <div ref={chatBottomRef} />
       </div>
 
-      {/* Input Form */}
-      <div className="border-t border-border p-3 bg-surface-secondary/40">
+      {/* ── Input Form ── */}
+      <div className="border-t border-border bg-surface-secondary/40 p-3">
         <div className="relative flex items-center">
           <textarea
             rows={1}
@@ -356,6 +398,7 @@ export function NvidiaAssistantWidget() {
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask Nvidia NIM Assistant (e.g. 'Summarize daily agent spending')... (Enter to send)"
+            aria-label="Message Nvidia NIM Assistant"
             disabled={isStreaming}
             className="w-full resize-none rounded-button border border-border bg-surface pl-3 pr-12 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
             aria-label="Message input"

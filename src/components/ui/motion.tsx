@@ -10,7 +10,7 @@ export const PageTransition = ({ children, className }: { children: ReactNode, c
       exit="hidden"
       variants={{
         hidden: { opacity: 0, y: 10 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.05 } }
+        show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.05 } },
       }}
       className={className}
     >
@@ -26,12 +26,7 @@ export const StaggerContainer = ({ children, className }: { children: ReactNode,
       animate="show"
       variants={{
         hidden: { opacity: 0 },
-        show: {
-          opacity: 1,
-          transition: {
-            staggerChildren: 0.05,
-          },
-        },
+        show: { opacity: 1, transition: { staggerChildren: 0.05 } },
       }}
       className={className}
     >
@@ -45,14 +40,7 @@ export const StaggerItem = ({ children, className }: { children: ReactNode, clas
     <motion.div
       variants={{
         hidden: { opacity: 0, y: 15 },
-        show: { 
-          opacity: 1, 
-          y: 0,
-          transition: {
-            duration: 0.4,
-            ease: [0.22, 1, 0.36, 1]
-          }
-        },
+        show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
       }}
       className={className}
     >
