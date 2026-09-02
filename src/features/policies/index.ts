@@ -1,5 +1,7 @@
 export * from './BudgetSimulator';
+export * from './PolicyRulesBuilder';
+export * from './PolicySimulationSandbox';
 export * from './types';
 export { default as BudgetSimulator } from './BudgetSimulator';
-export * from './policySimulation';
-export { default as PolicySimulationModal, PolicySimulationSandbox, defaultSimulationRules } from './PolicySimulationModal';
+export { PolicySandboxModal } from './components/PolicySandboxModal';
+export { simulateTransaction } from './utils/simulator';

@@ -3,17 +3,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles,
-  Send,
   Bot,
   User,
   Zap,
   Maximize2,
   Minimize2,
+  Send,
+  X,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency, formatRelativeTime } from '@/lib/format';
-import type { ChatMessage, QuickPromptChip } from './types';
+import { ChatMessage } from './ChatMessage';
+import type { ChatMessage as ChatMessageType, QuickPromptChip } from './types';
+
+/* ──────────────────────────────────────────────
+ * Constants
+ * ────────────────────────────────────────────── */
+
+const MotionCard = motion(Card);
 
 const PRESET_CHIPS: QuickPromptChip[] = [
   {
@@ -25,18 +34,20 @@ const PRESET_CHIPS: QuickPromptChip[] = [
   {
     id: 'chip-2',
     label: 'Low Balance Wallets',
-    promptText: 'Identify any agent wallets approaching minimum reserve or threshold balance.',
+    promptText:
+      'Identify any agent wallets approaching minimum reserve or threshold balance.',
     iconName: 'AlertCircle',
   },
   {
     id: 'chip-3',
     label: 'Gas Fee Optimization',
-    promptText: 'Analyze current Soroban contract RPC gas fees and recommend priority fee settings.',
+    promptText:
+      'Analyze current Soroban contract RPC gas fees and recommend priority fee settings.',
     iconName: 'TrendingDown',
   },
 ];
 
-const INITIAL_MESSAGES: ChatMessage[] = [
+const INITIAL_MESSAGES: ChatMessageType[] = [
   {
     id: 'msg-1',
     role: 'assistant',
@@ -66,76 +77,148 @@ export function NvidiaAssistantWidget() {
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isStreaming]);
-
-  // Send message handler
-  const handleSendMessage = (textToSend?: string) => {
-    const text = (textToSend || inputText).trim();
-    if (!text || isStreaming) return;
-
-    const userMsg: ChatMessage = {
-      id: `usr-${Date.now()}`,
-      role: 'user',
-      content: text,
-      timestamp: new Date().toISOString(),
+  if (q.includes('daily') || q.includes('spend')) {
+    return {
+      text: 'Daily spend summary analysis completed. All 8 active agents are operating within established daily budget envelopes.',
+      briefing: {
+        totalDailySpend: 24500,
+        currency: 'USDC',
+        activeAgentsCount: 8,
+        lowBalanceWalletsCount: 0,
+        topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
+        recommendation:
+          'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
+      },
     };
+  }
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInputText('');
-    setIsStreaming(true);
+  if (q.includes('balance') || q.includes('wallet')) {
+    return {
+      text: 'Wallet balance audit: 7 of 8 agent wallets are fully funded. 1 wallet (`agt-ci-bot`) is at **15.5%** capacity.\n\n[ACTION: APPROVE_TRANSFER: Replenish 500 USDC to agt-ci-bot wallet from Treasury Reserve]',
+    };
+  }
 
-    // Mock response fallback simulating Nvidia NIM LLM response
-    setTimeout(() => {
-      let replyText = `Nvidia NIM LLM Insights: Analyzed query "${text}". On-chain telemetry indicates normal agent activity across Stellar Testnet.`;
-      let briefing;
+    // Mock response fallback simulating streaming Nvidia NIM LLM response
+    let replyText = `Nvidia NIM LLM Insights: Analyzed query "${text}". On-chain telemetry indicates normal agent activity across Stellar Testnet.`;
+    let briefing;
 
-      if (text.toLowerCase().includes('daily') || text.toLowerCase().includes('spend')) {
-        replyText =
-          'Daily spend summary analysis completed. All 8 active agents are operating within established daily budget envelopes.';
-        briefing = {
-          totalDailySpend: 24500,
-          currency: 'USDC',
-          activeAgentsCount: 8,
-          lowBalanceWalletsCount: 0,
-          topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
-          recommendation: 'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
-        };
-      } else if (text.toLowerCase().includes('balance') || text.toLowerCase().includes('wallet')) {
-        replyText =
-          'Wallet balance audit: 7 of 8 agent wallets are fully funded. 1 wallet (agt-ci-bot) is at 15.5% capacity.';
-      } else if (text.toLowerCase().includes('gas') || text.toLowerCase().includes('fee')) {
-        replyText =
-          'Soroban RPC network congestion is currently minimal. Recommended base fee: 100 stroops.';
+    if (text.toLowerCase().includes('daily') || text.toLowerCase().includes('spend')) {
+      replyText =
+        'Daily spend summary analysis completed. All 8 active agents are operating within established daily budget envelopes.';
+      briefing = {
+        totalDailySpend: 24500,
+        currency: 'USDC',
+        activeAgentsCount: 8,
+        lowBalanceWalletsCount: 0,
+        topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
+        recommendation: 'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
+      };
+    } else if (text.toLowerCase().includes('portfolio') || text.toLowerCase().includes('health')) {
+      replyText =
+        'Portfolio health summary: all strategies are within target allocations and reserve requirements.';
+      briefing = {
+        totalDailySpend: 13200,
+        currency: 'USDC',
+        activeAgentsCount: 8,
+        lowBalanceWalletsCount: 1,
+        topSpenderAgent: 'Yield Harvest Bot (6,100 USDC)',
+        recommendation: 'Maintain current allocations; monitor agt-ci-bot before next epoch.',
+      };
+    } else if (text.toLowerCase().includes('balance') || text.toLowerCase().includes('wallet')) {
+      replyText =
+        'Wallet balance audit: 7 of 8 agent wallets are fully funded. 1 wallet (agt-ci-bot) is at 15.5% capacity.';
+    } else if (text.toLowerCase().includes('gas') || text.toLowerCase().includes('fee')) {
+      replyText =
+        'Soroban RPC network congestion is currently minimal. Recommended base fee: 100 stroops.';
+    }
+
+    const assistantId = `ast-${Date.now()}`;
+    const words = replyText.split(' ');
+    let streamedContent = '';
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+
+    const streamInterval = window.setInterval(() => {
+      const nextWord = words.shift();
+
+      if (nextWord !== undefined) {
+        streamedContent = streamedContent ? `${streamedContent} ${nextWord}` : nextWord;
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === assistantId ? { ...msg, content: streamedContent } : msg)),
+        );
       }
 
-      const assistantMsg: ChatMessage = {
-        id: `ast-${Date.now()}`,
-        role: 'assistant',
-        content: replyText,
+      if (words.length === 0) {
+        window.clearInterval(streamInterval);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantId ? { ...msg, structuredBriefing: briefing } : msg,
+          ),
+        );
+        setIsStreaming(false);
+      }
+    }, 40);
+  };
+
+  /* ── Send message ── */
+  const handleSendMessage = useCallback(
+    (textToSend?: string) => {
+      const text = (textToSend || inputText).trim();
+      if (!text || isStreaming) return;
+
+      const userMsg: ChatMessageType = {
+        id: `usr-${Date.now()}`,
+        role: 'user',
+        content: text,
         timestamp: new Date().toISOString(),
-        structuredBriefing: briefing,
       };
 
-      setMessages((prev) => [...prev, assistantMsg]);
-      setIsStreaming(false);
-    }, 1000);
-  };
+      setMessages((prev) => [...prev, userMsg]);
+      setInputText('');
+      setIsStreaming(true);
+      userScrolledRef.current = false;
 
-  // Keyboard shortcut listener
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
+      const { text: replyText, briefing } = buildReply(text);
+      simulateStream(replyText, briefing);
+    },
+    [inputText, isStreaming, simulateStream],
+  );
 
+  /* ── Keyboard shortcut ── */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+    },
+    [handleSendMessage],
+  );
+
+  /* ── Render ── */
   return (
-    <Card className={`flex flex-col border border-border bg-surface transition-all ${isExpanded ? 'h-[650px]' : 'h-[500px]'}`}>
+    <>
+      <AnimatePresence>
+        {isOpen && (
+    <MotionCard
+      id="nvidia-chat-panel"
+      className="fixed bottom-24 right-6 z-50 flex max-h-[calc(100vh-8rem)] w-[calc(100vw-2rem)] max-w-sm flex-col border border-border bg-surface shadow-2xl"
+      initial={{ opacity: 0, x: 20, y: 20, height: 500 }}
+      animate={{ opacity: 1, x: 0, y: 0, height: isExpanded ? 650 : 500 }}
+      exit={{ opacity: 0, x: 20, y: 20, height: isExpanded ? 650 : 500 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border p-4 bg-surface-secondary/50">
         <div className="flex items-center gap-2.5">
@@ -147,38 +230,56 @@ export function NvidiaAssistantWidget() {
               <h3 className="font-display text-sm font-semibold tracking-tight text-foreground">
                 Nvidia NIM Financial AI Assistant
               </h3>
-              <Badge variant="gold" size="sm" className="font-mono text-3xs">
+              <Badge variant="gold" size="sm" className="text-3xs font-mono">
                 LLM v2.4
               </Badge>
             </div>
             <p className="text-2xs text-foreground-muted">
-              Conversational intelligence & executive briefings on Stellar on-chain telemetry
+              Conversational intelligence &amp; executive briefings on Stellar on-chain
+              telemetry
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="gap-1.5 flex items-center">
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="grid h-7 w-7 place-items-center rounded-button text-foreground-muted transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+            aria-label="Close chat panel"
+            title="Close chat panel"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="grid h-7 w-7 place-items-center rounded-button text-foreground-muted hover:text-foreground hover:bg-surface-secondary transition-colors"
+            className="grid h-7 w-7 place-items-center rounded-button text-foreground-muted transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+            aria-label={isExpanded ? 'Collapse panel' : 'Expand panel'}
+            aria-expanded={isExpanded}
             title={isExpanded ? 'Collapse panel' : 'Expand panel'}
           >
-            {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            {isExpanded ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Preset Quick Chips */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 p-3 bg-surface/80">
-        <span className="text-3xs uppercase tracking-wider font-bold text-foreground-muted">Quick Prompts:</span>
+      {/* ── Preset Quick Chips ── */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-surface/80 p-3">
+        <span className="text-3xs font-bold uppercase tracking-wider text-foreground-muted">
+          Quick Prompts:
+        </span>
         {PRESET_CHIPS.map((chip) => (
           <button
             key={chip.id}
             type="button"
-            onClick={() => handleSendMessage(chip.promptText)}
+            onClick={() => setInputText(chip.promptText)}
             disabled={isStreaming}
-            className="flex items-center gap-1.5 rounded-button border border-border bg-surface-secondary px-2.5 py-1 text-2xs text-foreground-secondary hover:border-gold hover:text-foreground transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-button border border-border bg-surface-secondary px-2.5 py-1 text-2xs text-foreground-secondary hover:border-gold hover:text-foreground transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
           >
             <Zap className="h-3 w-3 text-gold" />
             <span>{chip.label}</span>
@@ -186,18 +287,25 @@ export function NvidiaAssistantWidget() {
         ))}
       </div>
 
-      {/* Chat Messages Stream */}
+      {/* ── Chat Messages Stream ── */}
       <div
         className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs"
+        role="log"
+        aria-label="Chat messages"
         aria-live="polite"
         aria-relevant="additions"
+        aria-busy={isStreaming}
       >
-        {messages.map((msg) => {
-          const isAssistant = msg.role === 'assistant';
+        {messages.map((msg) => (
+          <ChatMessage key={msg.id} message={msg} />
+        ))}
 
           return (
-            <div
+            <motion.div
               key={msg.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
               className={`flex items-start gap-3 ${isAssistant ? 'justify-start' : 'justify-end'}`}
             >
               {isAssistant && (
@@ -214,7 +322,9 @@ export function NvidiaAssistantWidget() {
                       : 'bg-gold text-surface-dark font-medium'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <div className="whitespace-pre-wrap markdown-body">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
 
                   {/* Structured Briefing Widget */}
                   {msg.structuredBriefing && (
@@ -265,7 +375,7 @@ export function NvidiaAssistantWidget() {
                   <User className="h-4 w-4" />
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
 
@@ -279,8 +389,8 @@ export function NvidiaAssistantWidget() {
         <div ref={chatBottomRef} />
       </div>
 
-      {/* Input Form */}
-      <div className="border-t border-border p-3 bg-surface-secondary/40">
+      {/* ── Input Form ── */}
+      <div className="border-t border-border bg-surface-secondary/40 p-3">
         <div className="relative flex items-center">
           <textarea
             rows={1}
@@ -288,20 +398,37 @@ export function NvidiaAssistantWidget() {
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask Nvidia NIM Assistant (e.g. 'Summarize daily agent spending')... (Enter to send)"
+            aria-label="Message Nvidia NIM Assistant"
             disabled={isStreaming}
-            className="w-full resize-none rounded-button border border-border bg-surface pl-3 pr-12 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
+            className="w-full resize-none rounded-button border border-border bg-surface pl-3 pr-12 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+            aria-label="Message input"
           />
           <button
             type="button"
             onClick={() => handleSendMessage()}
             disabled={!inputText.trim() || isStreaming}
-            className="absolute right-2 grid h-7 w-7 place-items-center rounded-button bg-gold text-surface-dark disabled:opacity-40 transition-opacity"
+            className="absolute right-2 grid h-7 w-7 place-items-center rounded-button bg-gold text-surface-dark disabled:opacity-40 transition-opacity focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+            aria-label="Send message"
             title="Send message"
           >
             <Send className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
-    </Card>
+    </MotionCard>
+        )}
+      </AnimatePresence>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="fixed bottom-6 right-6 z-50 grid h-12 w-12 place-items-center rounded-full bg-gold text-surface-dark shadow-gold transition-colors hover:bg-gold-strong focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+        aria-label={isOpen ? 'Close chat panel' : 'Open chat panel'}
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? 'nvidia-chat-panel' : undefined}
+        title={isOpen ? 'Close chat panel' : 'Open chat panel'}
+      >
+        {isOpen ? <X className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
+      </button>
+    </>
   );
 }
