@@ -6,6 +6,7 @@ import type {
   TransactionStatus,
   WalletStatus,
 } from '@/types/domain';
+import type { SignerStatus } from '@/types/multisig';
 
 export type BadgeVariant = NonNullable<BadgeProps['variant']>;
 
@@ -89,4 +90,23 @@ export function riskLevel(score: number): { level: RiskLevel } & StatusMeta {
   if (score >= 50) return { level: 'high', label: 'High', variant: 'danger' };
   if (score >= 25) return { level: 'medium', label: 'Medium', variant: 'warning' };
   return { level: 'low', label: 'Low', variant: 'success' };
+}
+
+// ---------------------------------------------------------------------------
+// Multi-sig signers
+// ---------------------------------------------------------------------------
+const signerStatusLabel: Record<SignerStatus, string> = {
+  active: 'Active',
+  proposed: 'Proposed',
+  'removal-pending': 'Removal staged',
+};
+
+const signerStatusVariant: Record<SignerStatus, BadgeVariant> = {
+  active: 'success',
+  proposed: 'gold',
+  'removal-pending': 'danger',
+};
+
+export function signerStatus(status: SignerStatus): StatusMeta {
+  return { label: signerStatusLabel[status], variant: signerStatusVariant[status] };
 }
