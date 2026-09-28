@@ -1,13 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ArrowUpRight, Check, Clock, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { KeyValue, SectionLabel } from '@/components/dashboard/stat-card';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -18,38 +24,23 @@ import { formatCurrency, formatDateTime, formatRelativeTime } from '@/lib/format
 import type { ApprovalDecision } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { XdrSigner } from '@/features/approvals/XdrSigner';
+import { ProposalAuditTrail } from '@/features/approvals/components/ProposalAuditTrail';
 
-const decisionMeta: Record<ApprovalDecision['decision'], { label: string; className: string }> = {
+const decisionMeta: Record<
+  ApprovalDecision['decision'],
+  { label: string; className: string }
+> = {
   approved: { label: 'Approved', className: 'text-success' },
   rejected: { label: 'Rejected', className: 'text-danger' },
   delegated: { label: 'Delegated', className: 'text-info' },
   pending: { label: 'Awaiting', className: 'text-foreground-muted' },
 };
 
-function DecisionIcon({ decision }: { decision: ApprovalDecision['decision'] }) {
-  const base = 'grid h-8 w-8 place-items-center rounded-md border';
-  const styles: Record<ApprovalDecision['decision'], string> = {
-    approved: 'border-success/40 bg-success-soft text-success',
-    rejected: 'border-danger/40 bg-danger-soft text-danger',
-    delegated: 'border-info/40 bg-info-soft text-info',
-    pending: 'border-border bg-surface-secondary text-foreground-muted',
-  };
-  return (
-    <span className={cn(base, styles[decision])}>
-      {decision === 'approved' ? (
-        <Check className="h-4 w-4" aria-hidden />
-      ) : decision === 'rejected' ? (
-        <X className="h-4 w-4" aria-hidden />
-      ) : (
-        <Clock className="h-4 w-4" aria-hidden />
-      )}
-    </span>
-  );
-}
-
 export default function ApprovalDetailPage({ params }: { params: { id: string } }) {
   const proposal = useProposal(params.id);
-  const [priority, setPriority] = useState<'standard' | 'priority' | 'urgent'>('priority');
+  const [priority, setPriority] = useState<'standard' | 'priority' | 'urgent'>(
+    'priority',
+  );
 
   const feeEstimate = useMemo(() => {
     const ledgerCongestion = 68;
@@ -61,7 +52,9 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
     } as const;
 
     const selected = priorityProfiles[priority];
-    const adjustedFee = Math.round(baseFee * (1 + ledgerCongestion / 100) * selected.multiplier);
+    const adjustedFee = Math.round(
+      baseFee * (1 + ledgerCongestion / 100) * selected.multiplier,
+    );
     const feeBump = adjustedFee - baseFee;
 
     return { ledgerCongestion, baseFee, selected, adjustedFee, feeBump };
@@ -87,7 +80,9 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
       >
         {(data) => {
           const status = proposalStatus(data.status);
-          const approved = data.approvals.filter((a) => a.decision === 'approved').length;
+          const approved = data.approvals.filter(
+            (a) => a.decision === 'approved',
+          ).length;
           const isPending = data.status === 'pending';
           const kindLabel = data.kind === 'multisig' ? 'MultiSig' : data.kind;
 
@@ -106,15 +101,21 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
 
               {/* Amount hero */}
               <Card className="relative overflow-hidden">
-                <div className="pointer-events-none absolute inset-0 bg-gold-sheen" aria-hidden />
+                <div
+                  className="pointer-events-none absolute inset-0 bg-gold-sheen"
+                  aria-hidden
+                />
                 <CardContent className="relative pt-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                       <p className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
                         Proposed spend
                       </p>
-                      <p className="mt-2 font-display text-4xl font-semibold leading-none tracking-tight tabular">
-                        <AnimatedNumber value={data.amount} formatter={(v) => formatCurrency(v, data.asset)} />
+                      <p className="tabular mt-2 font-display text-4xl font-semibold leading-none tracking-tight">
+                        <AnimatedNumber
+                          value={data.amount}
+                          formatter={(v) => formatCurrency(v, data.asset)}
+                        />
                       </p>
                       <p className="mt-2 text-2xs text-foreground-secondary">
                         to {data.counterparty} · expires{' '}
@@ -131,10 +132,18 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                 </CardContent>
                 {isPending && (
                   <CardFooter className="relative">
-                    <Button variant="gold" size="sm" leftIcon={<Check className="h-4 w-4" />}>
+                    <Button
+                      variant="gold"
+                      size="sm"
+                      leftIcon={<Check className="h-4 w-4" />}
+                    >
                       Approve
                     </Button>
-                    <Button variant="outline" size="sm" leftIcon={<X className="h-4 w-4" />}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      leftIcon={<X className="h-4 w-4" />}
+                    >
                       Reject
                     </Button>
                   </CardFooter>
@@ -147,50 +156,7 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                   <SectionLabel>
                     Approval chain — {approved} of {data.requiredApprovals} satisfied
                   </SectionLabel>
-                  <Card className="p-5">
-                    <ol className="space-y-4">
-                      {data.approvals.map((decision, i) => {
-                        const meta = decisionMeta[decision.decision];
-                        return (
-                          <li key={decision.id} className="flex items-start gap-3">
-                            <div className="flex flex-col items-center">
-                              <DecisionIcon decision={decision.decision} />
-                              {i < data.approvals.length - 1 && (
-                                <span
-                                  className="mt-1 w-px flex-1 bg-border"
-                                  aria-hidden
-                                />
-                              )}
-                            </div>
-                            <div className="flex flex-1 items-start justify-between gap-4 pb-1">
-                              <div className="min-w-0 space-y-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-sm font-medium text-foreground">
-                                    {decision.userName}
-                                  </span>
-                                  <span
-                                    className={cn('text-2xs font-medium', meta.className)}
-                                  >
-                                    {meta.label}
-                                  </span>
-                                </div>
-                                {decision.comment && (
-                                  <p className="max-w-prose text-xs leading-relaxed text-foreground-secondary">
-                                    “{decision.comment}”
-                                  </p>
-                                )}
-                              </div>
-                              {decision.createdAt && (
-                                <span className="shrink-0 text-2xs text-foreground-muted">
-                                  {formatRelativeTime(decision.createdAt)}
-                                </span>
-                              )}
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  </Card>
+                  <ProposalAuditTrail events={data.approvals} />
                 </div>
 
                 {/* Detail rail */}
@@ -207,8 +173,12 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                       <KeyValue label="Risk">
                         <RiskBadge score={data.riskScore} showScore />
                       </KeyValue>
-                      <KeyValue label="Created">{formatDateTime(data.createdAt)}</KeyValue>
-                      <KeyValue label="Expires">{formatDateTime(data.expiresAt)}</KeyValue>
+                      <KeyValue label="Created">
+                        {formatDateTime(data.createdAt)}
+                      </KeyValue>
+                      <KeyValue label="Expires">
+                        {formatDateTime(data.expiresAt)}
+                      </KeyValue>
                       <KeyValue label="Linked transaction">
                         <Link
                           href={`/transactions/${data.transactionId}`}
@@ -228,8 +198,16 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                 <SectionLabel>Approvers</SectionLabel>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {data.approvals.map((decision) => (
-                    <Card key={decision.id} elevation="flat" className="flex items-center gap-3 p-4">
-                      <Avatar name={decision.userName} src={decision.userAvatar} size="md" />
+                    <Card
+                      key={decision.id}
+                      elevation="flat"
+                      className="flex items-center gap-3 p-4"
+                    >
+                      <Avatar
+                        name={decision.userName}
+                        src={decision.userAvatar}
+                        size="md"
+                      />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-foreground">
                           {decision.userName}
@@ -255,7 +233,9 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between gap-4 text-2xs uppercase tracking-[0.12em] text-foreground-secondary">
                     <span>Ledger congestion</span>
-                    <span className="font-medium text-gold-strong">{feeEstimate.ledgerCongestion}%</span>
+                    <span className="font-medium text-gold-strong">
+                      {feeEstimate.ledgerCongestion}%
+                    </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-surface-secondary">
                     <div
@@ -271,7 +251,9 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                       </span>
                       <select
                         value={priority}
-                        onChange={(event) => setPriority(event.target.value as typeof priority)}
+                        onChange={(event) =>
+                          setPriority(event.target.value as typeof priority)
+                        }
                         className="h-10 w-full rounded-sm border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <option value="standard">Standard</option>
@@ -284,7 +266,7 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                       <p className="text-xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
                         Suggested fee bump
                       </p>
-                      <p className="font-display text-2xl font-semibold tracking-tight tabular">
+                      <p className="tabular font-display text-2xl font-semibold tracking-tight">
                         {feeEstimate.adjustedFee} stroops
                       </p>
                     </div>
@@ -292,7 +274,8 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
 
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface-secondary/70 p-3 text-sm">
                     <span className="text-foreground-secondary">
-                      {feeEstimate.selected.label} lane · {feeEstimate.selected.inclusion}
+                      {feeEstimate.selected.label} lane ·{' '}
+                      {feeEstimate.selected.inclusion}
                     </span>
                     <span className="font-medium text-gold-strong">
                       +{feeEstimate.feeBump} stroops vs base
@@ -302,8 +285,8 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                   <p className="max-w-prose text-xs leading-relaxed text-foreground-secondary">
                     This proposal was evaluated against {data.requiredApprovals}{' '}
                     {data.requiredApprovals === 1 ? 'policy' : 'policies'} and carries a
-                    cryptographic decision record. Approving signs on-chain; rejecting writes an
-                    immutable entry to the audit log.
+                    cryptographic decision record. Approving signs on-chain; rejecting
+                    writes an immutable entry to the audit log.
                   </p>
                 </CardContent>
               </Card>
