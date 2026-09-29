@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ArrowUpRight, Check, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, Loader2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
@@ -27,6 +27,55 @@ import { FileSignature } from 'lucide-react';
 import { TransactionSigningModal } from '@/features/wallet/components/TransactionSigningModal';
 import { mockMultisigRequest } from '@/features/approvals/fixtures/multisig';
 import { ProposalAuditTrail } from '@/features/approvals/components/ProposalAuditTrail';
+import { useProposalApproval } from '@/hooks/useProposalApproval';
+import type { Proposal } from '@/types/domain';
+
+function ProposalActionPanel({ proposal }: { proposal: Proposal }) {
+  const approval = useProposalApproval(proposal);
+
+  return (
+    <div className="w-full space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-foreground">
+          {approval.approvedWeight} of {approval.requiredApprovals} approvals
+        </span>
+        <span className="text-foreground-secondary">
+          {approval.isQuorumMet ? 'Quorum reached' : `${approval.remaining} more required`}
+        </span>
+      </div>
+      {approval.decision && (
+        <p role="status" className="text-xs text-foreground-secondary">
+          Your decision: <span className="font-medium capitalize">{approval.decision}</span>
+        </p>
+      )}
+      {approval.error && <p role="alert" className="text-xs text-danger">{approval.error}</p>}
+      {!approval.decision && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="gold"
+            size="sm"
+            leftIcon={approval.isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            onClick={() => void approval.approve()}
+            disabled={approval.isProcessing}
+          >
+            Approve
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            leftIcon={<X className="h-4 w-4" />}
+            onClick={() => void approval.reject()}
+            disabled={approval.isProcessing}
+          >
+            Reject
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const decisionMeta: Record<
   ApprovalDecision['decision'],
@@ -135,20 +184,7 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                 </CardContent>
                 {isPending && (
                   <CardFooter className="relative">
-                    <Button
-                      variant="gold"
-                      size="sm"
-                      leftIcon={<Check className="h-4 w-4" />}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      leftIcon={<X className="h-4 w-4" />}
-                    >
-                      Reject
-                    </Button>
+                    <ProposalActionPanel proposal={data} />
                   </CardFooter>
                 )}
               </Card>
