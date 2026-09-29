@@ -14,14 +14,17 @@ import {
   WaterfallChart,
   type DonutDatum,
 } from '@/components/charts';
-import { useOverview } from '@/hooks/use-queries';
+import { useActivity, useOverview } from '@/hooks/use-queries';
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { ActivityChart } from '@/features/dashboard/components/ActivityChart';
+import { NvidiaAssistantWidget } from '@/features/chat/NvidiaAssistantWidget';
 
 const chartSkeleton = <div className="skeleton h-[260px] w-full rounded-md" />;
 
 export default function AnalyticsPage() {
   const overview = useOverview();
+  const activity = useActivity();
 
   return (
     <PageTransition className="space-y-8">
@@ -89,6 +92,13 @@ export default function AnalyticsPage() {
                 />
               </div>
 
+              <QueryBoundary
+                query={activity}
+                loading={<div className="skeleton h-[372px] w-full rounded-card" />}
+              >
+                {(activityData) => <ActivityChart data={activityData} />}
+              </QueryBoundary>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Cashflow</CardTitle>
@@ -138,6 +148,11 @@ export default function AnalyticsPage() {
                   <WaterfallChart data={data.budgetWaterfall} />
                 </CardContent>
               </Card>
+
+              <div className="pt-4 border-t border-border space-y-4">
+                <h3 className="font-display text-lg font-semibold tracking-tight">Interactive Nvidia NIM AI Briefings & Assistant</h3>
+                <NvidiaAssistantWidget />
+              </div>
             </div>
           );
         }}

@@ -4,11 +4,13 @@ import { useQuery, useMutation, type UseQueryResult } from '@tanstack/react-quer
 import { queryKeys } from '@/services/query-keys';
 import { resources } from '@/services/resources';
 import type {
+  ActivityPoint,
   Agent,
   AiBriefing,
   AnalyticsOverview,
   ApiKey,
   AppNotification,
+  AssetRate,
   Budget,
   ChatMessage,
   MemoryRecord,
@@ -42,6 +44,9 @@ export const useTeam = (): UseQueryResult<User[]> =>
 // -- analytics --------------------------------------------------------------
 export const useOverview = (): UseQueryResult<AnalyticsOverview> =>
   useQuery({ queryKey: queryKeys.overview, queryFn: resources.getOverview });
+
+export const useActivity = (): UseQueryResult<ActivityPoint[]> =>
+  useQuery({ queryKey: queryKeys.activity, queryFn: resources.getActivity });
 
 // -- ai assistant -----------------------------------------------------------
 export const useBriefing = (): UseQueryResult<AiBriefing> =>
@@ -131,6 +136,14 @@ export const useMemoryRecord = (id: string): UseQueryResult<MemoryRecord> =>
     queryKey: queryKeys.memoryRecord(id),
     queryFn: () => resources.getMemoryRecord(id),
     enabled: Boolean(id),
+  });
+
+// -- asset rates -------------------------------------------------------------
+export const useAssetRates = (): UseQueryResult<AssetRate[]> =>
+  useQuery({
+    queryKey: queryKeys.rates,
+    queryFn: resources.getAssetRates,
+    refetchInterval: 30_000,
   });
 
 // -- notifications ----------------------------------------------------------

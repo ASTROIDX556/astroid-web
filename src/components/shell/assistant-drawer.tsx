@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Sparkles, Send, ArrowUpRight } from 'lucide-react';
 import { useAssistantStore } from '@/stores/ui-store';
 import { useAssistantSeed, useBriefing } from '@/hooks/use-queries';
@@ -8,6 +8,12 @@ import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/cn';
 import { env, isMockMode } from '@/lib/env';
 import type { ChatMessage } from '@/types/domain';
+
+const defaultSuggestions = [
+  { label: 'Financial summary', prompt: 'Summarize treasury health and any anomaly alerts.' },
+  { label: 'Budget check', prompt: 'Check budget health and flag any risks before close.' },
+  { label: 'Stellar transfer explainer', prompt: 'Explain the most recent high-value Stellar transfer in plain English.' },
+];
 
 
 /**
@@ -27,6 +33,23 @@ export function AssistantDrawer() {
   const [seeded, setSeeded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const saved = window.localStorage.getItem('astroid-assistant-chat');
+      if (saved) {
+        const parsed = JSON.parse(saved) as ChatMessage[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          setSeeded(true);
+        }
+      }
+    } catch {
+      // Ignore malformed local history and fall back to the seed conversation.
+    }
+  }, []);
+
   // Seed the transcript once the mock conversation resolves.
   useEffect(() => {
     if (!seeded && seedQuery.data) {
@@ -34,6 +57,12 @@ export function AssistantDrawer() {
       setSeeded(true);
     }
   }, [seeded, seedQuery.data]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && messages.length > 0) {
+      window.localStorage.setItem('astroid-assistant-chat', JSON.stringify(messages));
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -87,7 +116,10 @@ export function AssistantDrawer() {
   };
 
 
-  const suggestions = briefingQuery.data?.suggestedActions ?? [];
+  const suggestions = useMemo(
+    () => briefingQuery.data?.suggestedActions?.length ? briefingQuery.data.suggestedActions : defaultSuggestions,
+    [briefingQuery.data],
+  );
 
   return (
     <>
@@ -125,6 +157,12 @@ export function AssistantDrawer() {
           </header>
 
           <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-5">
+            {messages.length === 0 && (
+              <div className="rounded-card border border-dashed border-border bg-surface-secondary/40 p-4 text-sm leading-relaxed text-foreground-secondary">
+                Ask for a treasury summary, a budget-risk review, or a plain-English explanation of a Stellar transfer.
+              </div>
+            )}
+
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -150,7 +188,7 @@ export function AssistantDrawer() {
               </div>
             ))}
 
-            {messages.length > 0 && suggestions.length > 0 && (
+            {suggestions.length > 0 && (
               <div className="space-y-2.5 pt-2">
                 <p className="text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
                   Suggested Actions

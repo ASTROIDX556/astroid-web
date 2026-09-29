@@ -12,6 +12,7 @@ import { useAgent } from '@/hooks/use-queries';
 import { agentStatus } from '@/lib/status';
 import { formatCurrency, formatNumber, formatDateTime, formatRelativeTime } from '@/lib/format';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
+import { AgentProviderConfigForm } from '@/features/agents/components/AgentProviderConfigForm';
 
 export default function AgentDetailPage({ params }: { params: { id: string } }) {
   const agent = useAgent(params.id);
@@ -128,7 +129,9 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                       </span>
                       <div>
                         <p className="text-sm font-medium text-foreground">Linked wallet</p>
-                        <p className="text-2xs text-foreground-secondary">View balances & activity</p>
+                        <p className="text-2xs text-foreground-secondary">
+                          View balances & activity
+                        </p>
                       </div>
                     </Card>
                   </Link>
@@ -148,6 +151,16 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                     </Card>
                   </Link>
                 )}
+              </div>
+
+              <div className="space-y-4">
+                <SectionLabel>Provider configuration</SectionLabel>
+                <AgentProviderConfigForm
+                  defaultValues={{
+                    name: `${data.name} — provider`,
+                    model: data.model,
+                  }}
+                />
               </div>
             </div>
           );

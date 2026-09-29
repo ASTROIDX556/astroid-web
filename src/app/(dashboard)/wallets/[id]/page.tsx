@@ -6,30 +6,14 @@ import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { KeyValue, SectionLabel } from '@/components/dashboard/stat-card';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
-import { DataTable, type Column } from '@/components/dashboard/data-table';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useWallet } from '@/hooks/use-queries';
 import { walletStatus } from '@/lib/status';
-import { formatCurrency, formatNumber, formatDateTime, truncateHash } from '@/lib/format';
-import type { AssetBalance } from '@/types/domain';
+import { formatCurrency, formatDateTime, truncateHash } from '@/lib/format';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
-
-const balanceColumns: Column<AssetBalance>[] = [
-  { header: 'Asset', cell: (b) => <span className="font-medium">{b.asset}</span> },
-  {
-    header: 'Balance',
-    align: 'right',
-    cell: (b) => <span className="tabular"><AnimatedNumber value={b.balance} formatter={(v) => formatNumber(v)} /></span>,
-  },
-  {
-    header: 'USD value',
-    align: 'right',
-    cell: (b) => (
-      <span className="tabular"><AnimatedNumber value={b.usdValue} formatter={(v) => formatCurrency(v, 'USDC')} /></span>
-    ),
-  },
-];
+import { XdrInspector } from '@/features/wallet/components/XdrInspector';
+import { MultiCurrencyBalanceWidget } from '@/features/wallet/components/MultiCurrencyBalanceWidget';
 
 export default function WalletDetailPage({ params }: { params: { id: string } }) {
   const wallet = useWallet(params.id);
@@ -87,7 +71,10 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
                     {truncateHash(data.stellarAddress, 6, 6)}
                   </KeyValue>
                   <KeyValue label="Total value">
-                    <AnimatedNumber value={data.totalUsdValue} formatter={(v) => formatCurrency(v, 'USDC')} />
+                    <AnimatedNumber
+                      value={data.totalUsdValue}
+                      formatter={(v) => formatCurrency(v, 'USDC')}
+                    />
                   </KeyValue>
                   <KeyValue label="Risk">
                     <RiskBadge score={data.riskScore} showScore />
@@ -108,11 +95,12 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
 
               <div className="space-y-4">
                 <SectionLabel>Balances</SectionLabel>
-                <DataTable<AssetBalance>
-                  columns={balanceColumns}
-                  rows={data.balances}
-                  rowKey={(b) => b.asset}
-                />
+                <MultiCurrencyBalanceWidget balances={data.balances} />
+              </div>
+
+              <div className="space-y-4">
+                <SectionLabel>Transaction inspector</SectionLabel>
+                <XdrInspector />
               </div>
             </div>
           );

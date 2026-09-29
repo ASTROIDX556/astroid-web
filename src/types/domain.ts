@@ -344,6 +344,15 @@ export interface TimeseriesPoint {
   net: number;
 }
 
+export interface ActivityPoint {
+  /** ISO timestamp of the observation window start. */
+  timestamp: string;
+  /** Number of transactions in the window. */
+  count: number;
+  /** Total spend (USDC) in the window. */
+  spend: number;
+}
+
 export interface SpendingByCategory {
   category: string;
   amount: number;
@@ -408,4 +417,19 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Asset Rates & Conversion
+// ---------------------------------------------------------------------------
+export interface AssetRate {
+  asset: Asset;
+  /** Price in USD (e.g. 0.12 for XLM) */
+  priceUsd: number;
+  /** 24-hour percentage change */
+  change24h: number;
+  /** ISO 8601 timestamp of the last update */
+  updatedAt: string;
+  /** Source feed identifier */
+  source: string;
 }

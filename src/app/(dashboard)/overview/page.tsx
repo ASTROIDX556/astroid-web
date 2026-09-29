@@ -18,10 +18,11 @@ import { Badge } from '@/components/ui/badge';
 import { SkeletonCard } from '@/components/ui/skeleton';
 import { CashflowChart, CategoryBarChart, DonutChart, type DonutDatum } from '@/components/charts';
 import { CATEGORICAL } from '@/components/charts';
-import { useOverview, useBriefing } from '@/hooks/use-queries';
+import { useOverview, useBriefing, useBudgets } from '@/hooks/use-queries';
 import { useAssistantStore } from '@/stores/ui-store';
 import { formatCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { ProgressBar } from '@/components/dashboard/risk-badge';
 
 
 const severityBadge: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
@@ -38,6 +39,7 @@ const severityBadge: Record<string, 'info' | 'success' | 'warning' | 'danger'> =
 export default function OverviewPage() {
   const overview = useOverview();
   const briefing = useBriefing();
+  const budgets = useBudgets();
   const openAssistant = useAssistantStore((s) => s.setOpen);
 
   return (
@@ -236,40 +238,102 @@ export default function OverviewPage() {
         </Card>
       </div>
 
-      <div>
-        <SectionLabel className="mb-4">Where spend is going</SectionLabel>
-        <QueryBoundary query={overview} loading={<SkeletonCard />}>
-          {(data) => (
-            <Card>
-              <CardContent className="divide-y divide-border p-0">
-                {(data?.agentSpend ?? []).map((agent) => (
-                  <Link
-                    key={agent.agentId}
-                    href={`/agents/${agent.agentId}`}
-                    className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-surface-secondary/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-9 w-9 place-items-center rounded-md bg-surface-secondary text-foreground-secondary">
-                        <Bot className="h-4 w-4" aria-hidden />
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{agent.agentName}</p>
-                        <p className="text-2xs capitalize text-foreground-secondary">
-                          {agent.role} · {formatNumber(agent.transactions)} transactions
-                        </p>
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div>
+          <SectionLabel className="mb-4">Where spend is going</SectionLabel>
+          <QueryBoundary query={overview} loading={<SkeletonCard />}>
+            {(data) => (
+              <Card>
+                <CardContent className="divide-y divide-border p-0">
+                  {(data?.agentSpend ?? []).map((agent) => (
+                    <Link
+                      key={agent.agentId}
+                      href={`/agents/${agent.agentId}`}
+                      className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-surface-secondary/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-9 w-9 place-items-center rounded-md bg-surface-secondary text-foreground-secondary">
+                          <Bot className="h-4 w-4" aria-hidden />
+                        </span>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{agent.agentName}</p>
+                          <p className="text-2xs capitalize text-foreground-secondary">
+                            {agent.role} · {formatNumber(agent.transactions)} transactions
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <span className="tabular font-display text-lg font-semibold">
-                      {formatCurrency(agent.spent, 'USD', { compact: true })}
-                    </span>
-                  </Link>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-        </QueryBoundary>
-      </div>
 
+                      <span className="tabular font-display text-lg font-semibold">
+                        {formatCurrency(agent.spent, 'USD', { compact: true })}
+                      </span>
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </QueryBoundary>
+        </div>
+
+        <div>
+          <SectionLabel className="mb-4">Department budgets</SectionLabel>
+          <QueryBoundary
+            query={budgets}
+            loading={
+              <Card>
+                <CardContent className="space-y-3 p-5">
+                  <div className="skeleton h-4 w-28 rounded-sm" />
+                  <div className="skeleton h-16 w-full rounded-sm" />
+                  <div className="skeleton h-16 w-full rounded-sm" />
+                </CardContent>
+              </Card>
+            }
+          >
+            {(data) => {
+              const departments = [...data]
+                .filter((budget) => budget.scope === 'department' && budget.parentBudgetId)
+                .sort((a, b) => b.spent / b.limit - a.spent / a.limit)
+                .slice(0, 4);
+
+              return (
+                <Card>
+                  <CardHeader className="flex-row items-center justify-between gap-3">
+                    <CardTitle>Department budgets</CardTitle>
+                    <Link href="/budgets" className="text-2xs font-medium text-foreground-secondary hover:text-foreground">
+                      View all
+                    </Link>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {departments.map((budget) => {
+                      const utilization = budget.limit > 0 ? (budget.spent / budget.limit) * 100 : 0;
+
+                      return (
+                        <div key={budget.id} className="space-y-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{budget.name}</p>
+                              <p className="text-2xs text-foreground-secondary">
+                                {formatCurrency(budget.spent, budget.currency, { compact: true })} /{' '}
+                                {formatCurrency(budget.limit, budget.currency, { compact: true })}
+                              </p>
+                            </div>
+                            <span className="text-2xs font-medium text-foreground-secondary">
+                              {Math.round(utilization)}%
+                            </span>
+                          </div>
+                          <ProgressBar value={utilization} label={`${budget.name} utilization`} />
+                          <p className="text-2xs text-foreground-muted">
+                            {formatCurrency(budget.remaining, budget.currency, { compact: true })} remaining
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              );
+            }}
+          </QueryBoundary>
+        </div>
+      </div>
     </PageTransition>
   );
 }

@@ -13,6 +13,9 @@ import { PolicyShieldIllustration } from '@/components/illustrations';
 import { usePolicies } from '@/hooks/use-queries';
 import { formatNumber } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { PolicyRulesBuilder } from '@/features/policies/PolicyRulesBuilder';
+import { BudgetSimulator } from '@/features/policies/BudgetSimulator';
+import { PolicySandboxWidget } from '@/features/policies/PolicySandboxWidget';
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -27,6 +30,8 @@ export default function PoliciesPage() {
         title="Policies"
         description="The guardrails every agent operates within — spend ceilings, allow-lists, approval rules and locks."
       />
+
+      <BudgetSimulator />
 
       <QueryBoundary
         query={policies}
@@ -48,6 +53,11 @@ export default function PoliciesPage() {
       >
         {(data) => (
           <div className="space-y-6">
+            <PolicySandboxWidget policies={data} />
+
+            <SectionLabel>Spending rule designer</SectionLabel>
+            <PolicyRulesBuilder />
+
             <SectionLabel>{data.length} policies</SectionLabel>
             <div className="grid gap-4 lg:grid-cols-2">
               {data.map((policy) => (

@@ -1,4 +1,5 @@
 import type {
+  ActivityPoint,
   AiBriefing,
   AnalyticsOverview,
   ApiKey,
@@ -148,3 +149,57 @@ export const webhooks: Webhook[] = [
     createdAt: '2026-01-20T09:00:00.000Z',
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Activity timeseries — deterministic (seeded) so SSR and client hydration
+// render identical curves, covering 60 days of hourly observations so every
+// interval (24h / 7d / 30d) has a full preceding period for trend comparison.
+// ---------------------------------------------------------------------------
+
+/** mulberry32 — small seeded PRNG so mock generation is reproducible. */
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const HOUR_MS = 3_600_000;
+const ACTIVITY_DAYS = 60;
+
+/** Business-hours and weekend multipliers shape a believable agent workload. */
+function activityShape(timestamp: number): number {
+  const d = new Date(timestamp);
+  const hour = d.getUTCHours();
+  const day = d.getUTCDay();
+  const weekend = day === 0 || day === 6 ? 0.3 : 1;
+  const business = hour >= 8 && hour <= 19 ? 1 : 0.22;
+  return weekend * business;
+}
+
+function generateActivity(): ActivityPoint[] {
+  const rng = mulberry32(0x51a7c0de);
+  const end = Date.UTC(2026, 6, 31, 23, 0, 0); // 2026-07-31T23:00:00Z
+  const points: ActivityPoint[] = [];
+
+  for (let i = ACTIVITY_DAYS * 24 - 1; i >= 0; i--) {
+    const timestamp = end - i * HOUR_MS;
+    const shape = activityShape(timestamp);
+    // Occasional spikes (large settlement runs) keep the curve interesting.
+    const spike = rng() > 0.94 ? 2 + rng() * 1.5 : 1;
+    const count = Math.max(0, Math.round(9 * shape * (0.4 + rng()) * spike));
+    const avgTicket = 280 + rng() * 820;
+    points.push({
+      timestamp: new Date(timestamp).toISOString(),
+      count,
+      spend: Math.round(count * avgTicket * 100) / 100,
+    });
+  }
+  return points;
+}
+
+export const activityData: ActivityPoint[] = generateActivity();

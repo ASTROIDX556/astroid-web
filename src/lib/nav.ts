@@ -4,6 +4,7 @@ import {
   Bell,
   Bot,
   BrainCircuit,
+  KeyRound,
   LayoutDashboard,
   PiggyBank,
   ScrollText,
@@ -49,6 +50,7 @@ export const navSections: NavSection[] = [
       { label: 'Wallets', href: '/wallets', icon: Wallet },
       { label: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
       { label: 'Approvals', href: '/approvals', icon: ShieldCheck },
+      { label: 'Multi-Sig', href: '/multisig', icon: KeyRound },
     ],
   },
   {
