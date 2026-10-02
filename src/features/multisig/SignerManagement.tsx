@@ -1,580 +1,445 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import type { ColumnDef } from '@tanstack/react-table';
+import { z } from 'zod';
 import {
-  AlertTriangle,
+  type ColumnDef,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  flexRender,
+} from '@tanstack/react-table';
+import {
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
-  Info,
-  KeyRound,
-  Pencil,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Key,
   Plus,
-  RotateCcw,
-  Send,
+  Search,
+  Shield,
+  ShieldAlert,
   ShieldCheck,
+  Sliders,
   Trash2,
-  Undo2,
+  UserCheck,
+  UserPlus,
   Users,
-  X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { DataTable } from '@/components/ui/DataTable';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
-import { FormField, Input, Select } from '@/components/ui/input';
-import { useCurrentUser } from '@/hooks/use-queries';
-import { formatRelativeTime, truncateHash } from '@/lib/format';
-import { signerStatus } from '@/lib/status';
+import { FormField, Input } from '@/components/ui/input';
+import { formatDate, truncateHash } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import type {
-  OrgSigner,
-  SignerKind,
-  SignerProposal,
-  SignerProposalChange,
-  SignerStatus,
-  SignerThresholds,
-  SignerWeightAdjustment,
+  AccountThresholds,
+  MultisigSignerItem,
+  ProposalType,
+  SignerProposalItem,
 } from '@/types/multisig';
+
 import {
-  addSignerSchema,
-  adjustWeightSchema,
-  thresholdSchema,
-  type AddSignerFormValues,
-  type AdjustWeightFormValues,
-  type ThresholdFormValues,
-} from './schema';
+  INITIAL_ACCOUNT_ADDRESS,
+  INITIAL_PROPOSALS,
+  INITIAL_SIGNERS,
+  INITIAL_THRESHOLDS,
+} from './fixtures/signers';
 
-/** What a table row has staged for the next proposal. */
-type RowStage = 'none' | 'added' | 'weight' | 'removal';
+/* -------------------------------------------------------------------------- */
+/* Validation Schemas                                                         */
+/* -------------------------------------------------------------------------- */
 
-interface SignerTableRow {
-  id: string;
-  publicKey: string;
-  label: string;
-  /** Effective (possibly staged) weight. */
-  weight: number;
-  /** Last committed weight — only rendered when a change is staged. */
-  previousWeight: number;
-  kind: SignerKind;
-  status: SignerStatus;
-  addedAt: string;
-  staged: RowStage;
+const STELLAR_PUBLIC_KEY_REGEX = /^G[A-Z2-7]{55}$/;
+
+export const addSignerSchema = z.object({
+  publicKey: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(
+      STELLAR_PUBLIC_KEY_REGEX,
+      'Invalid Stellar public key. Must start with "G" followed by 55 base32 characters.',
+    ),
+  weight: z.coerce
+    .number({ invalid_type_error: 'Weight must be a number' })
+    .int('Weight must be an integer')
+    .min(1, 'Signing weight must be at least 1')
+    .max(255, 'Signing weight cannot exceed 255'),
+  label: z
+    .string()
+    .trim()
+    .min(2, 'Label must be at least 2 characters')
+    .max(60, 'Label cannot exceed 60 characters'),
+  description: z
+    .string()
+    .trim()
+    .max(200, 'Proposal description cannot exceed 200 characters')
+    .optional(),
+});
+
+export type AddSignerFormValues = z.infer<typeof addSignerSchema>;
+
+export const editWeightSchema = z.object({
+  weight: z.coerce
+    .number({ invalid_type_error: 'Weight must be a number' })
+    .int('Weight must be an integer')
+    .min(1, 'Weight must be at least 1')
+    .max(255, 'Weight cannot exceed 255'),
+  description: z
+    .string()
+    .trim()
+    .max(200, 'Proposal description cannot exceed 200 characters')
+    .optional(),
+});
+
+export type EditWeightFormValues = z.infer<typeof editWeightSchema>;
+
+export const thresholdsSchema = z
+  .object({
+    lowThreshold: z.coerce
+      .number({ invalid_type_error: 'Low threshold must be a number' })
+      .int()
+      .min(0, 'Min 0')
+      .max(255, 'Max 255'),
+    medThreshold: z.coerce
+      .number({ invalid_type_error: 'Medium threshold must be a number' })
+      .int()
+      .min(0, 'Min 0')
+      .max(255, 'Max 255'),
+    highThreshold: z.coerce
+      .number({ invalid_type_error: 'High threshold must be a number' })
+      .int()
+      .min(0, 'Min 0')
+      .max(255, 'Max 255'),
+    masterWeight: z.coerce
+      .number({ invalid_type_error: 'Master weight must be a number' })
+      .int()
+      .min(0, 'Min 0')
+      .max(255, 'Max 255'),
+  })
+  .refine((data) => data.lowThreshold <= data.medThreshold, {
+    message: 'Low threshold cannot exceed Medium threshold',
+    path: ['lowThreshold'],
+  })
+  .refine((data) => data.medThreshold <= data.highThreshold, {
+    message: 'Medium threshold cannot exceed High threshold',
+    path: ['medThreshold'],
+  });
+
+export type ThresholdsFormValues = z.infer<typeof thresholdsSchema>;
+
+/* -------------------------------------------------------------------------- */
+/* Pending Proposal Action Payload                                            */
+/* -------------------------------------------------------------------------- */
+
+export interface PendingActionState {
+  type: ProposalType;
+  title: string;
+  summary: string;
+  targetPublicKey?: string;
+  targetLabel?: string;
+  newWeight?: number;
+  currentWeight?: number;
+  newThresholds?: AccountThresholds;
+  currentThresholds?: AccountThresholds;
+  description: string;
 }
 
-const INITIAL_THRESHOLDS: SignerThresholds = { low: 3, medium: 5, high: 8 };
+/* -------------------------------------------------------------------------- */
+/* Main Component                                                             */
+/* -------------------------------------------------------------------------- */
 
-const INITIAL_SIGNERS: OrgSigner[] = [
-  {
-    id: 'sgn_master',
-    publicKey: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
-    label: 'Treasury master key',
-    weight: 3,
-    kind: 'master',
-    status: 'active',
-    addedAt: '2026-02-18T08:30:00.000Z',
-  },
-  {
-    id: 'sgn_finance',
-    publicKey: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
-    label: 'Finance controller',
-    weight: 2,
-    kind: 'co-signer',
-    status: 'active',
-    addedAt: '2026-04-02T11:15:00.000Z',
-  },
-  {
-    id: 'sgn_security',
-    publicKey: 'GDQNY3PBOJOKYZSRMK2S7LHHGWZIUISD4QORETLMXEWXBI7KFZZMKTL3',
-    label: 'Security officer',
-    weight: 2,
-    kind: 'co-signer',
-    status: 'active',
-    addedAt: '2026-05-21T14:05:00.000Z',
-  },
-  {
-    id: 'sgn_ops',
-    publicKey: 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ',
-    label: 'Ops approver',
-    weight: 1,
-    kind: 'co-signer',
-    status: 'active',
-    addedAt: '2026-06-30T09:45:00.000Z',
-  },
-  {
-    id: 'sgn_auditor',
-    publicKey: 'GAB2CD3EF4G5H6I7JKLMNOPQRST2U3V4W5X6YZABC2D3E4F5G6H7I2J3',
-    label: 'External auditor',
-    weight: 1,
-    kind: 'co-signer',
-    status: 'proposed',
-    addedAt: '2026-08-14T16:20:00.000Z',
-  },
-  {
-    id: 'sgn_rotation',
-    publicKey: 'GZYXWV2UT3S4R5Q6P7ONM2L3K4J5IHG6F7E5D4C3B2A7Z6Y5X4W3V2U7',
-    label: 'Rotation slot (pre-auth)',
-    weight: 1,
-    kind: 'pre-auth',
-    status: 'active',
-    addedAt: '2026-09-08T12:00:00.000Z',
-  },
-];
-
-const ADD_SIGNER_DEFAULTS: AddSignerFormValues = {
-  label: '',
-  publicKey: '',
-  weight: 1,
-  kind: 'co-signer',
-};
-
-const ADJUST_WEIGHT_DEFAULTS: AdjustWeightFormValues = { weight: 1, reason: '' };
-
-/** Small delay so the confirmation modal can show its pending state. */
-const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(() => resolve(), ms);
-  });
-
-/**
- * Signer management dashboard for an organization multi-signature Stellar
- * account.
- *
- * Administrators review the signer set, stage additions / weight adjustments /
- * removals and threshold edits, then push the whole batch as a single proposal
- * that the co-signers approve.
- */
 export function SignerManagement() {
-  const currentUser = useCurrentUser();
+  const [accountAddress] = useState<string>(INITIAL_ACCOUNT_ADDRESS);
+  const [thresholds, setThresholds] = useState<AccountThresholds>(INITIAL_THRESHOLDS);
+  const [signers, setSigners] = useState<MultisigSignerItem[]>(INITIAL_SIGNERS);
+  const [proposals, setProposals] = useState<SignerProposalItem[]>(INITIAL_PROPOSALS);
 
-  const [signers, setSigners] = useState<OrgSigner[]>(INITIAL_SIGNERS);
-  const [thresholds, setThresholds] = useState<SignerThresholds>(INITIAL_THRESHOLDS);
+  // Table filtering & pagination state
+  const [globalFilter, setGlobalFilter] = useState('');
 
-  const [stagedAdditions, setStagedAdditions] = useState<OrgSigner[]>([]);
-  const [stagedAdjustments, setStagedAdjustments] = useState<SignerWeightAdjustment[]>([]);
-  const [stagedRemovals, setStagedRemovals] = useState<string[]>([]);
-  const [stagedThresholds, setStagedThresholds] = useState<SignerThresholds | null>(null);
+  // Modals visibility state
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isThresholdsModalOpen, setIsThresholdsModalOpen] = useState(false);
+  const [editingSigner, setEditingSigner] = useState<MultisigSignerItem | null>(null);
+  const [removingSigner, setRemovingSigner] = useState<MultisigSignerItem | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingActionState | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [adjustTarget, setAdjustTarget] = useState<SignerTableRow | null>(null);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastProposal, setLastProposal] = useState<SignerProposal | null>(null);
-
+  // Forms
   const addForm = useForm<AddSignerFormValues>({
     resolver: zodResolver(addSignerSchema),
-    defaultValues: ADD_SIGNER_DEFAULTS,
+    defaultValues: {
+      publicKey: '',
+      weight: 1,
+      label: '',
+      description: '',
+    },
   });
 
-  const adjustForm = useForm<AdjustWeightFormValues>({
-    resolver: zodResolver(adjustWeightSchema),
-    defaultValues: ADJUST_WEIGHT_DEFAULTS,
+  const editWeightForm = useForm<EditWeightFormValues>({
+    resolver: zodResolver(editWeightSchema),
+    defaultValues: {
+      weight: 1,
+      description: '',
+    },
   });
 
-  const thresholdForm = useForm<ThresholdFormValues>({
-    resolver: zodResolver(thresholdSchema),
-    defaultValues: INITIAL_THRESHOLDS,
+  const thresholdsForm = useForm<ThresholdsFormValues>({
+    resolver: zodResolver(thresholdsSchema),
+    defaultValues: {
+      lowThreshold: thresholds.lowThreshold,
+      medThreshold: thresholds.medThreshold,
+      highThreshold: thresholds.highThreshold,
+      masterWeight: thresholds.masterWeight,
+    },
   });
 
-  // -- derived state ---------------------------------------------------------
+  // Calculate total signed weight
+  const totalWeight = useMemo(() => {
+    return signers
+      .filter((s) => s.status === 'active')
+      .reduce((sum, s) => sum + s.weight, 0);
+  }, [signers]);
 
-  const rows = useMemo<SignerTableRow[]>(() => {
-    const removalSet = new Set(stagedRemovals);
+  const activeSignerCount = useMemo(() => {
+    return signers.filter((s) => s.status === 'active').length;
+  }, [signers]);
 
-    const committed: SignerTableRow[] = signers.map((signer): SignerTableRow => {
-      const adjustment = stagedAdjustments.find((item) => item.signerId === signer.id);
-      if (removalSet.has(signer.id)) {
-        return { ...signer, previousWeight: signer.weight, staged: 'removal' };
-      }
-      if (adjustment) {
-        return {
-          ...signer,
-          weight: adjustment.proposedWeight,
-          previousWeight: signer.weight,
-          staged: 'weight',
-        };
-      }
-      return { ...signer, previousWeight: signer.weight, staged: 'none' };
-    });
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(text);
+    toast.success(`${label} copied to clipboard`);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
-    const additions: SignerTableRow[] = stagedAdditions.map(
-      (signer): SignerTableRow => ({
-        ...signer,
-        previousWeight: 0,
-        staged: 'added',
-      }),
+  /* ------------------------------------------------------------------------ */
+  /* Form Handlers (Stage for confirmation modal)                             */
+  /* ------------------------------------------------------------------------ */
+
+  const handleStageAddSigner = (values: AddSignerFormValues) => {
+    // Check if key already exists
+    const exists = signers.some(
+      (s) => s.publicKey.toLowerCase() === values.publicKey.toLowerCase(),
     );
-
-    return [...committed, ...additions];
-  }, [signers, stagedAdditions, stagedAdjustments, stagedRemovals]);
-
-  const totalWeight = useMemo(
-    () =>
-      rows.reduce((sum, row) => (row.staged === 'removal' ? sum : sum + row.weight), 0),
-    [rows],
-  );
-
-  const effectiveThresholds = stagedThresholds ?? thresholds;
-
-  const thresholdsChanged =
-    stagedThresholds !== null &&
-    (stagedThresholds.low !== thresholds.low ||
-      stagedThresholds.medium !== thresholds.medium ||
-      stagedThresholds.high !== thresholds.high);
-
-  const changes = useMemo<SignerProposalChange[]>(() => {
-    const list: SignerProposalChange[] = [];
-
-    for (const signer of stagedAdditions) {
-      list.push({
-        kind: 'add',
-        signerId: signer.id,
-        label: signer.label,
-        publicKey: signer.publicKey,
-        weight: signer.weight,
+    if (exists) {
+      addForm.setError('publicKey', {
+        type: 'manual',
+        message: 'This public key is already registered as a signer on this account.',
       });
+      return;
     }
 
-    for (const adjustment of stagedAdjustments) {
-      const signer = signers.find((item) => item.id === adjustment.signerId);
-      list.push({
-        kind: 'adjust',
-        signerId: adjustment.signerId,
-        label: signer?.label ?? 'Signer',
-        currentWeight: adjustment.currentWeight,
-        proposedWeight: adjustment.proposedWeight,
-        reason: adjustment.reason,
-      });
-    }
+    setPendingAction({
+      type: 'add_signer',
+      title: 'Propose Add New Co-Signer',
+      summary: `Add ${values.label} (${truncateHash(values.publicKey)}) with weight ${values.weight}`,
+      targetPublicKey: values.publicKey,
+      targetLabel: values.label,
+      newWeight: values.weight,
+      description:
+        values.description ||
+        `Propose adding co-signer ${values.label} with weight ${values.weight}.`,
+    });
+    setIsAddModalOpen(false);
+  };
 
-    for (const signerId of stagedRemovals) {
-      const signer = signers.find((item) => item.id === signerId);
-      if (signer) {
-        list.push({
-          kind: 'remove',
-          signerId: signer.id,
-          label: signer.label,
-          publicKey: signer.publicKey,
-        });
-      }
-    }
+  const handleStageEditWeight = (values: EditWeightFormValues) => {
+    if (!editingSigner) return;
+    setPendingAction({
+      type: 'update_weight',
+      title: 'Propose Weight Adjustment',
+      summary: `Update weight of ${editingSigner.label} from ${editingSigner.weight} to ${values.weight}`,
+      targetPublicKey: editingSigner.publicKey,
+      targetLabel: editingSigner.label,
+      currentWeight: editingSigner.weight,
+      newWeight: values.weight,
+      description:
+        values.description ||
+        `Propose changing weight for ${editingSigner.label} from ${editingSigner.weight} to ${values.weight}.`,
+    });
+    setEditingSigner(null);
+  };
 
-    if (thresholdsChanged && stagedThresholds) {
-      list.push({ kind: 'thresholds', previous: thresholds, next: stagedThresholds });
-    }
+  const handleStageRemoveSigner = (signer: MultisigSignerItem) => {
+    setRemovingSigner(null);
+    setPendingAction({
+      type: 'remove_signer',
+      title: 'Propose Signer Removal',
+      summary: `Remove ${signer.label} (${truncateHash(signer.publicKey)}) by revoking signing weight`,
+      targetPublicKey: signer.publicKey,
+      targetLabel: signer.label,
+      currentWeight: signer.weight,
+      newWeight: 0,
+      description: `Propose removing co-signer ${signer.label} and revoking its weight of ${signer.weight}.`,
+    });
+  };
 
-    return list;
-  }, [
-    signers,
-    stagedAdditions,
-    stagedAdjustments,
-    stagedRemovals,
-    stagedThresholds,
-    thresholds,
-    thresholdsChanged,
-  ]);
+  const handleStageThresholds = (values: ThresholdsFormValues) => {
+    setPendingAction({
+      type: 'update_thresholds',
+      title: 'Propose Threshold Adjustment',
+      summary: `Update account thresholds to Low:${values.lowThreshold}, Med:${values.medThreshold}, High:${values.highThreshold}`,
+      newThresholds: values,
+      currentThresholds: thresholds,
+      description: `Propose updating master thresholds: Low=${values.lowThreshold}, Medium=${values.medThreshold}, High=${values.highThreshold}.`,
+    });
+    setIsThresholdsModalOpen(false);
+  };
 
-  const changeCount = changes.length;
+  /* ------------------------------------------------------------------------ */
+  /* Execute Confirmation Action Flow                                         */
+  /* ------------------------------------------------------------------------ */
 
-  // -- add signer ------------------------------------------------------------
+  const handleConfirmProposal = () => {
+    if (!pendingAction) return;
 
-  const openAddDialog = useCallback(() => setIsAddOpen(true), []);
-
-  const closeAddDialog = useCallback(() => setIsAddOpen(false), []);
-
-  const handleAddSigner = useCallback(
-    (values: AddSignerFormValues) => {
-      const alreadyPresent =
-        signers.some((item) => item.publicKey === values.publicKey) ||
-        stagedAdditions.some((item) => item.publicKey === values.publicKey);
-
-      if (alreadyPresent) {
-        toast.error('That public key already belongs to the signer set');
-        return;
-      }
-
-      const signer: OrgSigner = {
-        id: `sgn_${Date.now().toString(36)}`,
-        publicKey: values.publicKey,
-        label: values.label,
-        weight: values.weight,
-        kind: values.kind,
-        status: 'proposed',
-        addedAt: new Date().toISOString(),
-      };
-
-      setStagedAdditions((prev) => [...prev, signer]);
-      setIsAddOpen(false);
-      addForm.reset(ADD_SIGNER_DEFAULTS);
-      toast.success(`Staged "${values.label}" as a proposed signer`);
-    },
-    [signers, stagedAdditions, addForm],
-  );
-
-  // -- weight adjustments ----------------------------------------------------
-
-  const openAdjustDialog = useCallback(
-    (row: SignerTableRow) => {
-      setAdjustTarget(row);
-      adjustForm.reset({ weight: row.weight, reason: '' });
-    },
-    [adjustForm],
-  );
-
-  const closeAdjustDialog = useCallback(() => {
-    setAdjustTarget(null);
-    adjustForm.reset(ADJUST_WEIGHT_DEFAULTS);
-  }, [adjustForm]);
-
-  const handleAdjustWeight = useCallback(
-    (values: AdjustWeightFormValues) => {
-      if (!adjustTarget) return;
-
-      const committed = signers.find((item) => item.id === adjustTarget.id);
-      const nextTotal = totalWeight - adjustTarget.weight + values.weight;
-      const highThreshold = (stagedThresholds ?? thresholds).high;
-
-      if (nextTotal < highThreshold) {
-        toast.error(
-          `Cannot stage this change: total weight would fall to ${nextTotal}, below the high threshold of ${highThreshold}`,
-        );
-        return;
-      }
-
-      const adjustment: SignerWeightAdjustment = {
-        signerId: adjustTarget.id,
-        currentWeight: committed ? committed.weight : adjustTarget.weight,
-        proposedWeight: values.weight,
-        reason: values.reason,
-      };
-
-      setStagedAdjustments((prev) => [
-        ...prev.filter((item) => item.signerId !== adjustment.signerId),
-        adjustment,
-      ]);
-      setAdjustTarget(null);
-      adjustForm.reset(ADJUST_WEIGHT_DEFAULTS);
-      toast.success(`Staged a weight change for "${adjustTarget.label}"`);
-    },
-    [adjustTarget, signers, totalWeight, stagedThresholds, thresholds, adjustForm],
-  );
-
-  const revertWeight = useCallback((signerId: string) => {
-    setStagedAdjustments((prev) => prev.filter((item) => item.signerId !== signerId));
-    toast.info('Reverted the staged weight change');
-  }, []);
-
-  // -- removals --------------------------------------------------------------
-
-  const toggleRemoval = useCallback(
-    (row: SignerTableRow) => {
-      if (row.staged === 'removal') {
-        setStagedRemovals((prev) => prev.filter((id) => id !== row.id));
-        toast.info(`Restored "${row.label}" to the proposal`);
-        return;
-      }
-
-      if (row.kind === 'master') {
-        toast.error('The master key cannot be removed from this dashboard');
-        return;
-      }
-
-      const projected = totalWeight - row.weight;
-      const highThreshold = (stagedThresholds ?? thresholds).high;
-
-      if (projected < highThreshold) {
-        toast.error(
-          `Cannot stage removal: projected weight ${projected} would fall below the high threshold of ${highThreshold}`,
-        );
-        return;
-      }
-
-      setStagedRemovals((prev) => [...prev, row.id]);
-      setStagedAdjustments((prev) => prev.filter((item) => item.signerId !== row.id));
-      toast.info(`Staged "${row.label}" for removal`);
-    },
-    [totalWeight, stagedThresholds, thresholds],
-  );
-
-  const discardAddition = useCallback((signerId: string) => {
-    setStagedAdditions((prev) => prev.filter((item) => item.id !== signerId));
-    toast.info('Discarded the staged signer');
-  }, []);
-
-  // -- thresholds ------------------------------------------------------------
-
-  const handleStageThresholds = useCallback(
-    (values: ThresholdFormValues) => {
-      const unchanged =
-        values.low === thresholds.low &&
-        values.medium === thresholds.medium &&
-        values.high === thresholds.high;
-
-      if (unchanged) {
-        setStagedThresholds(null);
-        thresholdForm.reset(thresholds);
-        toast.info('Thresholds already match the live configuration');
-        return;
-      }
-
-      if (values.high > totalWeight) {
-        toast.error(
-          `High threshold (${values.high}) cannot exceed the projected total weight (${totalWeight})`,
-        );
-        return;
-      }
-
-      setStagedThresholds(values);
-      toast.success('Threshold changes staged for the next proposal');
-    },
-    [thresholds, totalWeight, thresholdForm],
-  );
-
-  const discardThresholdChanges = useCallback(() => {
-    setStagedThresholds(null);
-    thresholdForm.reset(thresholds);
-    toast.info('Staged threshold changes discarded');
-  }, [thresholds, thresholdForm]);
-
-  const discardAll = useCallback(() => {
-    setStagedAdditions([]);
-    setStagedAdjustments([]);
-    setStagedRemovals([]);
-    setStagedThresholds(null);
-    thresholdForm.reset(thresholds);
-    toast.info('All staged changes discarded');
-  }, [thresholds, thresholdForm]);
-
-  // -- proposal submission ---------------------------------------------------
-
-  const handleSubmitProposal = useCallback(async () => {
-    if (changeCount === 0 || isSubmitting) return;
-
-    setIsSubmitting(true);
-    await wait(600);
-
-    const proposal: SignerProposal = {
-      id: `sgp_${Date.now().toString(36)}`,
-      changes,
-      proposedBy: currentUser.data?.name ?? 'Workspace admin',
+    const newProposal: SignerProposalItem = {
+      id: `prop-${Date.now().toString().slice(-4)}`,
+      accountAddress,
+      type: pendingAction.type,
+      targetPublicKey: pendingAction.targetPublicKey,
+      targetLabel: pendingAction.targetLabel,
+      newWeight: pendingAction.newWeight,
+      currentWeight: pendingAction.currentWeight,
+      newThresholds: pendingAction.newThresholds,
+      currentThresholds: pendingAction.currentThresholds,
+      status: 'proposed',
       createdAt: new Date().toISOString(),
-      status: 'pending',
+      description: pendingAction.description,
+      proposedBy: 'Admin (Current User)',
     };
 
-    setSigners((prev) => {
-      const removalSet = new Set(stagedRemovals);
+    setProposals((prev) => [newProposal, ...prev]);
 
-      const updated: OrgSigner[] = prev
-        .filter((item) => !removalSet.has(item.id))
-        .map((item) => {
-          const adjustment = stagedAdjustments.find(
-            (entry) => entry.signerId === item.id,
-          );
-          return adjustment ? { ...item, weight: adjustment.proposedWeight } : item;
-        });
-
-      const added: OrgSigner[] = stagedAdditions.map(
-        (item): OrgSigner => ({ ...item, status: 'active' }),
+    // Perform optimistic status updates on signers if applicable
+    if (pendingAction.type === 'add_signer' && pendingAction.targetPublicKey) {
+      const newSigner: MultisigSignerItem = {
+        id: `sgn-${Date.now().toString().slice(-4)}`,
+        publicKey: pendingAction.targetPublicKey,
+        weight: pendingAction.newWeight || 1,
+        label: pendingAction.targetLabel || 'Co-Signer',
+        type: 'co-signer',
+        status: 'pending_addition',
+        addedAt: new Date().toISOString(),
+      };
+      setSigners((prev) => [...prev, newSigner]);
+    } else if (
+      pendingAction.type === 'remove_signer' &&
+      pendingAction.targetPublicKey
+    ) {
+      setSigners((prev) =>
+        prev.map((s) =>
+          s.publicKey === pendingAction.targetPublicKey
+            ? { ...s, status: 'pending_removal' }
+            : s,
+        ),
       );
-
-      return [...updated, ...added];
-    });
-
-    if (thresholdsChanged && stagedThresholds) {
-      setThresholds(stagedThresholds);
-      thresholdForm.reset(stagedThresholds);
+    } else if (
+      pendingAction.type === 'update_thresholds' &&
+      pendingAction.newThresholds
+    ) {
+      // Optimistically update threshold display or keep proposal staged
+      setThresholds((prev) => ({
+        ...prev,
+        masterWeight: pendingAction.newThresholds?.masterWeight ?? prev.masterWeight,
+      }));
     }
 
-    setStagedAdditions([]);
-    setStagedAdjustments([]);
-    setStagedRemovals([]);
-    setStagedThresholds(null);
-    setLastProposal(proposal);
-    setIsConfirmOpen(false);
-    setIsSubmitting(false);
-    toast.success(`Proposal ${proposal.id} submitted for co-signature`);
-  }, [
-    changeCount,
-    isSubmitting,
-    changes,
-    currentUser,
-    stagedRemovals,
-    stagedAdjustments,
-    stagedAdditions,
-    stagedThresholds,
-    thresholdsChanged,
-    thresholdForm,
-  ]);
+    toast.success('Multi-signature proposal successfully created!', {
+      description: `Proposal ${newProposal.id} requires ${thresholds.highThreshold} signature weight before execution.`,
+    });
 
-  // -- table -----------------------------------------------------------------
+    setPendingAction(null);
+    addForm.reset();
+  };
 
-  const columns = useMemo<ColumnDef<SignerTableRow, unknown>[]>(
+  /* ------------------------------------------------------------------------ */
+  /* TanStack Table Definition                                                */
+  /* ------------------------------------------------------------------------ */
+
+  const columns = useMemo<ColumnDef<MultisigSignerItem>[]>(
     () => [
       {
         accessorKey: 'label',
-        header: 'Signer',
-        cell: ({ row }) => (
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gold-soft">
-              <KeyRound className="h-4 w-4 text-gold" aria-hidden />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate font-medium text-foreground">
-                {row.original.label}
+        header: 'Signer Label',
+        cell: ({ row }) => {
+          const signer = row.original;
+          return (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">{signer.label}</span>
+                {signer.type === 'master' ? (
+                  <Badge variant="gold" size="sm">
+                    Master Key
+                  </Badge>
+                ) : (
+                  <Badge variant="neutral" size="sm">
+                    Co-Signer
+                  </Badge>
+                )}
+              </div>
+              <span className="text-2xs text-foreground-secondary font-mono">
+                ID: {signer.id}
               </span>
-              <span className="block truncate text-2xs capitalize text-foreground-muted">
-                {row.original.kind}
-              </span>
-            </span>
-          </div>
-        ),
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'publicKey',
-        header: 'Address',
-        cell: ({ row }) => (
-          <code className="block max-w-[18rem] break-all font-mono text-2xs text-foreground-secondary">
-            {row.original.publicKey}
-          </code>
-        ),
+        header: 'Stellar Public Key',
+        cell: ({ row }) => {
+          const key = row.original.publicKey;
+          const isCopied = copiedKey === key;
+          return (
+            <div className="flex items-center gap-2 font-mono text-xs text-foreground">
+              <span title={key}>{truncateHash(key, 8, 8)}</span>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(key, 'Public Key')}
+                className="inline-flex items-center p-1 text-foreground-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-xs"
+                aria-label="Copy public key"
+              >
+                <Copy className={cn('h-3.5 w-3.5', isCopied && 'text-success')} />
+              </button>
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'weight',
-        header: 'Weight',
-        meta: { className: 'text-right' },
+        header: 'Signing Weight',
         cell: ({ row }) => {
-          const item = row.original;
-          const share =
-            item.staged === 'removal' || totalWeight === 0
-              ? 0
-              : Math.round((item.weight / totalWeight) * 100);
-
+          const weight = row.original.weight;
+          const percentage = totalWeight > 0 ? Math.round((weight / totalWeight) * 100) : 0;
           return (
-            <span className="flex flex-col items-end gap-1.5">
-              <span className="tabular-nums text-foreground">
-                {item.staged === 'weight' && (
-                  <span className="mr-1.5 text-foreground-muted line-through">
-                    {item.previousWeight}
-                  </span>
-                )}
-                {item.weight}
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                {weight}
               </span>
-              <span className="h-1 w-16 overflow-hidden rounded-full bg-surface-secondary" aria-hidden>
-                <span
-                  className="block h-full rounded-full bg-gold"
-                  style={{ width: `${share}%` }}
-                />
-              </span>
-            </span>
+              <div className="hidden w-20 sm:block">
+                <div className="h-1.5 w-full rounded-full bg-surface-secondary overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gold transition-all duration-300"
+                    style={{ width: `${Math.min(100, percentage)}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-foreground-secondary tabular-nums">
+                  {percentage}% of total
+                </span>
+              </div>
+            </div>
           );
         },
       },
@@ -582,101 +447,73 @@ export function SignerManagement() {
         accessorKey: 'status',
         header: 'Status',
         cell: ({ row }) => {
-          const item = row.original;
-          const meta = signerStatus(item.status);
-
-          return (
-            <span className="inline-flex flex-wrap items-center gap-1.5">
-              <Badge variant={meta.variant} size="sm" dot>
-                {meta.label}
+          const status = row.original.status;
+          if (status === 'active') {
+            return (
+              <Badge variant="success" size="sm" dot>
+                Active
               </Badge>
-              {item.staged === 'weight' && (
-                <Badge variant="warning" size="sm">
-                  Weight staged
-                </Badge>
-              )}
-            </span>
+            );
+          }
+          if (status === 'pending_addition') {
+            return (
+              <Badge variant="warning" size="sm">
+                Pending Add
+              </Badge>
+            );
+          }
+          return (
+            <Badge variant="danger" size="sm">
+              Pending Remove
+            </Badge>
           );
         },
       },
       {
         accessorKey: 'addedAt',
-        header: 'Added',
-        meta: { className: 'hidden sm:table-cell' },
+        header: 'Added On',
         cell: ({ row }) => (
-          <span className="text-2xs text-foreground-muted">
-            {formatRelativeTime(row.original.addedAt)}
+          <span className="text-xs text-foreground-secondary">
+            {formatDate(row.original.addedAt)}
           </span>
         ),
       },
       {
         id: 'actions',
-        header: 'Actions',
-        enableSorting: false,
-        meta: { className: 'text-right' },
+        header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => {
-          const item = row.original;
-
-          if (item.staged === 'added') {
-            return (
-              <div className="flex items-center justify-end gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => discardAddition(item.id)}
-                  aria-label={`Discard staged signer ${item.label}`}
-                  className="text-foreground-muted hover:text-danger"
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                </Button>
-              </div>
-            );
-          }
+          const signer = row.original;
+          const isMaster = signer.type === 'master';
+          const isPending = signer.status !== 'active';
 
           return (
-            <div className="flex items-center justify-end gap-1">
+            <div className="flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
-                onClick={() => openAdjustDialog(item)}
-                disabled={item.staged === 'removal'}
-                aria-label={`Adjust weight for ${item.label}`}
+                size="sm"
+                disabled={isPending}
+                onClick={() => {
+                  editWeightForm.setValue('weight', signer.weight);
+                  editWeightForm.setValue('description', '');
+                  setEditingSigner(signer);
+                }}
+                leftIcon={<Sliders className="h-3.5 w-3.5" />}
               >
-                <Pencil className="h-4 w-4" aria-hidden />
+                Adjust Weight
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => toggleRemoval(item)}
-                aria-label={
-                  item.staged === 'removal'
-                    ? `Restore ${item.label}`
-                    : `Stage removal of ${item.label}`
-                }
-                className={
-                  item.staged === 'removal'
-                    ? 'text-gold'
-                    : 'text-foreground-muted hover:text-danger'
-                }
-              >
-                {item.staged === 'removal' ? (
-                  <Undo2 className="h-4 w-4" aria-hidden />
-                ) : (
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                )}
-              </Button>
-              {item.staged === 'weight' && (
+
+              {!isMaster && (
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => revertWeight(item.id)}
-                  aria-label={`Revert weight change for ${item.label}`}
+                  variant="outline"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => setRemovingSigner(signer)}
+                  className="text-danger hover:border-danger hover:bg-danger/10"
+                  leftIcon={<Trash2 className="h-3.5 w-3.5" />}
                 >
-                  <RotateCcw className="h-4 w-4" aria-hidden />
+                  Remove
                 </Button>
               )}
             </div>
@@ -684,492 +521,726 @@ export function SignerManagement() {
         },
       },
     ],
-    [totalWeight, discardAddition, openAdjustDialog, toggleRemoval, revertWeight],
+    [copiedKey, totalWeight, editWeightForm],
   );
 
-  // -- render ----------------------------------------------------------------
+  const table = useReactTable({
+    data: signers,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    state: {
+      globalFilter,
+    },
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const search = (filterValue ?? '').toString().toLowerCase().trim();
+      if (!search) return true;
+      const { label, publicKey, type, status } = row.original;
+      return (
+        label.toLowerCase().includes(search) ||
+        publicKey.toLowerCase().includes(search) ||
+        type.toLowerCase().includes(search) ||
+        status.toLowerCase().includes(search)
+      );
+    },
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
+  });
 
   return (
-    <div className="space-y-6" role="region" aria-label="Multi-signature signer management">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <ThresholdTile
-          label="Total weight"
-          value={totalWeight}
-          caption={`${rows.length} keys in the set`}
-          reachable={totalWeight >= effectiveThresholds.high}
-        />
-        <ThresholdTile
-          label="Low threshold"
-          value={effectiveThresholds.low}
-          caption="Zero-value operations"
-          reachable={totalWeight >= effectiveThresholds.low}
-        />
-        <ThresholdTile
-          label="Medium threshold"
-          value={effectiveThresholds.medium}
-          caption="Standard payments"
-          reachable={totalWeight >= effectiveThresholds.medium}
-        />
-        <ThresholdTile
-          label="High threshold"
-          value={effectiveThresholds.high}
-          caption="High-value and account operations"
-          reachable={totalWeight >= effectiveThresholds.high}
-        />
+    <div className="space-y-8">
+      {/* ------------------------------------------------------------------ */}
+      {/* Header & Account Summary                                           */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Shield className="h-6 w-6 text-gold" />
+            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+              Organization Multi-Sig Signer Dashboard
+            </h1>
+          </div>
+          <p className="mt-1 text-sm text-foreground-secondary">
+            Manage co-signers, signing weight allocations, and master threshold policies for organization accounts.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            leftIcon={<Sliders className="h-4 w-4" />}
+            onClick={() => {
+              thresholdsForm.reset({
+                lowThreshold: thresholds.lowThreshold,
+                medThreshold: thresholds.medThreshold,
+                highThreshold: thresholds.highThreshold,
+                masterWeight: thresholds.masterWeight,
+              });
+              setIsThresholdsModalOpen(true);
+            }}
+          >
+            Configure Thresholds
+          </Button>
+
+          <Button
+            type="button"
+            variant="gold"
+            size="md"
+            leftIcon={<UserPlus className="h-4 w-4" />}
+            onClick={() => {
+              addForm.reset();
+              setIsAddModalOpen(true);
+            }}
+          >
+            Add Co-Signer
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader className="flex-row items-start justify-between gap-4">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-gold" aria-hidden />
-              Master key thresholds
-            </CardTitle>
-            <CardDescription>
-              Minimum weight required before an operation counts as low, medium or high value.
+      {/* ------------------------------------------------------------------ */}
+      {/* Overview Stat Cards                                                */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Account Info Card */}
+        <Card className="bg-surface">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-2xs uppercase tracking-wider text-foreground-secondary">
+              Multisig Account
             </CardDescription>
+            <CardTitle className="font-mono text-sm font-semibold truncate text-foreground" title={accountAddress}>
+              {truncateHash(accountAddress, 8, 8)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex items-center gap-2 text-2xs text-foreground-muted">
+              <span>Stellar Testnet / Public</span>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(accountAddress, 'Account Address')}
+                className="inline-flex items-center gap-1 text-gold hover:underline"
+              >
+                Copy Address
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Active Signers */}
+        <Card className="bg-surface">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-2xs uppercase tracking-wider text-foreground-secondary">
+              Active Co-Signers
+            </CardDescription>
+            <CardTitle className="font-display text-2xl font-bold tabular-nums text-foreground">
+              {activeSignerCount}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <span className="text-2xs text-foreground-secondary">
+              {signers.filter((s) => s.type === 'master').length} Master Key · {signers.filter((s) => s.type === 'co-signer').length} Co-Signers
+            </span>
+          </CardContent>
+        </Card>
+
+        {/* Total Weight Collected */}
+        <Card className="bg-surface">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-2xs uppercase tracking-wider text-foreground-secondary">
+              Total Account Weight
+            </CardDescription>
+            <CardTitle className="font-display text-2xl font-bold tabular-nums text-gold">
+              {totalWeight}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <span className="text-2xs text-foreground-secondary">
+              Max High Threshold: {thresholds.highThreshold} weight
+            </span>
+          </CardContent>
+        </Card>
+
+        {/* Threshold Status */}
+        <Card className="bg-surface">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-2xs uppercase tracking-wider text-foreground-secondary">
+              Security Margin
+            </CardDescription>
+            <CardTitle className="flex items-center gap-2 font-display text-xl font-bold text-success">
+              <ShieldCheck className="h-5 w-5" />
+              {totalWeight >= thresholds.highThreshold ? 'Fully Secured' : 'Sub-Optimal'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <span className="text-2xs text-foreground-secondary">
+              Low:{thresholds.lowThreshold} · Med:{thresholds.medThreshold} · High:{thresholds.highThreshold}
+            </span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Threshold Progress Bar Breakdown                                   */}
+      {/* ------------------------------------------------------------------ */}
+      <Card className="bg-surface border-border">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="h-4 w-4 text-gold" />
+              <CardTitle className="text-sm font-semibold">Account Threshold Allocation</CardTitle>
+            </div>
+            <span className="text-2xs text-foreground-secondary">
+              Current Weight: <span className="font-bold text-foreground">{totalWeight}</span>
+            </span>
           </div>
-          {stagedThresholds && <Badge variant="gold" size="sm">Changes staged</Badge>}
         </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="relative h-3 w-full rounded-full bg-surface-secondary overflow-hidden ring-1 ring-border">
+            {/* Active Weight fill */}
+            <div
+              className={cn(
+                'h-full rounded-full transition-all duration-500',
+                totalWeight >= thresholds.highThreshold ? 'bg-success' : 'bg-gold',
+              )}
+              style={{
+                width: `${Math.min(100, (totalWeight / Math.max(totalWeight, thresholds.highThreshold + 2)) * 100)}%`,
+              }}
+            />
+          </div>
 
-        <CardContent className="space-y-5">
-          <form
-            onSubmit={thresholdForm.handleSubmit(handleStageThresholds)}
-            className="space-y-4"
-          >
-            <div className="grid gap-4 sm:grid-cols-3">
-              <FormField
-                label="Low"
-                hint="Zero-value operations"
-                error={thresholdForm.formState.errors.low?.message}
-                required
-              >
-                <Input
-                  type="number"
-                  min={0}
-                  max={255}
-                  {...thresholdForm.register('low', {
-                    required: 'Enter a value for the low threshold',
-                  })}
-                  invalid={!!thresholdForm.formState.errors.low}
-                  aria-label="Low threshold"
-                />
-              </FormField>
-
-              <FormField
-                label="Medium"
-                hint="Standard payments"
-                error={thresholdForm.formState.errors.medium?.message}
-                required
-              >
-                <Input
-                  type="number"
-                  min={1}
-                  max={255}
-                  {...thresholdForm.register('medium', {
-                    required: 'Enter a value for the medium threshold',
-                  })}
-                  invalid={!!thresholdForm.formState.errors.medium}
-                  aria-label="Medium threshold"
-                />
-              </FormField>
-
-              <FormField
-                label="High"
-                hint="High-value operations"
-                error={thresholdForm.formState.errors.high?.message}
-                required
-              >
-                <Input
-                  type="number"
-                  min={1}
-                  max={255}
-                  {...thresholdForm.register('high', {
-                    required: 'Enter a value for the high threshold',
-                  })}
-                  invalid={!!thresholdForm.formState.errors.high}
-                  aria-label="High threshold"
-                />
-              </FormField>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="rounded-card border border-border p-2 bg-surface-secondary/20">
+              <span className="block text-2xs uppercase tracking-wider text-foreground-muted">Low Threshold</span>
+              <span className="font-mono font-semibold text-foreground">{thresholds.lowThreshold} Weight</span>
+              <span className="block text-[10px] text-foreground-secondary">Allow trust, 0-fee ops</span>
             </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <p className="text-2xs text-foreground-muted">
-                {stagedThresholds
-                  ? `Staged: ${stagedThresholds.low} / ${stagedThresholds.medium} / ${stagedThresholds.high} — live: ${thresholds.low} / ${thresholds.medium} / ${thresholds.high}`
-                  : 'Stage an edit, then propose it to your co-signers.'}
-              </p>
-              <div className="flex items-center gap-2">
-                {stagedThresholds && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={discardThresholdChanges}
-                    leftIcon={<RotateCcw className="h-4 w-4" aria-hidden />}
-                  >
-                    Discard
-                  </Button>
-                )}
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  size="sm"
-                  disabled={
-                    !thresholdForm.formState.isDirty && !stagedThresholds
-                  }
-                >
-                  Stage changes
-                </Button>
-              </div>
+            <div className="rounded-card border border-border p-2 bg-surface-secondary/20">
+              <span className="block text-2xs uppercase tracking-wider text-foreground-muted">Medium Threshold</span>
+              <span className="font-mono font-semibold text-foreground">{thresholds.medThreshold} Weight</span>
+              <span className="block text-[10px] text-foreground-secondary">Payment & transfer ops</span>
             </div>
-          </form>
+            <div className="rounded-card border border-border p-2 bg-surface-secondary/20">
+              <span className="block text-2xs uppercase tracking-wider text-foreground-muted">High Threshold</span>
+              <span className="font-mono font-semibold text-foreground">{thresholds.highThreshold} Weight</span>
+              <span className="block text-[10px] text-foreground-secondary">Signer & threshold updates</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      <section className="space-y-4" aria-labelledby="signers-heading">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2
-              id="signers-heading"
-              className="flex items-center gap-2 font-display text-xl font-semibold tracking-tight text-foreground"
-            >
-              <Users className="h-4 w-4 text-gold" aria-hidden />
-              Signers
-            </h2>
-            <p className="mt-1 text-xs text-foreground-secondary">
-              {rows.length} keys · projected weight {totalWeight} · high threshold{' '}
-              {effectiveThresholds.high}
-            </p>
+      {/* ------------------------------------------------------------------ */}
+      {/* Signers TanStack Table                                            */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-gold" />
+            <h2 className="font-display text-lg font-semibold text-foreground">Registered Co-Signers</h2>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={openAddDialog}
-              leftIcon={<Plus className="h-4 w-4" aria-hidden />}
-            >
-              Add signer
-            </Button>
-            <Button
-              type="button"
-              variant="gold"
-              size="sm"
-              onClick={() => setIsConfirmOpen(true)}
-              disabled={changeCount === 0}
-              leftIcon={<Send className="h-4 w-4" aria-hidden />}
-            >
-              Propose changes{changeCount > 0 ? ` (${changeCount})` : ''}
-            </Button>
+
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground-muted" />
+            <Input
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              placeholder="Search signers by label, key..."
+              className="pl-9 h-9 text-xs"
+            />
           </div>
         </div>
 
-        {changeCount > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-gold/40 bg-gold-soft px-4 py-3">
-            <p className="flex items-center gap-2 text-xs text-foreground">
-              <Info className="h-4 w-4 shrink-0 text-gold" aria-hidden />
-              {changeCount} staged {changeCount === 1 ? 'change' : 'changes'} — review and
-              propose them to your co-signers.
-            </p>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={discardAll}
-              leftIcon={<RotateCcw className="h-4 w-4" aria-hidden />}
-            >
-              Discard all
-            </Button>
+        <div className="overflow-hidden rounded-card border border-border bg-surface shadow-soft-1">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id} className="border-b border-border bg-surface-secondary/40">
+                    {headerGroup.headers.map((header) => {
+                      const canSort = header.column.getCanSort();
+                      return (
+                        <th
+                          key={header.id}
+                          className="px-4 py-3 text-2xs font-semibold uppercase tracking-wider text-foreground-secondary"
+                        >
+                          {header.isPlaceholder ? null : (
+                            <button
+                              type="button"
+                              onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                              className={cn(
+                                'inline-flex items-center gap-1 font-semibold text-foreground-secondary hover:text-foreground',
+                                !canSort && 'cursor-default',
+                              )}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {canSort && (
+                                <span className="text-foreground-muted">
+                                  {header.column.getIsSorted() === 'asc' ? (
+                                    <ArrowUp className="h-3 w-3" />
+                                  ) : header.column.getIsSorted() === 'desc' ? (
+                                    <ArrowDown className="h-3 w-3" />
+                                  ) : null}
+                                </span>
+                              )}
+                            </button>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </thead>
+              <tbody className="divide-y divide-border">
+                {table.getRowModel().rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length} className="p-8 text-center text-sm text-foreground-secondary">
+                      No co-signers found matching search criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="transition-colors hover:bg-surface-secondary/30"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-4 py-3 align-middle">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
 
-        {lastProposal && changeCount === 0 && (
-          <p className="text-2xs text-foreground-muted">
-            Last proposal{' '}
-            <span className="font-mono text-foreground-secondary">{lastProposal.id}</span> ·{' '}
-            {lastProposal.changes.length} changes · submitted{' '}
-            {formatRelativeTime(lastProposal.createdAt)}
-          </p>
-        )}
-
-        <DataTable
-          data={rows}
-          columns={columns}
-          getRowId={(row) => row.id}
-          searchable
-          searchPlaceholder="Search label, address, kind or status"
-          pageSize={5}
-          caption="Organization signers"
-          emptyState={
-            <div className="rounded-card border border-dashed border-border p-8 text-center text-sm text-foreground-secondary">
-              No signers match your search.
+          {/* Table Pagination Controls */}
+          {table.getPageCount() > 1 && (
+            <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-foreground-secondary bg-surface-secondary/20">
+              <span>
+                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  leftIcon={<ChevronLeft className="h-3.5 w-3.5" />}
+                >
+                  Previous
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  rightIcon={<ChevronRight className="h-3.5 w-3.5" />}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-          }
-        />
-      </section>
+          )}
+        </div>
+      </div>
 
+      {/* ------------------------------------------------------------------ */}
+      {/* Active Proposals Log                                               */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold text-foreground flex items-center gap-2">
+            <UserCheck className="h-5 w-5 text-gold" />
+            Multi-Sig Change Proposals
+          </h2>
+          <Badge variant="gold" size="sm">
+            {proposals.filter((p) => p.status === 'proposed').length} Proposed
+          </Badge>
+        </div>
+
+        <div className="grid gap-3">
+          {proposals.map((proposal) => (
+            <Card key={proposal.id} className="bg-surface border-border">
+              <CardContent className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-semibold text-gold">{proposal.id}</span>
+                    <Badge
+                      variant={
+                        proposal.type === 'add_signer'
+                          ? 'success'
+                          : proposal.type === 'remove_signer'
+                            ? 'danger'
+                            : 'info'
+                      }
+                      size="sm"
+                    >
+                      {proposal.type.replace('_', ' ').toUpperCase()}
+                    </Badge>
+                    <span className="text-2xs text-foreground-secondary">
+                      {formatDate(proposal.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-foreground font-medium">{proposal.description}</p>
+                  <p className="text-2xs text-foreground-muted">Proposed by: {proposal.proposedBy}</p>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <Badge variant="warning" size="sm">
+                    Awaiting {thresholds.highThreshold} Weight Signatures
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Dialog 1: Add Co-Signer Modal                                      */}
+      {/* ------------------------------------------------------------------ */}
       <Dialog
-        open={isAddOpen}
-        onClose={closeAddDialog}
-        title="Add a co-signer"
-        description="The key is staged locally and only joins the account once the proposal is co-signed."
-        size="sm"
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add New Co-Signer"
+        description="Propose adding a new Stellar public key to this organization multi-signature account."
+        size="md"
       >
-        <form onSubmit={addForm.handleSubmit(handleAddSigner)} className="space-y-4 pt-2">
+        <form onSubmit={addForm.handleSubmit(handleStageAddSigner)} className="space-y-4 pt-2">
           <FormField
-            label="Label"
-            hint="How this key appears in the signer table"
-            error={addForm.formState.errors.label?.message}
+            label="Stellar Public Key"
             required
-          >
-            <Input
-              type="text"
-              placeholder="e.g. Finance controller"
-              {...addForm.register('label')}
-              invalid={!!addForm.formState.errors.label}
-              aria-label="Signer label"
-            />
-          </FormField>
-
-          <FormField
-            label="Stellar public key"
-            hint="Ed25519 account ID — a G followed by 55 base32 characters"
             error={addForm.formState.errors.publicKey?.message}
-            required
+            hint="56-character base32 address starting with G (e.g., GABC...)"
           >
             <Input
-              type="text"
-              placeholder="GAB2CD3EF4G5H6I7JKLMNOPQRST2U3V4W5X6YZABC2D3E4F5G6H7I2J3"
               {...addForm.register('publicKey')}
+              placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+              className="font-mono text-xs uppercase"
               invalid={!!addForm.formState.errors.publicKey}
-              aria-label="Stellar public key"
-              className="font-mono"
             />
           </FormField>
 
           <FormField
-            label="Weight"
-            hint="Whole number between 1 and 255"
-            error={addForm.formState.errors.weight?.message}
+            label="Signing Weight"
             required
+            error={addForm.formState.errors.weight?.message}
+            hint="Weight assigned to this key (1 to 255)."
           >
             <Input
               type="number"
+              {...addForm.register('weight')}
               min={1}
               max={255}
-              {...addForm.register('weight')}
+              placeholder="1"
               invalid={!!addForm.formState.errors.weight}
-              aria-label="Signer weight"
             />
           </FormField>
 
           <FormField
-            label="Kind"
-            hint="The master key is provisioned outside this dashboard"
-            error={addForm.formState.errors.kind?.message}
+            label="Key Holder / Role Label"
             required
+            error={addForm.formState.errors.label?.message}
+            hint="Human-readable name or role for identification."
           >
-            <Select
-              {...addForm.register('kind')}
-              invalid={!!addForm.formState.errors.kind}
-              aria-label="Signer kind"
-            >
-              <option value="co-signer">Co-signer</option>
-              <option value="pre-auth">Pre-authorized</option>
-              <option value="hash">Hash signer</option>
-            </Select>
+            <Input
+              {...addForm.register('label')}
+              placeholder="e.g., Lead Auditor, Secondary Security Officer"
+              invalid={!!addForm.formState.errors.label}
+            />
           </FormField>
 
-          <div className="flex justify-end gap-2 border-t border-border pt-3">
-            <Button type="button" variant="secondary" size="sm" onClick={closeAddDialog}>
+          <FormField
+            label="Proposal Description (Optional)"
+            error={addForm.formState.errors.description?.message}
+            hint="Context for other organization admins before co-signing."
+          >
+            <Input
+              {...addForm.register('description')}
+              placeholder="e.g., Adding key for Q4 audit compliance"
+              invalid={!!addForm.formState.errors.description}
+            />
+          </FormField>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsAddModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit" variant="gold" size="sm">
-              Stage signer
+            <Button type="submit" variant="gold" leftIcon={<Plus className="h-4 w-4" />}>
+              Propose Co-Signer
             </Button>
           </div>
         </form>
       </Dialog>
 
+      {/* ------------------------------------------------------------------ */}
+      {/* Dialog 2: Adjust Signer Weight Modal                               */}
+      {/* ------------------------------------------------------------------ */}
       <Dialog
-        open={adjustTarget !== null}
-        onClose={closeAdjustDialog}
-        title={
-          adjustTarget ? `Adjust weight — ${adjustTarget.label}` : 'Adjust weight'
-        }
-        description="Propose a new signature weight for this key."
+        open={!!editingSigner}
+        onClose={() => setEditingSigner(null)}
+        title="Adjust Signing Weight"
+        description={`Modify signing weight for ${editingSigner?.label || 'co-signer'}.`}
         size="sm"
       >
-        <form
-          onSubmit={adjustForm.handleSubmit(handleAdjustWeight)}
-          className="space-y-4 pt-2"
-        >
-          {adjustTarget && (
-            <div className="rounded-sm bg-surface-secondary px-3 py-2 text-2xs text-foreground-secondary">
-              <span className="font-medium text-foreground">{adjustTarget.label}</span> ·{' '}
-              <span className="font-mono">
-                {truncateHash(adjustTarget.publicKey, 6, 6)}
-              </span>{' '}
-              · current weight {adjustTarget.weight}
+        <form onSubmit={editWeightForm.handleSubmit(handleStageEditWeight)} className="space-y-4 pt-2">
+          {editingSigner && (
+            <div className="rounded-card border border-border p-3 bg-surface-secondary/30 space-y-1">
+              <p className="text-xs font-semibold text-foreground">{editingSigner.label}</p>
+              <p className="font-mono text-2xs text-foreground-secondary truncate">{editingSigner.publicKey}</p>
+              <p className="text-2xs text-gold">Current Weight: {editingSigner.weight}</p>
             </div>
           )}
 
           <FormField
-            label="Proposed weight"
-            hint="Whole number between 1 and 255"
-            error={adjustForm.formState.errors.weight?.message}
+            label="New Signing Weight"
             required
+            error={editWeightForm.formState.errors.weight?.message}
+            hint="Set new weight between 1 and 255."
           >
             <Input
               type="number"
+              {...editWeightForm.register('weight')}
               min={1}
               max={255}
-              {...adjustForm.register('weight')}
-              invalid={!!adjustForm.formState.errors.weight}
-              aria-label="Proposed weight"
+              invalid={!!editWeightForm.formState.errors.weight}
             />
           </FormField>
 
           <FormField
-            label="Reason"
-            hint="Recorded on the proposal for auditors"
-            error={adjustForm.formState.errors.reason?.message}
-            required
+            label="Reason / Description (Optional)"
+            error={editWeightForm.formState.errors.description?.message}
           >
             <Input
-              type="text"
-              placeholder="e.g. Rotating the Q4 finance key"
-              {...adjustForm.register('reason')}
-              invalid={!!adjustForm.formState.errors.reason}
-              aria-label="Reason for the weight change"
+              {...editWeightForm.register('description')}
+              placeholder="e.g., Increasing weight for higher approval authority"
+              invalid={!!editWeightForm.formState.errors.description}
             />
           </FormField>
 
-          <div className="flex justify-end gap-2 border-t border-border pt-3">
-            <Button type="button" variant="secondary" size="sm" onClick={closeAdjustDialog}>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setEditingSigner(null)}
+            >
               Cancel
             </Button>
-            <Button type="submit" variant="gold" size="sm">
-              Stage adjustment
+            <Button type="submit" variant="gold">
+              Propose Weight Change
             </Button>
           </div>
         </form>
       </Dialog>
 
+      {/* ------------------------------------------------------------------ */}
+      {/* Dialog 3: Remove Signer Modal                                      */}
+      {/* ------------------------------------------------------------------ */}
       <Dialog
-        open={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        title="Confirm signer proposal"
-        description={`${changeCount} ${changeCount === 1 ? 'change' : 'changes'} will be sent to your co-signers for approval.`}
+        open={!!removingSigner}
+        onClose={() => setRemovingSigner(null)}
+        title="Propose Co-Signer Removal"
+        description="This operation will set the signer weight to 0, revoking all authorization rights."
+        size="sm"
+      >
+        {removingSigner && (
+          <div className="space-y-4 pt-2">
+            <div className="rounded-card border border-danger/30 p-3 bg-danger/5 space-y-1">
+              <div className="flex items-center gap-2 text-danger font-semibold text-xs">
+                <ShieldAlert className="h-4 w-4" />
+                Revoke Key Privileges
+              </div>
+              <p className="text-xs font-medium text-foreground">{removingSigner.label}</p>
+              <p className="font-mono text-2xs text-foreground-secondary truncate">{removingSigner.publicKey}</p>
+            </div>
+
+            <p className="text-xs text-foreground-secondary">
+              Removing a co-signer requires a High Threshold multi-sig transaction approval ({thresholds.highThreshold} weight).
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setRemovingSigner(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => handleStageRemoveSigner(removingSigner)}
+                leftIcon={<Trash2 className="h-4 w-4" />}
+              >
+                Confirm Removal Proposal
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Dialog 4: Configure Account Thresholds Modal                        */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog
+        open={isThresholdsModalOpen}
+        onClose={() => setIsThresholdsModalOpen(false)}
+        title="Configure Master Account Thresholds"
+        description="Adjust Low, Medium, and High operation thresholds for the organization Stellar account."
         size="md"
-        footer={
-          <>
+      >
+        <form onSubmit={thresholdsForm.handleSubmit(handleStageThresholds)} className="space-y-4 pt-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormField
+              label="Low Threshold"
+              required
+              error={thresholdsForm.formState.errors.lowThreshold?.message}
+              hint="Allowtrust & 0-fee ops."
+            >
+              <Input
+                type="number"
+                {...thresholdsForm.register('lowThreshold')}
+                min={0}
+                max={255}
+                invalid={!!thresholdsForm.formState.errors.lowThreshold}
+              />
+            </FormField>
+
+            <FormField
+              label="Medium Threshold"
+              required
+              error={thresholdsForm.formState.errors.medThreshold?.message}
+              hint="Payments & transfers."
+            >
+              <Input
+                type="number"
+                {...thresholdsForm.register('medThreshold')}
+                min={0}
+                max={255}
+                invalid={!!thresholdsForm.formState.errors.medThreshold}
+              />
+            </FormField>
+
+            <FormField
+              label="High Threshold"
+              required
+              error={thresholdsForm.formState.errors.highThreshold?.message}
+              hint="Signers & thresholds."
+            >
+              <Input
+                type="number"
+                {...thresholdsForm.register('highThreshold')}
+                min={0}
+                max={255}
+                invalid={!!thresholdsForm.formState.errors.highThreshold}
+              />
+            </FormField>
+          </div>
+
+          <FormField
+            label="Master Key Weight"
+            required
+            error={thresholdsForm.formState.errors.masterWeight?.message}
+            hint="Weight assigned to the primary organization account master key."
+          >
+            <Input
+              type="number"
+              {...thresholdsForm.register('masterWeight')}
+              min={0}
+              max={255}
+              invalid={!!thresholdsForm.formState.errors.masterWeight}
+            />
+          </FormField>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button
               type="button"
               variant="secondary"
-              size="sm"
-              onClick={() => setIsConfirmOpen(false)}
-              disabled={isSubmitting}
+              onClick={() => setIsThresholdsModalOpen(false)}
             >
               Cancel
             </Button>
-            <Button
-              type="button"
-              variant="gold"
-              size="sm"
-              loading={isSubmitting}
-              leftIcon={<Send className="h-4 w-4" aria-hidden />}
-              onClick={handleSubmitProposal}
-            >
-              Submit proposal
+            <Button type="submit" variant="gold">
+              Propose Threshold Changes
             </Button>
-          </>
-        }
+          </div>
+        </form>
+      </Dialog>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Dialog 5: Confirmation Modal Action Flow                           */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog
+        open={!!pendingAction}
+        onClose={() => setPendingAction(null)}
+        title={pendingAction?.title || 'Confirm Multi-Sig Proposal'}
+        description="Review details of the proposed multi-signature change before creating the official proposal."
+        size="md"
       >
-        <ul className="space-y-2">
-          {changes.map((change, index) => (
-            <li
-              key={`${change.kind}-${index}`}
-              className="rounded-sm border border-border bg-surface-secondary/50 px-3 py-2 text-xs text-foreground"
-            >
-              <ProposalChangeRow change={change} />
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 flex items-start gap-2 text-2xs text-foreground-secondary">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" aria-hidden />
-          Nothing is applied on-chain until the proposal collects enough co-signatures.
-        </p>
+        {pendingAction && (
+          <div className="space-y-4 pt-2">
+            <div className="rounded-card border border-gold/30 p-4 bg-gold/5 space-y-3">
+              <div className="flex items-center gap-2 text-gold font-semibold text-sm">
+                <CheckCircle2 className="h-5 w-5" />
+                {pendingAction.summary}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs border-t border-gold/20 pt-2 text-foreground-secondary">
+                <div>
+                  <span className="text-2xs text-foreground-muted block">Target Account</span>
+                  <span className="font-mono text-foreground font-medium">{truncateHash(accountAddress, 8, 8)}</span>
+                </div>
+                <div>
+                  <span className="text-2xs text-foreground-muted block">Required Threshold</span>
+                  <span className="font-semibold text-foreground">High Threshold ({thresholds.highThreshold} Weight)</span>
+                </div>
+              </div>
+
+              <div className="text-xs text-foreground">
+                <span className="text-2xs text-foreground-muted block">Proposal Description</span>
+                <p className="mt-0.5">{pendingAction.description}</p>
+              </div>
+            </div>
+
+            <p className="text-2xs text-foreground-secondary">
+              Upon confirmation, this proposal will be recorded in the organization multi-sig pipeline and sent to active co-signers for execution.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setPendingAction(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="gold"
+                onClick={handleConfirmProposal}
+                leftIcon={<ShieldCheck className="h-4 w-4" />}
+              >
+                Submit Proposal
+              </Button>
+            </div>
+          </div>
+        )}
       </Dialog>
     </div>
-  );
-}
-
-interface ThresholdTileProps {
-  label: string;
-  value: number;
-  caption: string;
-  reachable: boolean;
-}
-
-function ThresholdTile({ label, value, caption, reachable }: ThresholdTileProps) {
-  return (
-    <div className="rounded-card border border-border bg-surface p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-2xs font-medium uppercase tracking-[0.14em] text-foreground-secondary">
-          {label}
-        </p>
-        {reachable ? (
-          <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
-        ) : (
-          <AlertTriangle className="h-4 w-4 text-warning" aria-hidden />
-        )}
-      </div>
-      <p className="mt-2 font-display text-3xl font-semibold tabular-nums tracking-tight text-foreground">
-        {value}
-      </p>
-      <p className="mt-1 text-2xs text-foreground-muted">{caption}</p>
-    </div>
-  );
-}
-
-function ProposalChangeRow({ change }: { change: SignerProposalChange }) {
-  if (change.kind === 'add') {
-    return (
-      <span>
-        Add <span className="font-medium">{change.label}</span> · weight {change.weight} ·{' '}
-        <code className="font-mono">{truncateHash(change.publicKey, 6, 6)}</code>
-      </span>
-    );
-  }
-
-  if (change.kind === 'adjust') {
-    return (
-      <span>
-        Adjust <span className="font-medium">{change.label}</span> weight{' '}
-        {change.currentWeight} →{' '}
-        <span className="font-medium">{change.proposedWeight}</span> · {change.reason}
-      </span>
-    );
-  }
-
-  if (change.kind === 'remove') {
-    return (
-      <span>
-        Remove <span className="font-medium">{change.label}</span> ·{' '}
-        <code className="font-mono">{truncateHash(change.publicKey, 6, 6)}</code>
-      </span>
-    );
-  }
-
-  return (
-    <span>
-      Thresholds {change.previous.low}/{change.previous.medium}/{change.previous.high} →{' '}
-      <span className="font-medium">
-        {change.next.low}/{change.next.medium}/{change.next.high}
-      </span>
-    </span>
   );
 }
 
