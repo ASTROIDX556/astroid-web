@@ -14,7 +14,7 @@ import {
   Sparkles,
   AlertTriangle,
 } from 'lucide-react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, type UseFormReturn } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Select, Textarea } from '@/components/ui/input';
@@ -142,7 +142,7 @@ function TemplateCard({
 /*  Step 2 — Policies                                                 */
 /* ------------------------------------------------------------------ */
 
-function PoliciesStep() {
+function PoliciesStep({ form }: { form: UseFormReturn<TemplateWizardValues> }) {
   return (
     <div className="space-y-4">
       <p className="text-xs text-foreground-secondary">
@@ -153,45 +153,79 @@ function PoliciesStep() {
         <FormField
           label="Initial budget (XLM)"
           htmlFor="tpl-budget"
-          error={undefined}
+          error={form.formState.errors.budget?.message}
           required
         >
-          <Input id="tpl-budget" type="number" step="0.01" placeholder="10000" />
+          <Input
+            id="tpl-budget"
+            type="number"
+            step="0.01"
+            placeholder="10000"
+            {...form.register('budget')}
+            invalid={Boolean(form.formState.errors.budget)}
+          />
         </FormField>
 
         <FormField
           label="Single transaction cap (XLM)"
           htmlFor="tpl-singleTransactionCap"
-          error={undefined}
+          error={form.formState.errors.singleTransactionCap?.message}
           required
         >
-          <Input id="tpl-singleTransactionCap" type="number" step="0.01" placeholder="2000" />
+          <Input
+            id="tpl-singleTransactionCap"
+            type="number"
+            step="0.01"
+            placeholder="2000"
+            {...form.register('singleTransactionCap')}
+            invalid={Boolean(form.formState.errors.singleTransactionCap)}
+          />
         </FormField>
 
         <FormField
           label="Max hourly spend (USD)"
           htmlFor="tpl-maxHourlyBudgetUsd"
-          error={undefined}
+          error={form.formState.errors.maxHourlyBudgetUsd?.message}
           required
         >
-          <Input id="tpl-maxHourlyBudgetUsd" type="number" step="0.01" placeholder="50" />
+          <Input
+            id="tpl-maxHourlyBudgetUsd"
+            type="number"
+            step="0.01"
+            placeholder="50"
+            {...form.register('maxHourlyBudgetUsd')}
+            invalid={Boolean(form.formState.errors.maxHourlyBudgetUsd)}
+          />
         </FormField>
 
         <FormField
           label="Require approval above (XLM)"
           htmlFor="tpl-requireApprovalAbove"
-          error={undefined}
+          error={form.formState.errors.requireApprovalAbove?.message}
         >
-          <Input id="tpl-requireApprovalAbove" type="number" step="0.01" placeholder="5000" />
+          <Input
+            id="tpl-requireApprovalAbove"
+            type="number"
+            step="0.01"
+            placeholder="5000"
+            {...form.register('requireApprovalAbove')}
+            invalid={Boolean(form.formState.errors.requireApprovalAbove)}
+          />
         </FormField>
       </div>
 
-      <FormField label="Allowed networks" htmlFor="tpl-networks" required>
+      <FormField
+        label="Allowed networks"
+        htmlFor="tpl-networks"
+        error={form.formState.errors.allowedNetworks?.message}
+        required
+      >
         <div className="flex flex-wrap gap-2" role="group" aria-label="Select allowed networks">
           {NETWORK_OPTIONS.map((net) => (
             <Controller
               key={net}
               name="allowedNetworks"
+              control={form.control}
               render={({ field }) => {
                 const checked = field.value?.includes(net) ?? false;
                 return (
@@ -553,7 +587,7 @@ export function AgentTemplateWizard() {
                   </div>
                 )}
 
-                {step === 2 && <PoliciesStep />}
+                {step === 2 && <PoliciesStep form={form} />}
 
                 {step === 3 && <ConfirmationStep values={form.getValues()} />}
               </form>
