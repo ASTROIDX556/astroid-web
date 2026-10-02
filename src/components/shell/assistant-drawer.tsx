@@ -15,10 +15,6 @@ const defaultSuggestions = [
   { label: 'Stellar transfer explainer', prompt: 'Explain the most recent high-value Stellar transfer in plain English.' },
 ];
 
-/** Shared, brand-tinted focus ring for drawer controls (WCAG AA). */
-const DRAWER_FOCUS =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
-
 
 /**
  * Slide-over AI assistant. Seeds from the mock conversation and the daily
@@ -35,6 +31,7 @@ export function AssistantDrawer() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [seeded, setSeeded] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,40 +79,53 @@ export function AssistantDrawer() {
 
   const send = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || isStreaming) return;
     const stamp = new Date().toISOString();
     const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: 'user', content: trimmed, createdAt: stamp };
-    setMessages((prev) => [...prev, userMsg]);
+    const assistantId = `a-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      userMsg,
+      { id: assistantId, role: 'assistant', content: '', createdAt: stamp },
+    ]);
     setDraft('');
-
-    if (isMockMode) {
-      const mockReply: ChatMessage = {
-        id: `a-${Date.now()}`,
-        role: 'assistant',
-        content: 'I can help with that. In this preview the assistant is running in mock mode — set NEXT_PUBLIC_API_URL to connect to the live API.',
-        createdAt: stamp,
-      };
-      setMessages((prev) => [...prev, mockReply]);
-      return;
-    }
+    setIsStreaming(true);
 
     try {
-      const res = await fetch(`${env.apiUrl}${env.apiVersion}/ai/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed }),
-      });
-      const body = await res.json();
-      const reply = body?.data?.reply ?? body?.reply ?? 'No response from AI.';
-      setMessages((prev) => [
-        ...prev,
-        { id: `a-${Date.now()}`, role: 'assistant', content: reply, createdAt: new Date().toISOString() },
-      ]);
+      let reply: string;
+      if (isMockMode) {
+        reply = 'I can help with that. In this preview the assistant is running in mock mode — set NEXT_PUBLIC_API_URL to connect to the live API.';
+      } else {
+        const res = await fetch(`${env.apiUrl}${env.apiVersion}/ai/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: trimmed }),
+        });
+        if (!res.ok) throw new Error('Assistant request failed.');
+        const body = await res.json();
+        reply = body?.data?.reply ?? body?.reply ?? 'No response from AI.';
+      }
+
+      let content = '';
+      for (const chunk of reply.match(/.{1,12}/gs) ?? [reply]) {
+        content += chunk;
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId ? { ...message, content } : message,
+          ),
+        );
+        await new Promise((resolve) => window.setTimeout(resolve, 24));
+      }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { id: `a-err-${Date.now()}`, role: 'assistant', content: 'Failed to reach the AI service. Check the API connection.', createdAt: new Date().toISOString() },
-      ]);
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === assistantId
+            ? { ...message, content: 'Failed to reach the AI service. Check the API connection.' }
+            : message,
+        ),
+      );
+    } finally {
+      setIsStreaming(false);
     }
   };
 
@@ -153,17 +163,14 @@ export function AssistantDrawer() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className={cn(
-                'grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground',
-                DRAWER_FOCUS,
-              )}
+              className="grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground"
               aria-label="Close assistant"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
           </header>
 
-          <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-5">
+          <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-5" aria-live="polite">
             {messages.length === 0 && (
               <div className="rounded-card border border-dashed border-border bg-surface-secondary/40 p-4 text-sm leading-relaxed text-foreground-secondary">
                 Ask for a treasury summary, a budget-risk review, or a plain-English explanation of a Stellar transfer.
@@ -195,6 +202,12 @@ export function AssistantDrawer() {
               </div>
             ))}
 
+            {isStreaming && (
+              <p role="status" className="pl-10 text-xs text-foreground-muted">
+                Assistant is responding...
+              </p>
+            )}
+
             {suggestions.length > 0 && (
               <div className="space-y-2.5 pt-2">
                 <p className="text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
@@ -206,10 +219,8 @@ export function AssistantDrawer() {
                       key={s.label}
                       type="button"
                       onClick={() => send(s.prompt)}
-                      className={cn(
-                        'group flex items-center justify-between gap-2 rounded-button border border-border bg-surface p-3 text-left text-xs text-foreground-secondary transition-all duration-fast hover:border-gold hover:text-foreground',
-                        DRAWER_FOCUS,
-                      )}
+                      disabled={isStreaming}
+                      className="group flex items-center justify-between gap-2 rounded-button border border-border bg-surface p-3 text-left text-xs text-foreground-secondary transition-all duration-fast hover:border-gold hover:text-foreground"
                     >
                       <span className="truncate">{s.label}</span>
                       <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
@@ -239,15 +250,13 @@ export function AssistantDrawer() {
                 }}
                 rows={1}
                 placeholder="Ask about spend, policies..."
+                disabled={isStreaming}
                 className="max-h-32 flex-1 resize-none bg-transparent py-1.5 text-sm text-foreground outline-none placeholder:text-foreground-muted"
               />
               <button
                 type="submit"
-                disabled={!draft.trim()}
-                className={cn(
-                  'grid h-8 w-8 shrink-0 place-items-center rounded-button bg-accent-gradient text-background-secondary font-semibold transition-opacity duration-fast disabled:opacity-40',
-                  DRAWER_FOCUS,
-                )}
+                disabled={!draft.trim() || isStreaming}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-button bg-accent-gradient text-background-secondary font-semibold transition-opacity duration-fast disabled:opacity-40"
                 aria-label="Send message"
               >
                 <Send className="h-4 w-4" aria-hidden />
