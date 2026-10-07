@@ -58,6 +58,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: 'Policies', href: '/policies', icon: Shield },
       { label: 'Budgets', href: '/budgets', icon: PiggyBank },
+      { label: 'Multisig Signers', href: '/multisig', icon: Key, signature: true },
       { label: 'Audit Log', href: '/audit', icon: ScrollText },
     ],
   },
