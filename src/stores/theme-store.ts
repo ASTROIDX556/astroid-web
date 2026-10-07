@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import {
   getDocumentThemeCookie,
   readThemeCookie,
@@ -19,16 +20,31 @@ const initialThemeMode = readThemeCookie(
   typeof document !== 'undefined' ? getDocumentThemeCookie() : 'light',
 );
 
-export const useThemeStore = create<ThemeState>((set) => ({
-  mode: initialThemeMode,
-  highContrast: false,
-  reducedMotion: false,
-  setMode: (mode) => {
-    set({ mode });
-    setThemeCookie(mode);
-  },
-  toggleContrast: () => set((s) => ({ highContrast: !s.highContrast })),
-  toggleReducedMotion: () => set((s) => ({ reducedMotion: !s.reducedMotion })),
-}));
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set) => ({
+      mode: initialThemeMode,
+      highContrast: false,
+      reducedMotion: false,
+      setMode: (mode) => {
+        set({ mode });
+        setThemeCookie(mode);
+      },
+      toggleContrast: () => set((s) => ({ highContrast: !s.highContrast })),
+      toggleReducedMotion: () => set((s) => ({ reducedMotion: !s.reducedMotion })),
+    }),
+    {
+      name: 'astroid-theme-preferences',
+      partialize: (state) => ({
+        mode: state.mode,
+        highContrast: state.highContrast,
+        reducedMotion: state.reducedMotion,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) setThemeCookie(state.mode);
+      },
+    },
+  ),
+);
 
 export type { ThemeMode };

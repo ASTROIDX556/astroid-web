@@ -17,6 +17,7 @@ import { CredentialVault } from '@/features/vault/CredentialVault';
 import { RBACManagementView } from '@/features/settings/RBACManagementView';
 import { PreferencesPanel } from '@/features/settings/PreferencesPanel';
 import { CircuitBreakerControl } from '@/features/security';
+import { usePreferencesStore, useThemeStore, type ThemeMode } from '@/stores';
 
 type BadgeVariant = NonNullable<BadgeProps['variant']>;
 
@@ -92,6 +93,14 @@ export default function SettingsPage() {
   const user = useCurrentUser();
   const organizations = useOrganizations();
   const team = useTeam();
+  const themeMode = useThemeStore((state) => state.mode);
+  const setThemeMode = useThemeStore((state) => state.setMode);
+  const highContrast = useThemeStore((state) => state.highContrast);
+  const toggleContrast = useThemeStore((state) => state.toggleContrast);
+  const reducedMotion = useThemeStore((state) => state.reducedMotion);
+  const toggleReducedMotion = useThemeStore((state) => state.toggleReducedMotion);
+  const compactTables = usePreferencesStore((state) => state.compactTables);
+  const toggleCompactTables = usePreferencesStore((state) => state.toggleCompactTables);
 
   return (
     <PageTransition className="space-y-8">
@@ -202,6 +211,40 @@ export default function SettingsPage() {
         </QueryBoundary>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Appearance & preferences</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-5 sm:grid-cols-2">
+          <label className="space-y-2 text-xs font-medium text-foreground">
+            <span>Theme</span>
+            <select
+              value={themeMode}
+              onChange={(event) => setThemeMode(event.target.value as ThemeMode)}
+              className="h-10 w-full rounded-sm border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <div className="space-y-4">
+            <label className="flex items-center justify-between gap-4 text-xs text-foreground">
+              <span>High contrast</span>
+              <input type="checkbox" checked={highContrast} onChange={toggleContrast} />
+            </label>
+            <label className="flex items-center justify-between gap-4 text-xs text-foreground">
+              <span>Reduce motion</span>
+              <input type="checkbox" checked={reducedMotion} onChange={toggleReducedMotion} />
+            </label>
+            <label className="flex items-center justify-between gap-4 text-xs text-foreground">
+              <span>Compact tables</span>
+              <input type="checkbox" checked={compactTables} onChange={toggleCompactTables} />
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="space-y-4">
         <SectionLabel>Team</SectionLabel>
         <QueryBoundary
@@ -218,7 +261,12 @@ export default function SettingsPage() {
           }
         >
           {(data) => (
-            <DataTable<User> columns={teamColumns} rows={data} rowKey={(u) => u.id} />
+            <DataTable<User>
+              columns={teamColumns}
+              rows={data}
+              rowKey={(u) => u.id}
+              compact={compactTables}
+            />
           )}
         </QueryBoundary>
       </div>
