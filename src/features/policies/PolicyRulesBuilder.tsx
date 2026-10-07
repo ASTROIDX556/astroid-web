@@ -59,28 +59,16 @@ export function PolicyRulesBuilder() {
 
   const simulationResults = useMemo(
     () => rules.map((rule) => {
-      if (rule.field !== 'Transaction Amount') return { evaluated: false, matched: false };
+      if (rule.field !== 'Transaction Amount') return true;
       const threshold = Number(rule.value);
-      if (!Number.isFinite(threshold)) return { evaluated: false, matched: false };
-      if (rule.operator === 'greater_than') return { evaluated: true, matched: simulationAmount > threshold };
-      if (rule.operator === 'less_than') return { evaluated: true, matched: simulationAmount < threshold };
-      if (rule.operator === 'equals') return { evaluated: true, matched: simulationAmount === threshold };
-      return { evaluated: false, matched: false };
+      if (!Number.isFinite(threshold)) return false;
+      if (rule.operator === 'greater_than') return simulationAmount > threshold;
+      if (rule.operator === 'less_than') return simulationAmount < threshold;
+      if (rule.operator === 'equals') return simulationAmount === threshold;
+      return true;
     }),
     [rules, simulationAmount],
   );
-  const triggeredRules = simulationResults.flatMap((result, index) =>
-    result.evaluated && result.matched && rules[index] ? [rules[index]] : [],
-  );
-  const simulationOutcome = triggeredRules.some((rule) => rule.action === 'block')
-    ? 'Blocked'
-    : triggeredRules.some((rule) => rule.action === 'require_approval')
-      ? 'Approval required'
-      : triggeredRules.some((rule) => rule.action === 'flag')
-        ? 'Flagged'
-        : triggeredRules.some((rule) => rule.action === 'allow')
-          ? 'Allowed'
-          : 'No rule triggered';
 
   return (
     <Card>
@@ -185,15 +173,7 @@ export function PolicyRulesBuilder() {
               <h3 className="text-sm font-semibold text-foreground">Live simulator</h3>
               <p className="text-xs text-foreground-muted">Test a transaction amount against the active rules.</p>
             </div>
-            <div className="flex items-center gap-2">
-              <output aria-live="polite" className="text-xs text-foreground-secondary">{simulationAmount} XLM</output>
-              <Badge
-                variant={simulationOutcome === 'Blocked' ? 'danger' : simulationOutcome === 'Allowed' ? 'success' : simulationOutcome === 'No rule triggered' ? 'neutral' : 'warning'}
-                size="sm"
-              >
-                {simulationOutcome}
-              </Badge>
-            </div>
+            <output aria-live="polite" className="text-xs text-foreground-secondary">{simulationAmount} XLM</output>
           </div>
           <label className="mt-3 block text-xs text-foreground-secondary">
             <span>Transaction amount</span>
@@ -210,16 +190,8 @@ export function PolicyRulesBuilder() {
           </label>
           <div className="mt-3 space-y-2">
             {rules.map((rule, index) => (
-              <div
-                key={`simulation-${index}`}
-                className={simulationResults[index]?.matched ? 'rounded border border-warning/40 bg-warning/10 p-2 text-xs text-foreground' : 'rounded border border-border bg-surface p-2 text-xs text-foreground-secondary'}
-              >
-                {simulationResults[index]?.evaluated
-                  ? simulationResults[index]?.matched
-                    ? `Triggered: ${rule.action.replace(/_/g, ' ')}`
-                    : 'No match'
-                  : 'Not evaluated: additional transaction context required'}
-                {' · '}{rule.field} {rule.operator.replace(/_/g, ' ')} {rule.value}
+              <div key={`simulation-${index}`} className={simulationResults[index] ? 'rounded border border-success/40 bg-success/10 p-2 text-xs text-success' : 'rounded border border-danger/40 bg-danger/10 p-2 text-xs text-danger'}>
+                {simulationResults[index] ? 'Pass' : 'Fail'}: {rule.field} {rule.operator.replace(/_/g, ' ')} {rule.value}
               </div>
             ))}
           </div>

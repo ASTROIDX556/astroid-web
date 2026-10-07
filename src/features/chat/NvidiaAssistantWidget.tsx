@@ -82,9 +82,6 @@ export function NvidiaAssistantWidget() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
-  const briefingContext = [...messages]
-    .reverse()
-    .find((message) => message.structuredBriefing)?.structuredBriefing;
 
   /** One-click export: copy the briefing transcript, or download it as text. */
   const buildTranscript = useCallback(
@@ -303,42 +300,6 @@ export function NvidiaAssistantWidget() {
           })}
         </div>
       </div>
-
-      {briefingContext && (
-        <aside aria-label="Financial briefing context" className="border-b border-border bg-surface-secondary/30 px-4 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-2xs font-semibold uppercase tracking-wider text-foreground-secondary">
-              Briefing context
-            </h4>
-            <Badge variant="outline" size="sm">Latest financial summary</Badge>
-          </div>
-          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-            <div>
-              <dt className="text-3xs text-foreground-muted">Daily spend</dt>
-              <dd className="font-mono text-xs font-semibold text-foreground">
-                {formatCurrency(briefingContext.totalDailySpend, briefingContext.currency)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-3xs text-foreground-muted">Active agents</dt>
-              <dd className="text-xs font-semibold text-foreground">{briefingContext.activeAgentsCount}</dd>
-            </div>
-            <div>
-              <dt className="text-3xs text-foreground-muted">Low-balance wallets</dt>
-              <dd className="text-xs font-semibold text-foreground">{briefingContext.lowBalanceWalletsCount}</dd>
-            </div>
-            <div className="col-span-2 sm:col-span-1">
-              <dt className="text-3xs text-foreground-muted">Top spender</dt>
-              <dd className="truncate text-xs font-semibold text-foreground" title={briefingContext.topSpenderAgent}>
-                {briefingContext.topSpenderAgent}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-2 border-t border-border/60 pt-2 text-2xs leading-relaxed text-foreground-secondary">
-            {briefingContext.recommendation}
-          </p>
-        </aside>
-      )}
 
       {/* Chat Messages Stream */}
       <div

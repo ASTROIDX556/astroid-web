@@ -83,7 +83,7 @@ export default function BudgetsPage() {
           const totalSpent = data.reduce((sum, b) => sum + b.spent, 0);
           const totalRemaining = data.reduce((sum, b) => sum + b.remaining, 0);
 
-          const chartData = data.filter((budget) => budget.scope === 'department').map((b) => ({
+          const chartData = data.map((b) => ({
             id: b.id,
             department: b.name,
             allocated: b.limit,
