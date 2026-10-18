@@ -10,6 +10,7 @@ import {
   Maximize2,
   Minimize2,
   Copy,
+  Check,
   Download,
   AlertCircle,
   TrendingDown,
@@ -20,7 +21,25 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { chatMessageToMarkdown, chatTranscriptToMarkdown } from './briefingMarkdown';
 import type { ChatMessage, QuickPromptChip } from './types';
+
+/** Clipboard write with a fallback for blocked permissions (e.g. non-secure contexts). */
+async function writeTextToClipboard(text: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+}
 
 const PRESET_CHIPS: QuickPromptChip[] = [
   {
@@ -81,7 +100,41 @@ export function NvidiaAssistantWidget() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // Animated copy-icon feedback: revert the icon after a short delay.
+  const flashCopied = (key: string) => {
+    setCopiedKey(key);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedKey(null), 2000);
+  };
+  useEffect(
+    () => () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    },
+    [],
+  );
+
+  /** Copy briefing text as Markdown, with toast feedback and icon animation. */
+  const copyAsMarkdown = async (key: string, markdown: string) => {
+    if (messages.length === 0) {
+      toast.info('Nothing to export yet — start a conversation first.');
+      return;
+    }
+    try {
+      await writeTextToClipboard(markdown);
+      toast.success('Briefing copied as Markdown');
+      flashCopied(key);
+    } catch {
+      toast.error('Clipboard access was blocked. Use “Download transcript” instead.');
+    }
+  };
+
+  /** Copy a single assistant briefing message block. */
+  const handleCopyBriefingBlock = (msg: ChatMessage) =>
+    copyAsMarkdown(msg.id, chatMessageToMarkdown(msg));
 
   /** One-click export: copy the briefing transcript, or download it as text. */
   const buildTranscript = useCallback(
@@ -106,20 +159,7 @@ export function NvidiaAssistantWidget() {
     }
     const transcript = buildTranscript();
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(transcript);
-      } else {
-        // Fallback for environments where clipboard permissions are blocked.
-        const textarea = document.createElement('textarea');
-        textarea.value = transcript;
-        textarea.setAttribute('readonly', '');
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
+      await writeTextToClipboard(transcript);
       toast.success('Briefing transcript copied to clipboard');
     } catch {
       toast.error('Clipboard access was blocked. Use “Download transcript” instead.');
@@ -262,6 +302,19 @@ export function NvidiaAssistantWidget() {
             </button>
             <button
               type="button"
+              onClick={() => copyAsMarkdown('transcript', chatTranscriptToMarkdown(messages))}
+              className="flex items-center gap-1 rounded-button border border-border bg-surface-secondary px-2 py-1 text-2xs text-foreground-secondary transition-colors hover:border-gold hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              title="Copy briefing transcript as Markdown"
+            >
+              {copiedKey === 'transcript' ? (
+                <Check className="h-3 w-3 text-emerald-400" aria-hidden />
+              ) : (
+                <Copy className="h-3 w-3" aria-hidden />
+              )}
+              <span>Markdown</span>
+            </button>
+            <button
+              type="button"
               onClick={handleDownloadTranscript}
               className="flex items-center gap-1 rounded-button border border-border bg-surface-secondary px-2 py-1 text-2xs text-foreground-secondary transition-colors hover:border-gold hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               title="Download chat history as .txt"
@@ -370,8 +423,38 @@ export function NvidiaAssistantWidget() {
                   )}
                 </div>
 
-                <div className="px-1 text-3xs text-foreground-muted font-mono">
-                  {formatRelativeTime(msg.timestamp)}
+                <div className="flex items-center justify-between gap-2 px-1">
+                  <span className="text-3xs text-foreground-muted font-mono">
+                    {formatRelativeTime(msg.timestamp)}
+                  </span>
+                  {isAssistant && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyBriefingBlock(msg)}
+                      aria-label={
+                        copiedKey === msg.id
+                          ? 'Briefing copied as Markdown'
+                          : 'Copy this briefing as Markdown'
+                      }
+                      title="Copy this briefing as Markdown"
+                      className="grid h-5 w-5 place-items-center rounded-button text-foreground-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span className="relative grid place-items-center" aria-hidden>
+                        <Copy
+                          className={cn(
+                            'h-3 w-3 transition-all duration-200',
+                            copiedKey === msg.id ? 'scale-50 opacity-0' : 'scale-100 opacity-100',
+                          )}
+                        />
+                        <Check
+                          className={cn(
+                            'absolute h-3 w-3 text-emerald-400 transition-all duration-200',
+                            copiedKey === msg.id ? 'scale-100 opacity-100' : 'scale-150 opacity-0',
+                          )}
+                        />
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
