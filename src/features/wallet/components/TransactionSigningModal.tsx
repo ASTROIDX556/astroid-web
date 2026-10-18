@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
+import { useStellarFeeEstimate } from '@/hooks/useStellarFeeEstimate';
+import { FeeBadge } from './FeeBadge';
 import { parseEnvelope } from '../utils/xdrEnvelope';
 
 export interface TransactionSigningModalProps {
@@ -60,6 +62,7 @@ export function TransactionSigningModal({
   } = useStellarWallet();
   const [isSigning, setIsSigning] = useState(false);
   const [networkMismatch, setNetworkMismatch] = useState(false);
+  const feeEstimate = useStellarFeeEstimate();
 
   const parsed = useMemo(() => parseEnvelope(xdr), [xdr]);
 
@@ -211,9 +214,12 @@ export function TransactionSigningModal({
           )}
 
           <div className="rounded-md border border-border bg-surface-primary p-3">
-            <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
               Transaction summary
+              </div>
+              <FeeBadge feeEstimate={feeEstimate} showDetails />
             </div>
             <dl className="space-y-2.5">
               <div className="flex items-start justify-between gap-3 border-b border-border pb-2">
