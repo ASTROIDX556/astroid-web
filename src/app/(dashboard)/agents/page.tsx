@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Bot, Sparkles, Zap } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { SectionLabel } from '@/components/dashboard/stat-card';
 import { RiskBadge, ProgressBar } from '@/components/dashboard/risk-badge';
@@ -31,9 +32,15 @@ export default function AgentsPage() {
         description="Every autonomous operator, the budget it controls, and how close it is to its ceiling."
       />
 
-      <AgentTemplateWizard />
-      <AgentWizard />
-      <AgentTimeline />
+      <ErrorBoundary section="Template wizard">
+        <AgentTemplateWizard />
+      </ErrorBoundary>
+      <ErrorBoundary section="Agent wizard">
+        <AgentWizard />
+      </ErrorBoundary>
+      <ErrorBoundary section="Agent activity timeline">
+        <AgentTimeline />
+      </ErrorBoundary>
 
       <QueryBoundary
         query={agents}
@@ -55,7 +62,9 @@ export default function AgentsPage() {
       >
         {(data) => (
           <div className="space-y-6">
-            <AgentConfigForm />
+            <ErrorBoundary section="Agent configuration">
+              <AgentConfigForm />
+            </ErrorBoundary>
 
             <SectionLabel>{data.length} agents</SectionLabel>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
