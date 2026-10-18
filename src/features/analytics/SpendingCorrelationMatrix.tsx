@@ -105,7 +105,7 @@ export function SpendingCorrelationMatrix({
             </thead>
             <tbody>
               {dataset.agents.map((rowAgent) => (
-                <tr key={rowAgent.id} className="border-b border-border/50 hover:">
+                <tr key={rowAgent.id} className="border-b border-border/50 hover:bg-surface-secondary/30">
                   <th
                     className="p-space-8 text-xs font-medium text-foreground-primary text-left border-r border-border"
                     scope="row"
@@ -152,7 +152,7 @@ export function SpendingCorrelationMatrix({
             <div>
               <span className="font-medium text-foreground-primary">
                 Selected Pair Analysis:
-              </span>{' />'}
+              </span>
               {dataset.agents.find((a) => a.id === activeCell.agentIdA)?.name} &harr;{' '}
               {dataset.agents.find((a) => a.id === activeCell.agentIdB)?.name}
             </div>
