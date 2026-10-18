@@ -10,6 +10,7 @@ import type {
   AnalyticsOverview,
   ApiKey,
   AppNotification,
+  AssetBalance,
   AssetRate,
   Budget,
   ChatMessage,
@@ -63,6 +64,14 @@ export const useWallet = (id: string): UseQueryResult<Wallet> =>
   useQuery({
     queryKey: queryKeys.wallet(id),
     queryFn: () => resources.getWallet(id),
+    enabled: Boolean(id),
+  });
+
+/** Asset-level balances, fetched separately so the cards own their loading/error state. */
+export const useWalletBalances = (id: string): UseQueryResult<AssetBalance[]> =>
+  useQuery({
+    queryKey: queryKeys.walletBalances(id),
+    queryFn: () => resources.getWalletBalances(id),
     enabled: Boolean(id),
   });
 
