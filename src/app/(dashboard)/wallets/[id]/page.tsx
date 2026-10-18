@@ -13,8 +13,7 @@ import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatDateTime, truncateHash } from '@/lib/format';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { XdrInspector } from '@/features/wallet/components/XdrInspector';
-import { AssetAllocationChart } from '@/features/wallet/components/AssetAllocationChart';
-import { MultiCurrencyBalanceWidget } from '@/features/wallet/components/MultiCurrencyBalanceWidget';
+import { WalletBalanceCards } from '@/features/wallet/components/WalletBalanceCards';
 
 export default function WalletDetailPage({ params }: { params: { id: string } }) {
   const wallet = useWallet(params.id);
@@ -93,23 +92,20 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
                   )}
                 </dl>
               </Card>
-
-              <div className="space-y-4">
-                <SectionLabel>Balances</SectionLabel>
-                <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,380px)_1fr] xl:grid-cols-[minmax(0,420px)_1fr]">
-                  <AssetAllocationChart balances={data.balances} />
-                  <MultiCurrencyBalanceWidget balances={data.balances} />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <SectionLabel>Transaction inspector</SectionLabel>
-                <XdrInspector />
-              </div>
             </div>
           );
         }}
       </QueryBoundary>
+
+      <div className="space-y-4">
+        <SectionLabel>Balances</SectionLabel>
+        <WalletBalanceCards walletId={params.id} />
+      </div>
+
+      <div className="space-y-4">
+        <SectionLabel>Transaction inspector</SectionLabel>
+        <XdrInspector />
+      </div>
     </PageTransition>
   );
 }
