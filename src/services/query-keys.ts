@@ -9,6 +9,7 @@ export const queryKeys = {
   assistantSeed: ['ai', 'assistant-seed'] as const,
   wallets: ['wallets'] as const,
   wallet: (id: string) => ['wallets', id] as const,
+  walletBalances: (id: string) => ['wallets', id, 'balances'] as const,
   agents: ['agents'] as const,
   agent: (id: string) => ['agents', id] as const,
   policies: ['policies'] as const,
