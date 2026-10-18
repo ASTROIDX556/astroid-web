@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -28,6 +28,17 @@ export interface DataTableProps<TData> {
   emptyState?: React.ReactNode;
   caption?: string;
   onRowClick?: (row: TData) => void;
+  /**
+   * Let more than one column be sorted at a time: Shift + click (or Shift + Enter
+   * on the header button) appends the column instead of replacing the sort.
+   */
+  enableMultiSort?: boolean;
+  /**
+   * Projects a row onto the text the search box matches against. Defaults to the
+   * visible cell values, so pass this when a column renders fields that are not
+   * its own accessor (e.g. a recipient address shown under a counterparty name).
+   */
+  getRowSearchText?: (row: TData) => string;
 }
 
 export function DataTable<TData>({
@@ -41,6 +52,8 @@ export function DataTable<TData>({
   emptyState,
   caption,
   onRowClick,
+  enableMultiSort = false,
+  getRowSearchText,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -55,6 +68,7 @@ export function DataTable<TData>({
       globalFilter,
       pagination,
     },
+    enableMultiSort,
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
@@ -63,11 +77,16 @@ export function DataTable<TData>({
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     globalFilterFn: (row, _columnId, filterValue) => {
-      const search = (filterValue ?? '').toString().trim().toLowerCase();
+      const search = String(filterValue ?? '').trim().toLowerCase();
       if (!search) return true;
 
-      const candidates = [row.original, row.getVisibleCells().map((cell) => cell.getValue())]
-        .flat()
+      if (getRowSearchText) {
+        return getRowSearchText(row.original).toLowerCase().includes(search);
+      }
+
+      const candidates = row
+        .getVisibleCells()
+        .map((cell) => cell.getValue())
         .filter(Boolean)
         .map((value) => String(value).toLowerCase());
 
@@ -78,15 +97,24 @@ export function DataTable<TData>({
   const pageCount = table.getPageCount();
   const canPaginate = pageCount > 1;
 
-  const summary = useMemo(() => {
-    const start = data.length === 0 ? 0 : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1;
-    const end = Math.min(
-      start + table.getState().pagination.pageSize - 1,
-      data.length,
-    );
+  // Filtering — the search box or a filter applied to `data` upstream — can leave the
+  // current page past the last one, which renders an empty table. Clamp it into range.
+  useEffect(() => {
+    setPagination((current) => {
+      const lastPage = Math.max(0, pageCount - 1);
+      return current.pageIndex > lastPage ? { ...current, pageIndex: lastPage } : current;
+    });
+  }, [pageCount]);
 
-    return data.length === 0 ? '0 rows' : `${start}-${end} of ${data.length}`;
-  }, [data.length, table]);
+  // The footer counts describe the *filtered* set, so a search or an external
+  // filter never leaves the reader showing "1-8 of 40" over three rows.
+  const filteredRowCount = table.getFilteredRowModel().rows.length;
+  const { pageIndex, pageSize: currentPageSize } = table.getState().pagination;
+  const rangeStart = Math.min(pageIndex * currentPageSize + 1, filteredRowCount);
+  const summary =
+    filteredRowCount === 0
+      ? '0 rows'
+      : `${rangeStart}-${Math.min(rangeStart + currentPageSize - 1, filteredRowCount)} of ${filteredRowCount}`;
 
   return (
     <div className={cn('overflow-hidden rounded-card border border-border bg-surface', className)}>
@@ -111,6 +139,12 @@ export function DataTable<TData>({
         </div>
       )}
 
+      {enableMultiSort && (
+        <p className="border-b border-border bg-surface px-4 py-2 text-2xs text-foreground-muted">
+          Click a column header to sort, or Shift + click to sort by several columns at once.
+        </p>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full min-w-full border-collapse text-left text-sm">
           <thead>
@@ -119,11 +153,16 @@ export function DataTable<TData>({
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta as { className?: string; sticky?: boolean } | undefined;
                   const canSort = header.column.getCanSort();
+                  const sorted = header.column.getIsSorted();
+                  const label = String(header.column.columnDef.header ?? '');
+                  const sortedDirection = sorted ? (sorted === 'asc' ? 'ascending' : 'descending') : 'not sorted';
+                  const sortPosition = canSort && sorted ? header.column.getSortIndex() + 1 : 0;
 
                   return (
                     <th
                       key={header.id}
                       scope="col"
+                      aria-sort={canSort ? (sorted ? (sorted === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
                       className={cn(
                         'px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary',
                         meta?.className,
@@ -133,24 +172,46 @@ export function DataTable<TData>({
                       {header.isPlaceholder ? null : (
                         <button
                           type="button"
-                          onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                          onClick={(event) => {
+                            // Shift + click keeps the existing sort and appends this column,
+                            // giving multi-column sorting; a plain click replaces it.
+                            if (canSort) {
+                              header.column.toggleSorting(sorted === 'asc', !(enableMultiSort && event.shiftKey));
+                            }
+                          }}
                           className={cn(
                             'inline-flex items-center gap-1.5 text-left font-medium transition-colors hover:text-foreground',
                             !canSort && 'cursor-default',
                           )}
-                          aria-label={canSort ? `Sort by ${header.column.columnDef.header?.toString()}` : undefined}
+                          aria-label={
+                            canSort
+                              ? `Sort by ${label}, currently ${sortedDirection}.${
+                                  enableMultiSort ? ' Hold Shift and press Enter to sort by multiple columns.' : ''
+                                }`
+                              : undefined
+                          }
                         >
                           <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
                           {canSort && (
-                            <span aria-hidden className="text-foreground-muted">
-                              {header.column.getIsSorted() === 'asc' ? (
-                                <ArrowUp className="h-3.5 w-3.5" />
-                              ) : header.column.getIsSorted() === 'desc' ? (
-                                <ArrowDown className="h-3.5 w-3.5" />
-                              ) : (
-                                <ArrowDown className="h-3.5 w-3.5 opacity-50" />
+                            <>
+                              <span aria-hidden className="text-foreground-muted">
+                                {header.column.getIsSorted() === 'asc' ? (
+                                  <ArrowUp className="h-3.5 w-3.5" />
+                                ) : header.column.getIsSorted() === 'desc' ? (
+                                  <ArrowDown className="h-3.5 w-3.5" />
+                                ) : (
+                                  <ArrowDown className="h-3.5 w-3.5 opacity-50" />
+                                )}
+                              </span>
+                              {sortPosition > 1 && (
+                                <span
+                                  aria-hidden
+                                  className="rounded-sm bg-gold-soft px-1 text-2xs font-semibold tabular text-gold-strong"
+                                >
+                                  {sortPosition}
+                                </span>
                               )}
-                            </span>
+                            </>
                           )}
                         </button>
                       )}
