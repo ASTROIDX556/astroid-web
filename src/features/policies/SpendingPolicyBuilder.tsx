@@ -1,48 +1,28 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ShieldCheck, Sparkles, WalletCards } from 'lucide-react';
-import { useMemo } from 'react';
+import { LayoutTemplate, ShieldCheck, Sparkles, WalletCards } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FormField, Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
-import { isValidStellarPublicKey } from '@/stores/freighter-store';
+import {
+  spendingPolicySchema,
+  validAddressList,
+  type SpendingPolicyFormValues,
+} from './spendingPolicySchema';
+import { PolicyTemplateModal } from './PolicyTemplateModal';
+import { applyPolicyTemplate, type PolicyTemplate } from './policyTemplates';
 
-const validAddressList = (value: string) =>
-  value
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-const spendingPolicySchema = z.object({
-  name: z.string().trim().min(3, 'Policy name must be at least 3 characters.'),
-  maxSingleTransactionLimit: z.coerce.number().positive('Maximum single transaction must be greater than zero.'),
-  rollingBudgetLimit: z.coerce.number().positive('Rolling budget must be greater than zero.'),
-  rollingBudgetInterval: z.enum(['daily', 'weekly', 'monthly']),
-  whitelistAddresses: z
-    .string()
-    .trim()
-    .refine((value) => {
-      const addresses = validAddressList(value);
-      if (addresses.length === 0) return true;
-      return addresses.every((address) => isValidStellarPublicKey(address));
-    }, 'Whitelist addresses must be valid Stellar public keys.'),
-  allowedAssets: z.string().trim().refine((value) => {
-    const assets = value
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter(Boolean);
-    return assets.length > 0 && assets.every((asset) => asset.length > 1);
-  }, 'At least one asset is required.'),
-});
-
-export type SpendingPolicyFormValues = z.infer<typeof spendingPolicySchema>;
+export type { SpendingPolicyFormValues };
 
 export function SpendingPolicyBuilder() {
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null);
+
   const form = useForm<SpendingPolicyFormValues>({
     resolver: zodResolver(spendingPolicySchema),
     defaultValues: {
@@ -55,8 +35,19 @@ export function SpendingPolicyBuilder() {
     },
   });
 
+  const handleApplyTemplate = (template: PolicyTemplate) => {
+    // Merge the template into the live form state and adopt it as the new
+    // baseline so "Reset" returns to the applied template, not the stub data.
+    form.reset(applyPolicyTemplate(form.getValues(), template));
+    setAppliedTemplateId(template.id);
+  };
+
+  // Watched so the preview (and the effect of an applied template) is always
+  // in sync with the live form state rather than a one-time snapshot at mount.
+  const watchedValues = form.watch();
+
   const preview = useMemo(() => {
-    const values = form.getValues();
+    const values = watchedValues;
     return {
       policyName: values.name,
       maxSingleTransactionLimit: Number(values.maxSingleTransactionLimit),
@@ -64,13 +55,10 @@ export function SpendingPolicyBuilder() {
         limit: Number(values.rollingBudgetLimit),
         interval: values.rollingBudgetInterval,
       },
-      whitelistAddresses: validAddressList(values.whitelistAddresses).filter(Boolean),
-      allowedAssets: values.allowedAssets
-        .split(',')
-        .map((asset) => asset.trim())
-        .filter(Boolean),
+      whitelistAddresses: validAddressList(values.whitelistAddresses ?? '').filter(Boolean),
+      allowedAssets: validAddressList(values.allowedAssets ?? ''),
     };
-  }, [form]);
+  }, [watchedValues]);
 
   const submitForm = (values: SpendingPolicyFormValues) => {
     const validValues = {
@@ -94,10 +82,26 @@ export function SpendingPolicyBuilder() {
             <p className="text-2xs font-medium uppercase tracking-[0.18em] text-foreground-secondary">Policy builder</p>
             <h3 className="mt-1 font-display text-xl font-semibold tracking-tight">Spending guardrail configuration</h3>
           </div>
-          <Badge variant="gold" size="sm" className="inline-flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Live validation
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            {appliedTemplateId ? (
+              <Badge variant="neutral" size="sm" className="mr-1">
+                Template applied
+              </Badge>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              leftIcon={<LayoutTemplate className="h-4 w-4" aria-hidden />}
+              onClick={() => setTemplateModalOpen(true)}
+            >
+              Rule templates
+            </Button>
+            <Badge variant="gold" size="sm" className="inline-flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              Live validation
+            </Badge>
+          </div>
         </div>
       </div>
 
@@ -160,7 +164,14 @@ export function SpendingPolicyBuilder() {
           </FormField>
 
           <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-            <Button type="button" variant="secondary" onClick={() => form.reset()}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                form.reset();
+                setAppliedTemplateId(null);
+              }}
+            >
               Reset
             </Button>
             <Button type="submit" variant="gold" leftIcon={<ShieldCheck className="h-4 w-4" aria-hidden />}>
@@ -181,6 +192,12 @@ export function SpendingPolicyBuilder() {
           </div>
         </div>
       </div>
+
+      <PolicyTemplateModal
+        open={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        onApply={handleApplyTemplate}
+      />
     </Card>
   );
 }
