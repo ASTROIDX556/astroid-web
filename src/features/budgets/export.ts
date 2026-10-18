@@ -90,8 +90,13 @@ export function buildExportFileName(
   format: ExportFormat,
   stamp: Date = new Date(),
 ): string {
+  const slug =
+    scope
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'export';
   const suffix = stamp.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  return `astroid-budgets-${scope}-${suffix}.${format}`;
+  return `astroid-budgets-${slug}-${suffix}.${format}`;
 }
 
 /**
