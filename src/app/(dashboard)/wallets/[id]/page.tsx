@@ -13,6 +13,7 @@ import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatDateTime, truncateHash } from '@/lib/format';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { XdrInspector } from '@/features/wallet/components/XdrInspector';
+import { AssetAllocationChart } from '@/features/wallet/components/AssetAllocationChart';
 import { MultiCurrencyBalanceWidget } from '@/features/wallet/components/MultiCurrencyBalanceWidget';
 
 export default function WalletDetailPage({ params }: { params: { id: string } }) {
@@ -95,7 +96,10 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
 
               <div className="space-y-4">
                 <SectionLabel>Balances</SectionLabel>
-                <MultiCurrencyBalanceWidget balances={data.balances} />
+                <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,380px)_1fr] xl:grid-cols-[minmax(0,420px)_1fr]">
+                  <AssetAllocationChart balances={data.balances} />
+                  <MultiCurrencyBalanceWidget balances={data.balances} />
+                </div>
               </div>
 
               <div className="space-y-4">
