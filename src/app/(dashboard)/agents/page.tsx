@@ -1,13 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { Bot, Sparkles, Zap } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { SectionLabel } from '@/components/dashboard/stat-card';
 import { RiskBadge, ProgressBar } from '@/components/dashboard/risk-badge';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { SkeletonCard } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AgentClusterIllustration } from '@/components/illustrations';
@@ -19,9 +22,16 @@ import { AgentConfigForm } from '@/features/agents/AgentConfigForm';
 import { AgentWizard } from '@/features/agents/AgentWizard';
 import { AgentTemplateWizard } from '@/features/agents/components/AgentTemplateWizard';
 import { AgentTimeline } from '@/features/agents/components/AgentTimeline';
+import {
+  AgentListFilters,
+  DEFAULT_AGENT_FILTERS,
+  filterAgents,
+  type AgentFilterState,
+} from '@/features/agents/components/AgentListFilters';
 
 export default function AgentsPage() {
   const agents = useAgents();
+  const [agentFilters, setAgentFilters] = useState<AgentFilterState>(DEFAULT_AGENT_FILTERS);
 
   return (
     <PageTransition className="space-y-8">
@@ -31,9 +41,15 @@ export default function AgentsPage() {
         description="Every autonomous operator, the budget it controls, and how close it is to its ceiling."
       />
 
-      <AgentTemplateWizard />
-      <AgentWizard />
-      <AgentTimeline />
+      <ErrorBoundary section="Template wizard">
+        <AgentTemplateWizard />
+      </ErrorBoundary>
+      <ErrorBoundary section="Agent wizard">
+        <AgentWizard />
+      </ErrorBoundary>
+      <ErrorBoundary section="Agent activity timeline">
+        <AgentTimeline />
+      </ErrorBoundary>
 
       <QueryBoundary
         query={agents}
@@ -53,13 +69,41 @@ export default function AgentsPage() {
           />
         }
       >
-        {(data) => (
-          <div className="space-y-6">
-            <AgentConfigForm />
+        {(data) => {
+          const visibleAgents = filterAgents(data, agentFilters);
 
-            <SectionLabel>{data.length} agents</SectionLabel>
+          return (
+          <div className="space-y-6">
+            <ErrorBoundary section="Agent configuration">
+              <AgentConfigForm />
+            </ErrorBoundary>
+
+            <AgentListFilters
+              filters={agentFilters}
+              onChange={setAgentFilters}
+              agents={data}
+              resultCount={visibleAgents.length}
+            />
+
+            <SectionLabel>{visibleAgents.length} agents</SectionLabel>
+            {visibleAgents.length === 0 ? (
+              <EmptyState
+                compact
+                title="No agents match your filters"
+                description="Try a different search term, or clear the provider and status filters."
+                action={
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setAgentFilters(DEFAULT_AGENT_FILTERS)}
+                  >
+                    Clear filters
+                  </Button>
+                }
+              />
+            ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {data.map((agent) => {
+              {visibleAgents.map((agent) => {
                 const status = agentStatus(agent.status);
                 const utilization =
                   agent.monthlyBudget > 0
@@ -122,8 +166,10 @@ export default function AgentsPage() {
                 );
               })}
             </div>
+            )}
           </div>
-        )}
+          );
+        }}
       </QueryBoundary>
     </PageTransition>
   );
