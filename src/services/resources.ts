@@ -8,6 +8,7 @@ import type {
   AnalyticsOverview,
   ApiKey,
   AppNotification,
+  AssetBalance,
   AssetRate,
   Budget,
   ChatMessage,
@@ -99,6 +100,11 @@ export const resources = {
     resolve(
       mock.wallets.find((w) => w.id === id) ?? notFound('Wallet'),
       () => one<Wallet>(`/wallets/${id}`),
+    ),
+  getWalletBalances: (id: string): Promise<AssetBalance[]> =>
+    resolve(
+      mock.wallets.find((w) => w.id === id)?.balances ?? notFound('Balances'),
+      () => one<AssetBalance[]>(`/wallets/${id}/balances`),
     ),
 
   // -- agents -------------------------------------------------------------
