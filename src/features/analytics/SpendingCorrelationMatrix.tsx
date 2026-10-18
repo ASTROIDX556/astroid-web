@@ -4,137 +4,138 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/cn';
-import type { SpendingCorrelationDataset, CorrelationCell } from './types';
+import type { AgentCorrelationPoint } from '@/services/mock/analytics';
 
 export interface SpendingCorrelationMatrixProps {
-  data?: SpendingCorrelationDataset;
+  data?: AgentCorrelationPoint[];
   title?: string;
   description?: string;
   className?: string;
 }
 
-function getCoefficientColor(coefficient: number): string {
-  if (coefficient === 1.0) {
-    return 'bg-surface-secondary text-foreground-primary font-semibold border border-border-strong';
-  }
-  if (coefficient >= 0.75) {
-    return 'bg-gold/30 text-gold-strong font-medium';
-  }
-  if (coefficient >= 0.5) {
-    return 'bg-gold/15 text-foreground-primary';
-  }
-  if (coefficient >= 0.25) {
-    return 'bg-surface-secondary text-foreground-secondary';
-  }
-  if (coefficient > 0) {
-    return 'bg-surface-primary text-foreground-muted';
-  }
-  if (coefficient === 0) {
-    return 'bg-surface-primary text-foreground-muted opacity-50';
-  }
-  return 'bg-danger/20 text-danger font-medium';
-}
-
 export function SpendingCorrelationMatrix({
-  data,
+  data = [],
   title = 'Multi-Agent Spending Correlation Matrix',
-  description = 'Cross-agent expenditure patterns and operational dependencies on Stellar over selected time periods.',
+  description = 'Cross-agent expenditure correlation coefficients and transaction pattern dependencies across Stellar.',
   className,
 }: SpendingCorrelationMatrixProps) {
-  const dataset = data;
-  const [activeCell, setActiveCell] = useState<CorrelationCell | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{
+    rowAgent: string;
+    colAgent: string;
+    value: number;
+  } | null>(null);
 
-  if (!dataset) {
+  if (!data || data.length === 0) {
     return (
-      <Card className={cn('w-full', className)}>
+      <Card className={cn('border-border bg-surface-primary', className)}>
         <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+          <CardTitle className="text-foreground-primary">{title}</CardTitle>
+          <CardDescription className="text-foreground-muted">{description}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="py-space-24 text-center text-foreground-muted">
+          <p className="text-sm text-foreground-muted" role="status">
             No correlation data available.
-          </div>
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  const lookupCell = (idA: string, idB: string): CorrelationCell | undefined => {
-    return dataset.matrix.find((c) => c.agentIdA === idA && c.agentIdB === idB);
-  };
+  const agents = data.map((d) => ({ agentId: d.agentId, agentName: d.agentName, role: d.role }));
+
+  function getCorrelationColor(val: number): string {
+    if (val === 1.0) return 'bg-gold text-surface-primary font-semibold';
+    if (val >= 0.7) return 'bg-success-soft text-success font-medium';
+    if (val >= 0.4) return 'bg-warning-soft text-warning font-medium';
+    if (val >= 0.2) return 'bg-surface-secondary text-foreground-primary';
+    return 'bg-surface-primary text-foreground-muted';
+  }
 
   return (
-    <Card className={cn('w-full', className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-space-16">
-        <div>
-          <CardTitle className="text-lg font-semibold text-foreground-primary">{title}</CardTitle>
-          <CardDescription className="text-sm text-foreground-muted mt-space-4">{description}</CardDescription>
+    <Card className={cn('border-border bg-surface-primary', className)}>
+      <CardHeader>
+        <div className="flex flex-col gap-space-8 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-foreground-primary">{title}</CardTitle>
+            <CardDescription className="text-foreground-muted">{description}</CardDescription>
+          </div>
+          {selectedCell && (
+            <Badge variant="outline" className="self-start sm:self-auto border-border-strong text-foreground-primary">
+              {selectedCell.rowAgent} ↔ {selectedCell.colAgent}: {selectedCell.value.toFixed(2)}
+            </Badge>
+          )}
         </div>
-        <Badge variant="outline" className="font-mono text-xs">
-          Timeframe: {dataset.timeframe.toUpperCase()}
-        </Badge>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <table
-            className="w-full border-collapse text-left"
+            className="w-full border-collapse text-left text-sm"
             role="grid"
-            aria-label="Multi-agent spending correlation matrix"
+            aria-label="Multi-Agent Spending Correlation Matrix"
           >
             <thead>
               <tr>
-                <th className="p-space-8 text-xs font-medium text-foreground-muted border-b border-border w-40">
-                  Agent / Agent
+                <th
+                  scope="col"
+                  className="p-space-12 text-xs font-mono font-medium text-foreground-muted border-b border-border"
+                >
+                  Agent / Peer
                 </th>
-                {dataset.agents.map((agent) => (
+                {agents.map((colAgent) => (
                   <th
-                    key={agent.id}
-                    className="p-space-8 text-xs font-medium text-foreground-primary border-b border-border text-center min-w-[100px]"
+                    key={colAgent.agentId}
                     scope="col"
+                    className="p-space-12 text-center text-xs font-mono font-medium text-foreground-muted border-b border-border"
                   >
-                    <div className="truncate" title={agent.name}>
-                      {agent.name}
-                    </div>
-                    <div className="text-[10px] text-foreground-muted font-normal">
-                      {agent.category}
-                    </div>
+                    <span className="block truncate max-w-[100px]" title={colAgent.agentName}>
+                      {colAgent.agentName}
+                    </span>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {dataset.agents.map((rowAgent) => (
-                <tr key={rowAgent.id} className="border-b border-border/50 hover:bg-surface-secondary/30">
+              {data.map((row) => (
+                <tr key={row.agentId} className="border-b border-border/50 hover:bg-surface-secondary/40 transition-colors">
                   <th
-                    className="p-space-8 text-xs font-medium text-foreground-primary text-left border-r border-border"
                     scope="row"
+                    className="p-space-12 font-medium text-foreground-primary text-xs whitespace-nowrap border-r border-border"
                   >
-                    <div className="truncate" title={rowAgent.name}>
-                      {rowAgent.name}
+                    <div className="flex flex-col">
+                      <span>{row.agentName}</span>
+                      <span className="text-[10px] text-foreground-muted uppercase tracking-wider">{row.role}</span>
                     </div>
                   </th>
-                  {dataset.agents.map((colAgent) => {
-                    const cell = lookupCell(rowAgent.id, colAgent.id);
-                    const coeff = cell ? cell.coefficient : 0;
+                  {agents.map((colAgent) => {
+                    const val = row.correlations[colAgent.agentId] ?? 0;
+                    const isSelected =
+                      selectedCell?.rowAgent === row.agentName &&
+                      selectedCell?.colAgent === colAgent.agentName;
+
                     return (
                       <td
-                        key={colAgent.id}
-                        className="p-2 text-center"
+                        key={colAgent.agentId}
+                        className="p-space-8 text-center"
                         role="gridcell"
-                        tabIndex={0}
-                        aria-label={`Correlation between ${rowAgent.name} and ${colAgent.name}: ${coeff.toFixed(2)}`}
-                        onMouseEnter={() => cell && setActiveCell(cell)}
-                        onFocus={() => cell && setActiveCell(cell)}
+                        aria-label={`Correlation between ${row.agentName} and ${colAgent.agentName} is ${val.toFixed(2)}`}
                       >
-                        <div
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedCell({
+                              rowAgent: row.agentName,
+                              colAgent: colAgent.agentName,
+                              value: val,
+                            })
+                          }
                           className={cn(
-                            'flex h-12 w-full items-center justify-center rounded-md font-mono text-xs transition-colors',
-                            getCoefficientColor(coeff)
+                            'w-full py-2 px-3 rounded-md text-xs font-mono transition-all focus:outline-none focus:ring-2 focus:ring-gold',
+                            getCorrelationColor(val),
+                            isSelected && 'ring-2 ring-gold shadow-sm'
                           )}
                         >
-                          {coeff.toFixed(2)}
-                        </div>
+                          {val.toFixed(2)}
+                        </button>
                       </td>
                     );
                   })}
@@ -143,25 +144,23 @@ export function SpendingCorrelationMatrix({
             </tbody>
           </table>
         </div>
-
-        {activeCell && (
-          <div
-            className="mt-space-16 flex flex-wrap items-center justify-between rounded-md bg-surface-secondary p-space-12 text-xs text-foreground-secondary border border-border"
-            aria-live="polite"
-          >
-            <div>
-              <span className="font-medium text-foreground-primary">
-                Selected Pair Analysis:
-              </span>
-              {dataset.agents.find((a) => a.id === activeCell.agentIdA)?.name} &harr;{' '}
-              {dataset.agents.find((a) => a.id === activeCell.agentIdB)?.name}
-            </div>
-            <div className="flex gap-space-16 font-mono">
-              <span>Coefficient: <strong className="text-gold">{activeCell.coefficient.toFixed(2)}</strong></span>
-              <span>Shared Txs: <strong>{activeCell.commonTransactionsCount}</strong></span>
-            </div>
+        <div className="mt-space-16 flex flex-wrap items-center justify-between gap-space-12 text-xs text-foreground-muted">
+          <div className="flex items-center gap-space-12">
+            <span className="flex items-center gap-space-4">
+              <span className="inline-block w-3 h-3 rounded bg-gold" /> Self (1.0)
+            </span>
+            <span className="flex items-center gap-space-4">
+              <span className="inline-block w-3 h-3 rounded bg-success-soft border border-success/30" /> High (&gt;=0.7)
+            </span>
+            <span className="flex items-center gap-space-4">
+              <span className="inline-block w-3 h-3 rounded bg-warning-soft border border-warning/30" /> Moderate (&gt;=0.4)
+            </span>
+            <span className="flex items-center gap-space-4">
+              <span className="inline-block w-3 h-3 rounded bg-surface-secondary border border-border" /> Low
+            </span>
           </div>
-        )}
+          <span className="italic font-mono">Coefficients derived from rolling window spend activity</span>
+        </div>
       </CardContent>
     </Card>
   );
