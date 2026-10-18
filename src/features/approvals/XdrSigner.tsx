@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, ShieldCheck, Wallet2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { AlertTriangle, CheckCircle2, RotateCcw, ShieldCheck, Wallet2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
+import { truncateHash } from '@/lib/format';
 
 export interface XdrSignerProps {
   xdr: string;
@@ -12,14 +14,64 @@ export interface XdrSignerProps {
 }
 
 export function XdrSigner({ xdr, label = 'Review pending XDR' }: XdrSignerProps) {
-  const { isAvailable, isConnected, publicKey, isLoading, error, connect, signTransaction } =
-    useStellarWallet();
+  const {
+    isAvailable,
+    isConnected,
+    publicKey,
+    isLoading,
+    walletError,
+    walletErrorRef,
+    retryState,
+    connect,
+    retry,
+    signTransaction,
+  } = useStellarWallet();
   const [signedTx, setSignedTx] = useState<string | null>(null);
+
+  const toastWalletFailure = (headline: string) => {
+    const error = walletErrorRef.current;
+    if (!error) {
+      toast.error(headline);
+      return;
+    }
+    toast.error(error.message || headline, {
+      description: error.hint,
+      ...(error.retryable
+        ? { action: { label: 'Retry', onClick: () => void retry() } }
+        : {}),
+    });
+  };
+
+  const handleConnect = async () => {
+    const key = await connect();
+    if (key) {
+      toast.success('Freighter connected', {
+        description: `Signed in as ${truncateHash(key, 6, 4)}.`,
+      });
+      return;
+    }
+    toastWalletFailure('Could not connect to Freighter.');
+  };
+
+  const handleRetry = async () => {
+    const key = await retry();
+    if (key) {
+      toast.success('Freighter connected', {
+        description: `Signed in as ${truncateHash(key, 6, 4)}.`,
+      });
+      return;
+    }
+    toastWalletFailure('Retry failed — Freighter is still unreachable.');
+  };
 
   const handleSign = async () => {
     if (!xdr) return;
     const result = await signTransaction(xdr);
-    setSignedTx(result ?? null);
+    if (result) {
+      setSignedTx(result);
+      return;
+    }
+    toastWalletFailure('Transaction signing failed.');
   };
 
   if (!isAvailable) {
@@ -73,7 +125,7 @@ export function XdrSigner({ xdr, label = 'Review pending XDR' }: XdrSignerProps)
         </div>
 
         {!isConnected ? (
-          <Button type="button" variant="gold" onClick={() => void connect()} loading={isLoading}>
+          <Button type="button" variant="gold" onClick={() => void handleConnect()} loading={isLoading}>
             Connect Freighter wallet
           </Button>
         ) : (
@@ -92,7 +144,29 @@ export function XdrSigner({ xdr, label = 'Review pending XDR' }: XdrSignerProps)
           </div>
         )}
 
-        {error && <p className="text-xs text-danger">{error}</p>}
+        {walletError && (
+          <div
+            className="flex items-start justify-between gap-3 rounded-card border border-danger/30 bg-danger-soft/10 p-3 text-xs text-danger"
+            role="alert"
+          >
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">{walletError.message}</p>
+              <p className="text-foreground-secondary">{walletError.hint}</p>
+            </div>
+            {retryState.canRetry && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleRetry()}
+                loading={isLoading && retryState.isRetrying}
+              >
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                Retry
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
