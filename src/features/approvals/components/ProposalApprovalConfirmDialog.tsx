@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
+import { useStellarFeeEstimate } from '@/hooks/useStellarFeeEstimate';
+import { FeeBadge } from '@/features/wallet/components/FeeBadge';
 import type { LocalApprovalDecision } from '@/stores/proposal-approval-store';
 import { cn } from '@/lib/cn';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
@@ -46,6 +48,7 @@ export function ProposalApprovalConfirmDialog({
 }: ProposalApprovalConfirmDialogProps) {
   const { approve, reject, decision, isProcessing } = useProposalApproval(proposal);
   const { isConnected, signTransaction } = useStellarWallet();
+  const feeEstimate = useStellarFeeEstimate();
 
   const [isSigning, setIsSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
@@ -169,6 +172,13 @@ export function ProposalApprovalConfirmDialog({
         </p>
 
         {/* Proposal summary ------------------------------------------------- */}
+        <div className="flex items-center justify-between rounded-card border border-border bg-surface-secondary/40 px-4 py-3">
+          <span className="text-xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
+            Network fee estimate
+          </span>
+          <FeeBadge feeEstimate={feeEstimate} showDetails />
+        </div>
+
         <dl className="grid gap-x-4 gap-y-3 rounded-card border border-border bg-surface-secondary/40 p-4 text-xs sm:grid-cols-2">
           <div className="min-w-0">
             <dt className="text-2xs uppercase tracking-wide text-foreground-muted">Recipient</dt>
