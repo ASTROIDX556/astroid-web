@@ -1,31 +1,37 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Bot, Gauge, Link2, Sparkles } from 'lucide-react';
+import { Bot, Gauge, Link2, ShieldCheck, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FormField, Input, Select } from '@/components/ui/input';
+import { cn } from '@/lib/cn';
 import { toast } from 'sonner';
+import {
+  AGENT_PERMISSION_SCOPES,
+  PERMISSION_SCOPE_DESCRIPTIONS,
+  PERMISSION_SCOPE_LABELS,
+  agentConfigurationSchema,
+  type AgentConfigurationValues,
+} from '@/lib/validations/agent';
 import {
   AGENT_PROVIDER_IDS,
   PROVIDER_LABELS,
   PROVIDER_MODELS,
-  createAgentSchema,
   requiresEndpoint,
-  type CreateAgentInput,
 } from './schema';
 
 /**
- * Controlled agent configuration form. Model options are derived from the
- * selected provider, and switching providers resets the model (and clears
- * stale endpoint errors) so only valid configurations can be submitted.
+ * Controlled agent configuration form with provider-specific validation,
+ * spending limits, and explicitly granted permission scopes.
  */
 export function AgentConfigForm() {
   const {
+    control,
     register,
     handleSubmit,
     reset,
@@ -33,8 +39,8 @@ export function AgentConfigForm() {
     trigger,
     watch,
     formState: { errors, isSubmitting, isSubmitSuccessful },
-  } = useForm<CreateAgentInput>({
-    resolver: zodResolver(createAgentSchema),
+  } = useForm<AgentConfigurationValues>({
+    resolver: zodResolver(agentConfigurationSchema),
     mode: 'onBlur',
     defaultValues: {
       name: '',
@@ -45,6 +51,8 @@ export function AgentConfigForm() {
       mode: 'assisted',
       temperature: 0.2,
       monthlyBudget: 500,
+      dailySpendingLimit: 100,
+      capabilities: ['wallet.read', 'analytics.read'],
     },
   });
 
@@ -77,11 +85,11 @@ export function AgentConfigForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
-  const onSubmit = (values: CreateAgentInput) => {
+  const onSubmit = (values: AgentConfigurationValues) => {
     // Mock-mode deployment: the API contract is defined in astroid-api
     // (POST /agents); wire the payload there once the backend ships.
     toast.success(`${values.name} configured`, {
-      description: `${PROVIDER_LABELS[values.provider]} · ${values.model || 'custom model'} deployed to the Stellar testnet control plane.`,
+      description: `${PROVIDER_LABELS[values.provider]} · ${values.model || 'custom model'} · ${values.capabilities.length} scope${values.capabilities.length === 1 ? '' : 's'} deployed to the Stellar testnet control plane.`,
     });
     reset();
   };
@@ -104,12 +112,12 @@ export function AgentConfigForm() {
                 Configure agent
               </h3>
               <p className="text-2xs text-foreground-muted">
-                Pick a provider, then a model from its catalog before deployment.
+                Pick a provider, model, and the scopes the agent may use.
               </p>
             </div>
           </div>
           <Badge variant="outline" size="sm" className="font-mono">
-            form v2 · validated
+            form v3 · zod-validated
           </Badge>
         </div>
 
@@ -215,7 +223,7 @@ export function AgentConfigForm() {
           </FormField>
         )}
 
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <FormField
             label="Operating mode"
             htmlFor="agent-config-mode"
@@ -273,7 +281,90 @@ export function AgentConfigForm() {
               {...register('monthlyBudget', { valueAsNumber: true })}
             />
           </FormField>
+
+          <FormField
+            label="Daily spending limit (USDC)"
+            htmlFor="agent-config-daily-limit"
+            required
+            error={errors.dailySpendingLimit?.message}
+            hint="Cannot exceed the monthly budget"
+          >
+            <Input
+              id="agent-config-daily-limit"
+              type="number"
+              min={1}
+              step="1"
+              invalid={Boolean(errors.dailySpendingLimit)}
+              aria-describedby={
+                errors.dailySpendingLimit ? 'agent-config-daily-limit-error' : undefined
+              }
+              leftIcon={<ShieldCheck className="h-4 w-4" aria-hidden />}
+              {...register('dailySpendingLimit', { valueAsNumber: true })}
+            />
+          </FormField>
         </div>
+
+        <FormField
+          label="Permission scopes"
+          htmlFor="agent-config-capabilities"
+          required
+          error={errors.capabilities?.message}
+          hint="Only the granted scopes may be exercised by the agent."
+        >
+          <Controller
+            control={control}
+            name="capabilities"
+            render={({ field }) => (
+              <div
+                id="agent-config-capabilities"
+                role="group"
+                aria-label="Permission scopes"
+                aria-invalid={Boolean(errors.capabilities)}
+                aria-describedby={
+                  errors.capabilities ? 'agent-config-capabilities-error' : undefined
+                }
+                className="grid gap-2 sm:grid-cols-2"
+              >
+                {AGENT_PERMISSION_SCOPES.map((scope) => {
+                  const checked = field.value.includes(scope);
+                  return (
+                    <label
+                      key={scope}
+                      className={cn(
+                        'flex cursor-pointer items-start gap-2.5 rounded-button border p-2.5 text-xs transition-colors duration-fast',
+                        checked
+                          ? 'border-gold bg-gold-soft/40'
+                          : 'border-border bg-surface hover:bg-surface-secondary',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        aria-invalid={Boolean(errors.capabilities)}
+                        onChange={(event) => {
+                          field.onChange(
+                            event.target.checked
+                              ? [...field.value, scope]
+                              : field.value.filter((value) => value !== scope),
+                          );
+                        }}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                      />
+                      <span className="space-y-0.5">
+                        <span className="block font-medium text-foreground">
+                          {PERMISSION_SCOPE_LABELS[scope]}
+                        </span>
+                        <span className="block text-2xs text-foreground-secondary">
+                          {PERMISSION_SCOPE_DESCRIPTIONS[scope]}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          />
+        </FormField>
 
         <FormField
           label="Description"
