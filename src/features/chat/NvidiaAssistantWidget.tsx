@@ -6,49 +6,17 @@ import {
   Send,
   Bot,
   User,
-  Zap,
   Maximize2,
   Minimize2,
   Copy,
   Download,
-  AlertCircle,
-  TrendingDown,
-  type LucideIcon,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
-import { cn } from '@/lib/cn';
-import type { ChatMessage, QuickPromptChip } from './types';
-
-const PRESET_CHIPS: QuickPromptChip[] = [
-  {
-    id: 'chip-1',
-    label: 'Daily Spend Briefing',
-    promptText: 'Summarize total daily spending across all AI agents and departments.',
-    iconName: 'Zap',
-  },
-  {
-    id: 'chip-2',
-    label: 'Low Balance Wallets',
-    promptText: 'Identify any agent wallets approaching minimum reserve or threshold balance.',
-    iconName: 'AlertCircle',
-  },
-  {
-    id: 'chip-3',
-    label: 'Gas Fee Optimization',
-    promptText: 'Analyze current Soroban contract RPC gas fees and recommend priority fee settings.',
-    iconName: 'TrendingDown',
-  },
-];
-
-/** Lucide icon registry for quick-prompt chips (iconName comes from data). */
-const CHIP_ICONS: Record<string, LucideIcon> = {
-  Zap,
-  AlertCircle,
-  TrendingDown,
-};
+import { PromptChips } from '@/features/ai/components/PromptChips';
+import type { ChatMessage } from './types';
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
@@ -80,7 +48,6 @@ export function NvidiaAssistantWidget() {
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeChipId, setActiveChipId] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   /** One-click export: copy the briefing transcript, or download it as text. */
@@ -169,7 +136,10 @@ export function NvidiaAssistantWidget() {
       let replyText = `Nvidia NIM LLM Insights: Analyzed query "${text}". On-chain telemetry indicates normal agent activity across Stellar Testnet.`;
       let briefing;
 
-      if (text.toLowerCase().includes('daily') || text.toLowerCase().includes('spend')) {
+      if (
+        text.toLowerCase().includes('daily') ||
+        text.toLowerCase().includes('spend')
+      ) {
         replyText =
           'Daily spend summary analysis completed. All 8 active agents are operating within established daily budget envelopes.';
         briefing = {
@@ -178,12 +148,19 @@ export function NvidiaAssistantWidget() {
           activeAgentsCount: 8,
           lowBalanceWalletsCount: 0,
           topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
-          recommendation: 'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
+          recommendation:
+            'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
         };
-      } else if (text.toLowerCase().includes('balance') || text.toLowerCase().includes('wallet')) {
+      } else if (
+        text.toLowerCase().includes('balance') ||
+        text.toLowerCase().includes('wallet')
+      ) {
         replyText =
           'Wallet balance audit: 7 of 8 agent wallets are fully funded. 1 wallet (agt-ci-bot) is at 15.5% capacity.';
-      } else if (text.toLowerCase().includes('gas') || text.toLowerCase().includes('fee')) {
+      } else if (
+        text.toLowerCase().includes('gas') ||
+        text.toLowerCase().includes('fee')
+      ) {
         replyText =
           'Soroban RPC network congestion is currently minimal. Recommended base fee: 100 stroops.';
       }
@@ -201,6 +178,17 @@ export function NvidiaAssistantWidget() {
     }, 1000);
   };
 
+  /**
+   * Chips hydrate the composer with the full briefing prompt, then submit it
+   * immediately. `handleSendMessage` is a no-op while streaming, so rapid chip
+   * clicks cannot enqueue duplicate turns.
+   */
+  const handlePromptSelect = (prompt: string) => {
+    if (isStreaming) return;
+    setInputText(prompt);
+    handleSendMessage(prompt);
+  };
+
   // Keyboard shortcut listener
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -210,10 +198,12 @@ export function NvidiaAssistantWidget() {
   };
 
   return (
-    <Card className={`flex flex-col border border-border bg-surface transition-all ${isExpanded ? 'h-[650px]' : 'h-[500px]'}`}>
+    <Card
+      className={`flex flex-col border border-border bg-surface transition-all ${isExpanded ? 'h-[650px]' : 'h-[500px]'}`}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border p-4 bg-surface-secondary/50">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-between border-b border-border bg-surface-secondary/50 p-4">
+        <div className="gap-2.5 flex items-center">
           <div className="grid h-8 w-8 place-items-center rounded-button bg-gold-soft text-gold-strong shadow-gold">
             <Sparkles className="h-4 w-4" />
           </div>
@@ -222,35 +212,41 @@ export function NvidiaAssistantWidget() {
               <h3 className="font-display text-sm font-semibold tracking-tight text-foreground">
                 Nvidia NIM Financial AI Assistant
               </h3>
-              <Badge variant="gold" size="sm" className="font-mono text-3xs">
+              <Badge variant="gold" size="sm" className="text-3xs font-mono">
                 LLM v2.4
               </Badge>
             </div>
             <p className="text-2xs text-foreground-muted">
-              Conversational intelligence & executive briefings on Stellar on-chain telemetry
+              Conversational intelligence & executive briefings on Stellar on-chain
+              telemetry
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="gap-1.5 flex items-center">
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="grid h-7 w-7 place-items-center rounded-button text-foreground-muted hover:text-foreground hover:bg-surface-secondary transition-colors"
+            className="grid h-7 w-7 place-items-center rounded-button text-foreground-muted transition-colors hover:bg-surface-secondary hover:text-foreground"
             title={isExpanded ? 'Collapse panel' : 'Expand panel'}
           >
-            {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            {isExpanded ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Export toolbar + Preset Quick Chips */}
-      <div className="space-y-2 border-b border-border/60 p-3 bg-surface/80">
+      {/* Export toolbar + financial briefing quick prompts */}
+      <div className="space-y-3 border-b border-border/60 bg-surface/80 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-3xs uppercase tracking-wider font-bold text-foreground-muted">
-            Quick Prompts:
-          </span>
-          <div className="flex items-center gap-1.5" role="group" aria-label="Export briefing transcript">
+          <div
+            className="gap-1.5 flex items-center"
+            role="group"
+            aria-label="Export briefing transcript"
+          >
             <button
               type="button"
               onClick={handleCopyTranscript}
@@ -271,39 +267,16 @@ export function NvidiaAssistantWidget() {
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {PRESET_CHIPS.map((chip) => {
-            const Icon = CHIP_ICONS[chip.iconName] ?? Zap;
-            const isActive = activeChipId === chip.id;
-            return (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => handleSendMessage(chip.promptText)}
-                onMouseEnter={() => setActiveChipId(chip.id)}
-                onMouseLeave={() => setActiveChipId(null)}
-                onFocus={() => setActiveChipId(chip.id)}
-                onBlur={() => setActiveChipId(null)}
-                disabled={isStreaming}
-                aria-pressed={isActive}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-button border px-2.5 py-1 text-2xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-50',
-                  isActive
-                    ? 'border-gold bg-gold-soft text-foreground'
-                    : 'border-border bg-surface-secondary text-foreground-secondary hover:border-gold hover:text-foreground',
-                )}
-              >
-                <Icon className="h-3 w-3 text-gold" aria-hidden />
-                <span>{chip.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        <PromptChips
+          onSelect={handlePromptSelect}
+          disabled={isStreaming}
+          busy={isStreaming}
+        />
       </div>
 
       {/* Chat Messages Stream */}
       <div
-        className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs"
+        className="flex-1 space-y-4 overflow-y-auto p-4 font-sans text-xs"
         aria-live="polite"
         aria-relevant="additions"
       >
@@ -321,21 +294,25 @@ export function NvidiaAssistantWidget() {
                 </div>
               )}
 
-              <div className={`space-y-2 max-w-[85%] ${isAssistant ? 'items-start' : 'items-end'}`}>
+              <div
+                className={`max-w-[85%] space-y-2 ${isAssistant ? 'items-start' : 'items-end'}`}
+              >
                 <div
-                  className={`rounded-card p-3.5 leading-relaxed text-xs shadow-xs ${
+                  className={`p-3.5 shadow-xs rounded-card text-xs leading-relaxed ${
                     isAssistant
-                      ? 'bg-surface-secondary border border-border text-foreground'
-                      : 'bg-gold text-surface-dark font-medium'
+                      ? 'border border-border bg-surface-secondary text-foreground'
+                      : 'text-surface-dark bg-gold font-medium'
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{msg.content}</p>
 
                   {/* Structured Briefing Widget */}
                   {msg.structuredBriefing && (
-                    <div className="mt-3 space-y-2.5 rounded-button border border-border bg-surface p-3 text-2xs text-foreground">
+                    <div className="space-y-2.5 mt-3 rounded-button border border-border bg-surface p-3 text-2xs text-foreground">
                       <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                        <span className="font-bold uppercase tracking-wider text-gold">Executive Summary</span>
+                        <span className="font-bold uppercase tracking-wider text-gold">
+                          Executive Summary
+                        </span>
                         <Badge variant="outline" size="sm">
                           Live On-Chain
                         </Badge>
@@ -343,34 +320,51 @@ export function NvidiaAssistantWidget() {
 
                       <div className="grid grid-cols-2 gap-2 text-2xs">
                         <div>
-                          <span className="text-foreground-muted">Total Daily Spend:</span>
+                          <span className="text-foreground-muted">
+                            Total Daily Spend:
+                          </span>
                           <p className="font-mono font-bold text-foreground">
-                            {formatCurrency(msg.structuredBriefing.totalDailySpend, msg.structuredBriefing.currency)}
+                            {formatCurrency(
+                              msg.structuredBriefing.totalDailySpend,
+                              msg.structuredBriefing.currency,
+                            )}
                           </p>
                         </div>
                         <div>
                           <span className="text-foreground-muted">Active Agents:</span>
-                          <p className="font-bold text-foreground">{msg.structuredBriefing.activeAgentsCount} Agents</p>
+                          <p className="font-bold text-foreground">
+                            {msg.structuredBriefing.activeAgentsCount} Agents
+                          </p>
                         </div>
                         <div>
                           <span className="text-foreground-muted">Top Spender:</span>
-                          <p className="font-semibold text-foreground truncate">{msg.structuredBriefing.topSpenderAgent}</p>
+                          <p className="truncate font-semibold text-foreground">
+                            {msg.structuredBriefing.topSpenderAgent}
+                          </p>
                         </div>
                         <div>
-                          <span className="text-foreground-muted">Low Balance Wallets:</span>
-                          <p className="font-bold text-amber-400">{msg.structuredBriefing.lowBalanceWalletsCount} Warning</p>
+                          <span className="text-foreground-muted">
+                            Low Balance Wallets:
+                          </span>
+                          <p className="font-bold text-amber-400">
+                            {msg.structuredBriefing.lowBalanceWalletsCount} Warning
+                          </p>
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-border/50 text-2xs">
-                        <span className="text-foreground-muted">AI Recommendation:</span>
-                        <p className="text-foreground font-medium italic mt-0.5">{msg.structuredBriefing.recommendation}</p>
+                      <div className="border-t border-border/50 pt-2 text-2xs">
+                        <span className="text-foreground-muted">
+                          AI Recommendation:
+                        </span>
+                        <p className="mt-0.5 font-medium italic text-foreground">
+                          {msg.structuredBriefing.recommendation}
+                        </p>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="px-1 text-3xs text-foreground-muted font-mono">
+                <div className="text-3xs px-1 font-mono text-foreground-muted">
                   {formatRelativeTime(msg.timestamp)}
                 </div>
               </div>
@@ -385,8 +379,8 @@ export function NvidiaAssistantWidget() {
         })}
 
         {isStreaming && (
-          <div className="flex items-center gap-2 text-2xs text-foreground-muted animate-pulse">
-            <Bot className="h-4 w-4 text-gold animate-spin" />
+          <div className="flex animate-pulse items-center gap-2 text-2xs text-foreground-muted">
+            <Bot className="h-4 w-4 animate-spin text-gold" />
             <span>Nvidia NIM LLM is formulating insight...</span>
           </div>
         )}
@@ -395,7 +389,7 @@ export function NvidiaAssistantWidget() {
       </div>
 
       {/* Input Form */}
-      <div className="border-t border-border p-3 bg-surface-secondary/40">
+      <div className="border-t border-border bg-surface-secondary/40 p-3">
         <div className="relative flex items-center">
           <textarea
             rows={1}
@@ -404,13 +398,13 @@ export function NvidiaAssistantWidget() {
             onKeyDown={handleKeyDown}
             placeholder="Ask Nvidia NIM Assistant (e.g. 'Summarize daily agent spending')... (Enter to send)"
             disabled={isStreaming}
-            className="w-full resize-none rounded-button border border-border bg-surface pl-3 pr-12 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
+            className="pr-12 w-full resize-none rounded-button border border-border bg-surface py-2 pl-3 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
           />
           <button
             type="button"
             onClick={() => handleSendMessage()}
             disabled={!inputText.trim() || isStreaming}
-            className="absolute right-2 grid h-7 w-7 place-items-center rounded-button bg-gold text-surface-dark disabled:opacity-40 transition-opacity"
+            className="text-surface-dark absolute right-2 grid h-7 w-7 place-items-center rounded-button bg-gold transition-opacity disabled:opacity-40"
             title="Send message"
           >
             <Send className="h-3.5 w-3.5" />

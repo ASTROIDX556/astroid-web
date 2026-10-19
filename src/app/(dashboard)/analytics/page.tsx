@@ -21,6 +21,7 @@ import { ActivityChart } from '@/features/dashboard/components/ActivityChart';
 import { SpendingCorrelationMatrix } from '@/features/analytics';
 import { agentSpendingCorrelations } from '@/services/mock/analytics';
 import { NvidiaAssistantWidget } from '@/features/chat/NvidiaAssistantWidget';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const chartSkeleton = <div className="skeleton h-[260px] w-full rounded-md" />;
 
@@ -151,11 +152,17 @@ export default function AnalyticsPage() {
                 </CardContent>
               </Card>
 
-              <SpendingCorrelationMatrix data={agentSpendingCorrelations} />
+              <ErrorBoundary section="Spending correlation matrix">
+                <SpendingCorrelationMatrix data={agentSpendingCorrelations} />
+              </ErrorBoundary>
 
-              <div className="pt-4 border-t border-border space-y-4">
-                <h3 className="font-display text-lg font-semibold tracking-tight">Interactive Nvidia NIM AI Briefings & Assistant</h3>
-                <NvidiaAssistantWidget />
+              <div className="space-y-4 border-t border-border pt-4">
+                <h3 className="font-display text-lg font-semibold tracking-tight">
+                  Interactive Nvidia NIM AI Briefings & Assistant
+                </h3>
+                <ErrorBoundary section="AI assistant">
+                  <NvidiaAssistantWidget />
+                </ErrorBoundary>
               </div>
             </div>
           );
