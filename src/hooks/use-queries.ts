@@ -3,6 +3,7 @@
 import { useQuery, useMutation, type UseQueryResult } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import { resources } from '@/services/resources';
+import type { HorizonBalance } from '@/features/wallet/types';
 import type {
   ActivityPoint,
   Agent,
@@ -72,6 +73,14 @@ export const useWalletBalances = (id: string): UseQueryResult<AssetBalance[]> =>
   useQuery({
     queryKey: queryKeys.walletBalances(id),
     queryFn: () => resources.getWalletBalances(id),
+    enabled: Boolean(id),
+  });
+
+/** Horizon-shaped trustlines powering the multi-currency asset breakdown. */
+export const useWalletTrustlines = (id: string): UseQueryResult<HorizonBalance[]> =>
+  useQuery({
+    queryKey: queryKeys.walletTrustlines(id),
+    queryFn: () => resources.getWalletTrustlines(id),
     enabled: Boolean(id),
   });
 
