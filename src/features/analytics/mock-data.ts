@@ -1,8 +1,8 @@
 import type { SpendingCorrelationDataset } from './types';
 
 export const MOCK_SPENDING_CORRELATION_DATA: SpendingCorrelationDataset = {
-  timeframe: '30d',
   updatedAt: new Date().toISOString(),
+  timeframe: '30d',
   agents: [
     {
       id: 'agent-soroban',
