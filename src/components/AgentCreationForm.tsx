@@ -72,7 +72,7 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
         {errors.spendingThreshold && <p className="text-red-500 text-sm mt-1">{errors.spendingThreshold.message}</p>}
       </div>
 
-      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+      <button type="submit" className="w-full bg-primary text-primary-foreground py-2 px-4 rounded hover:bg-primary/95">
         Create Agent
       </button>
     </form>
