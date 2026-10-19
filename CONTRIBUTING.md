@@ -13,6 +13,7 @@ npm install
 npm run dev         # start the Next.js dev server
 npm run typecheck   # strict TypeScript checking
 npm run lint        # ESLint + Prettier
+npm test            # Vitest unit suites (pure modules in src/lib and feature utils)
 ```
 
 The web app is a **Next.js App Router** project using TypeScript, Tailwind CSS,
@@ -30,7 +31,7 @@ backend.
 
 ## Pull request checklist
 
-1. `npm run typecheck && npm run lint && npm run build` all pass.
+1. `npm run typecheck && npm run lint && npm test && npm run build` all pass.
 2. New components use design tokens, not ad-hoc values.
 3. Visual changes include a screenshot or recording in the PR description.
 4. Cross-repo contracts (API response shapes, entity names) still match `astroid-api`.
