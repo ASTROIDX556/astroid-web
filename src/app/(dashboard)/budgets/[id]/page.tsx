@@ -21,6 +21,8 @@ import {
 } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
+import { ExpenseBreakdownChart } from '@/features/budgets/ExpenseBreakdownChart';
+import { buildExpenseSeries } from '@/features/budgets/utils/expenseBreakdown';
 
 const spendColumns: Column<Transaction>[] = [
   {
@@ -142,6 +144,22 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                   <ProgressBar value={utilization} label="Budget utilization" className="mt-4" tone={utilization >= 90 ? 'danger' : utilization >= 75 ? 'warning' : 'gold'} />
                 </div>
               </Card>
+
+              {/* Historical expense breakdown (#247): this budget's outbound spend bucketed into a Recharts time series. */}
+              <ExpenseBreakdownChart
+                series={buildExpenseSeries(
+                  spend.map((t) => ({
+                    date: t.createdAt,
+                    amount: t.amount,
+                    counterparty: t.counterparty,
+                    description: t.purpose,
+                  })),
+                )}
+                asset={data.currency}
+                subjectName={data.name}
+                title="Expense breakdown over time"
+                description="Historical spend drawn against this envelope, bucketed by day or week."
+              />
 
               <div className="grid gap-6 lg:grid-cols-3">
                 {/* Spend ledger */}

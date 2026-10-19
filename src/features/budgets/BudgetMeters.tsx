@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CircleDollarSign, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowDownToLine, CircleDollarSign, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/format';
@@ -22,7 +22,14 @@ export function getBudgetMeterState(percent: number): BudgetMeterState {
   return 'normal';
 }
 
-function Gauge({ percent = 0, label, spent, allocated, currency }: BudgetMeterProps) {
+function Gauge({
+  percent = 0,
+  label,
+  spent,
+  allocated,
+  currency,
+  onDrillDown,
+}: BudgetMeterProps & { onDrillDown?: (budget: BudgetMeterProps) => void }) {
   const safePercent = Math.min(100, Math.max(0, percent));
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
@@ -119,6 +126,17 @@ function Gauge({ percent = 0, label, spent, allocated, currency }: BudgetMeterPr
               Action required
             </span>
           )}
+          {onDrillDown && (
+            <button
+              type="button"
+              onClick={() => onDrillDown({ label, allocated, spent, currency })}
+              className="ml-auto inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-2xs font-medium text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`Drill down into ${label} expense breakdown`}
+            >
+              <ArrowDownToLine className="h-3.5 w-3.5" aria-hidden />
+              Expense breakdown
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -127,8 +145,14 @@ function Gauge({ percent = 0, label, spent, allocated, currency }: BudgetMeterPr
 
 export function BudgetMeters({
   budgets,
+  onDrillDown,
 }: {
   budgets?: BudgetMeterProps[];
+  /**
+   * Optional drill-down trigger (#247). When provided, each meter renders a
+   * "Expense breakdown" button; when omitted the rendered DOM is unchanged.
+   */
+  onDrillDown?: (budget: BudgetMeterProps) => void;
 }) {
   const baseBudgets = useMemo<BudgetMeterProps[]>(
     () =>
@@ -157,13 +181,20 @@ export function BudgetMeters({
           spent={budget.spent}
           currency={budget.currency ?? 'USDC'}
           percent={values[index] ?? 0}
+          onDrillDown={onDrillDown}
         />
       ))}
     </div>
   );
 }
 
-export function BudgetMeterCard({ budgets }: { budgets?: BudgetMeterProps[] }) {
+export function BudgetMeterCard({
+  budgets,
+  onDrillDown,
+}: {
+  budgets?: BudgetMeterProps[];
+  onDrillDown?: (budget: BudgetMeterProps) => void;
+}) {
   return (
     <Card className="overflow-hidden">
       <CardContent className="space-y-4 pt-5">
@@ -178,7 +209,7 @@ export function BudgetMeterCard({ budgets }: { budgets?: BudgetMeterProps[] }) {
             Real-time
           </Badge>
         </div>
-        <BudgetMeters budgets={budgets} />
+        <BudgetMeters budgets={budgets} onDrillDown={onDrillDown} />
       </CardContent>
     </Card>
   );

@@ -23,7 +23,7 @@ import { BudgetBreakdownChart } from '@/features/budgets/BudgetBreakdownChart';
 import { BudgetAllocationDashboard } from '@/features/budgets/components/BudgetAllocationDashboard';
 import { BudgetAllocationModal } from '@/features/budgets/BudgetAllocationModal';
 import { BudgetMatrix } from '@/features/budgets/BudgetMatrix';
-import { BudgetMeterCard } from '@/features/budgets/BudgetMeters';
+import { BudgetMeterDrilldownSection } from '@/features/budgets/BudgetMeterDrilldownSection';
 import { MOCK_DEPARTMENT_BUDGETS } from '@/features/budgets/mock-data';
 
 const ORG_TREASURY_CAP = MOCK_DEPARTMENT_BUDGETS.reduce(
@@ -199,7 +199,7 @@ export default function BudgetsPage() {
               <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
                 <div className="space-y-4">
                   <SectionLabel>Live budget consumption</SectionLabel>
-                  <BudgetMeterCard />
+                  <BudgetMeterDrilldownSection />
                 </div>
                 <div className="space-y-4">
                   <SectionLabel>Alert configuration</SectionLabel>
