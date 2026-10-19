@@ -46,19 +46,43 @@ export const requiresEndpoint = (provider: AgentProviderId): boolean =>
 // ---------------------------------------------------------------------------
 // Agent wizard (template wizard flow)
 // ---------------------------------------------------------------------------
-export const agentWizardSchema = z.object({
-  name: z.string().min(2, 'Agent name is required.').max(80),
-  description: z.string().min(10, 'Add a brief description.').max(500),
-  ownerDepartment: z.string().min(2, 'Department is required.').max(60),
-  provider: z.enum(providerOptions),
-  model: z.string().min(2, 'Model name is required.').max(80),
-  apiKey: z.string().max(200).optional().or(z.literal('')),
-  budget: z.coerce.number().min(0, 'Budget must be zero or greater.').max(100000000),
-  singleTransactionCap: z.coerce
-    .number()
-    .min(0, 'Single-transaction cap must be zero or greater.')
-    .max(10000000),
-});
+export const agentWizardSchema = z
+  .object({
+    name: z.string().min(2, 'Agent name is required.').max(80),
+    description: z.string().min(10, 'Add a brief description.').max(500),
+    ownerDepartment: z.string().min(2, 'Department is required.').max(60),
+    provider: z.enum(providerOptions),
+    model: z.string().min(2, 'Model name is required.').max(80),
+    apiKey: z.string().max(200).optional().or(z.literal('')),
+    endpointUrl: z
+      .string()
+      .trim()
+      .url('Enter a properly formatted URL, e.g. https://api.example.com/v1')
+      .optional()
+      .or(z.literal('')),
+    contextWindowTokens: z.coerce
+      .number()
+      .int('Context window must be a whole number of tokens.')
+      .min(1, 'Context window must be at least 1 token.')
+      .max(10_000_000, 'Context window cannot exceed 10,000,000 tokens.')
+      .optional(),
+    budget: z.coerce.number().min(0, 'Budget must be zero or greater.').max(100000000),
+    singleTransactionCap: z.coerce
+      .number()
+      .min(0, 'Single-transaction cap must be zero or greater.')
+      .max(10000000),
+  })
+  .superRefine((values, ctx) => {
+    // A custom provider has no sensible default to fall back on: the wizard
+    // only proceeds once the operator supplies a properly formatted endpoint.
+    if (values.provider === 'Custom' && (!values.endpointUrl || values.endpointUrl.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['endpointUrl'],
+        message: 'A custom provider requires an API endpoint URL.',
+      });
+    }
+  });
 
 export type AgentWizardValues = z.infer<typeof agentWizardSchema>;
 
