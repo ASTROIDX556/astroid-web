@@ -5,7 +5,13 @@ import { ResponsiveContainer, Treemap, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Layers, Receipt, TrendingDown, TrendingUp } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -64,10 +70,16 @@ interface TreemapContentProps {
   payload?: BreakdownNode;
 }
 
-function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapContentProps) {
+function TreemapCell({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  payload,
+}: TreemapContentProps) {
   if (!payload || width <= 0 || height <= 0) return null;
   const pct = payload.allocated > 0 ? (payload.consumed / payload.allocated) * 100 : 0;
-  const { hex } = getThresholdColor(pct);
+  const { color } = getThresholdColor(pct);
   const showLabel = width > 70 && height > 32;
 
   return (
@@ -78,7 +90,7 @@ function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapCo
         width={width}
         height={height}
         style={{
-          fill: hex,
+          fill: color,
           fillOpacity: 0.85,
           stroke: 'rgb(var(--chart-surface))',
           strokeWidth: 2,
@@ -89,7 +101,9 @@ function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapCo
       {showLabel && (
         <>
           <text x={x + 8} y={y + 18} fontSize={11} fontWeight={600} fill="#ffffff">
-            {payload.name.length > (width / 7) ? `${payload.name.slice(0, Math.max(1, Math.floor(width / 7) - 1))}…` : payload.name}
+            {payload.name.length > width / 7
+              ? `${payload.name.slice(0, Math.max(1, Math.floor(width / 7) - 1))}…`
+              : payload.name}
           </text>
           <text x={x + 8} y={y + 34} fontSize={10} fill="rgba(255,255,255,0.85)">
             {Math.round(pct)}% utilized
@@ -100,7 +114,13 @@ function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapCo
   );
 }
 
-function BreakdownTooltip({ active, payload }: { active?: boolean; payload?: { payload: BreakdownNode }[] }) {
+function BreakdownTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { payload: BreakdownNode }[];
+}) {
   if (!active || !payload || !payload.length) return null;
   const node = payload[0]?.payload;
   if (!node) return null;
@@ -110,19 +130,27 @@ function BreakdownTooltip({ active, payload }: { active?: boolean; payload?: { p
   const isOver = variance < 0;
 
   return (
-    <div className="z-50 min-w-[200px] space-y-1.5 rounded-lg border border-border bg-surface-primary p-3 text-xs shadow-md">
-      <p className="border-b border-border/60 pb-1 font-semibold text-foreground">{node.name}</p>
+    <div className="space-y-1.5 z-50 min-w-[200px] rounded-lg border border-border bg-surface-primary p-3 text-xs shadow-md">
+      <p className="border-b border-border/60 pb-1 font-semibold text-foreground">
+        {node.name}
+      </p>
       <div className="flex justify-between gap-4">
         <span className="text-foreground-secondary">Consumed:</span>
-        <span className="tabular font-medium text-foreground">{formatCurrency(node.consumed, node.asset)}</span>
+        <span className="tabular font-medium text-foreground">
+          {formatCurrency(node.consumed, node.asset)}
+        </span>
       </div>
       <div className="flex justify-between gap-4">
         <span className="text-foreground-secondary">Allocated:</span>
-        <span className="tabular font-medium text-foreground">{formatCurrency(node.allocated, node.asset)}</span>
+        <span className="tabular font-medium text-foreground">
+          {formatCurrency(node.allocated, node.asset)}
+        </span>
       </div>
       <div className="flex items-center justify-between gap-4 border-t border-border/40 pt-1">
         <span className="font-medium text-foreground-secondary">Variance:</span>
-        <span className={`tabular font-bold ${isOver ? 'text-danger' : 'text-success'}`}>
+        <span
+          className={`tabular font-bold ${isOver ? 'text-danger' : 'text-success'}`}
+        >
           {isOver ? '−' : '+'}
           {formatCurrency(Math.abs(variance), node.asset)}
         </span>
@@ -131,8 +159,16 @@ function BreakdownTooltip({ active, payload }: { active?: boolean; payload?: { p
         <span className="font-medium text-foreground-secondary">% Consumed:</span>
         <span className="tabular font-bold">{Math.round(pct)}%</span>
       </div>
-      {node.agent && <p className="pt-1 text-2xs text-foreground-muted">Click to view ledger history</p>}
-      {!node.agent && <p className="pt-1 text-2xs text-foreground-muted">Click to drill into sub-departments</p>}
+      {node.agent && (
+        <p className="pt-1 text-2xs text-foreground-muted">
+          Click to view ledger history
+        </p>
+      )}
+      {!node.agent && (
+        <p className="pt-1 text-2xs text-foreground-muted">
+          Click to drill into sub-departments
+        </p>
+      )}
     </div>
   );
 }
@@ -194,7 +230,7 @@ export function BudgetBreakdownChart({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 8 }}
                 onClick={() => setActiveDeptId(null)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="gap-1.5 px-2.5 py-1.5 inline-flex items-center rounded-md border border-border text-xs font-medium text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
                 <span>All departments</span>
@@ -217,7 +253,11 @@ export function BudgetBreakdownChart({
             transition={{ duration: 0.18 }}
             className="h-96 w-full"
             role="region"
-            aria-label={activeDept ? `${activeDept.departmentName} agent breakdown` : 'Department budget breakdown'}
+            aria-label={
+              activeDept
+                ? `${activeDept.departmentName} agent breakdown`
+                : 'Department budget breakdown'
+            }
           >
             <ResponsiveContainer width="100%" height="100%">
               <Treemap
@@ -244,16 +284,25 @@ export function BudgetBreakdownChart({
         </AnimatePresence>
 
         <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-border/60 pt-3 text-2xs text-foreground-secondary">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#2A78D6]" />
+          <span className="gap-1.5 flex items-center">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: 'rgb(var(--chart-1))' }}
+            />
             <span>Optimal (&lt;80%)</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#D98A21]" />
+          <span className="gap-1.5 flex items-center">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: 'rgb(var(--warning))' }}
+            />
             <span>Warning (80%–99%)</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#C84747]" />
+          <span className="gap-1.5 flex items-center">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: 'rgb(var(--danger))' }}
+            />
             <span>Over budget (&ge;100%)</span>
           </span>
         </div>
@@ -264,8 +313,17 @@ export function BudgetBreakdownChart({
   );
 }
 
-function LedgerModal({ agent, onClose }: { agent: AgentAllocation | null; onClose: () => void }) {
-  const pct = agent && agent.allocatedAmount > 0 ? (agent.spentAmount / agent.allocatedAmount) * 100 : 0;
+function LedgerModal({
+  agent,
+  onClose,
+}: {
+  agent: AgentAllocation | null;
+  onClose: () => void;
+}) {
+  const pct =
+    agent && agent.allocatedAmount > 0
+      ? (agent.spentAmount / agent.allocatedAmount) * 100
+      : 0;
   const variance = agent ? agent.allocatedAmount - agent.spentAmount : 0;
   const isOver = variance < 0;
 
@@ -282,16 +340,26 @@ function LedgerModal({ agent, onClose }: { agent: AgentAllocation | null; onClos
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-card border border-border p-3">
               <p className="text-2xs text-foreground-muted">Allocated</p>
-              <p className="tabular text-sm font-semibold">{formatCurrency(agent.allocatedAmount, agent.asset, { compact: true })}</p>
+              <p className="tabular text-sm font-semibold">
+                {formatCurrency(agent.allocatedAmount, agent.asset, { compact: true })}
+              </p>
             </div>
             <div className="rounded-card border border-border p-3">
               <p className="text-2xs text-foreground-muted">Consumed</p>
-              <p className="tabular text-sm font-semibold">{formatCurrency(agent.spentAmount, agent.asset, { compact: true })}</p>
+              <p className="tabular text-sm font-semibold">
+                {formatCurrency(agent.spentAmount, agent.asset, { compact: true })}
+              </p>
             </div>
             <div className="rounded-card border border-border p-3">
               <p className="text-2xs text-foreground-muted">Variance</p>
-              <p className={`tabular flex items-center gap-1 text-sm font-semibold ${isOver ? 'text-danger' : 'text-success'}`}>
-                {isOver ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
+              <p
+                className={`tabular flex items-center gap-1 text-sm font-semibold ${isOver ? 'text-danger' : 'text-success'}`}
+              >
+                {isOver ? (
+                  <TrendingDown className="h-3.5 w-3.5" />
+                ) : (
+                  <TrendingUp className="h-3.5 w-3.5" />
+                )}
                 {isOver ? '−' : '+'}
                 {formatCurrency(Math.abs(variance), agent.asset, { compact: true })}
               </p>
@@ -303,7 +371,7 @@ function LedgerModal({ agent, onClose }: { agent: AgentAllocation | null; onClos
           </div>
 
           <div>
-            <div className="mb-2 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
+            <div className="gap-1.5 mb-2 flex items-center text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
               <Receipt className="h-3.5 w-3.5" />
               <span>Recent ledger entries</span>
             </div>
@@ -321,10 +389,16 @@ function LedgerModal({ agent, onClose }: { agent: AgentAllocation | null; onClos
                   <tbody className="divide-y divide-border/60">
                     {agent.ledger.map((entry) => (
                       <tr key={entry.id} className="hover:bg-surface-secondary/40">
-                        <td className="px-3 py-2.5 text-foreground-secondary">{formatDateTime(entry.date)}</td>
-                        <td className="px-3 py-2.5 text-foreground">{entry.description}</td>
-                        <td className="px-3 py-2.5 text-foreground-secondary">{entry.counterparty}</td>
-                        <td className="px-3 py-2.5 text-right tabular font-medium text-foreground">
+                        <td className="py-2.5 px-3 text-foreground-secondary">
+                          {formatDateTime(entry.date)}
+                        </td>
+                        <td className="py-2.5 px-3 text-foreground">
+                          {entry.description}
+                        </td>
+                        <td className="py-2.5 px-3 text-foreground-secondary">
+                          {entry.counterparty}
+                        </td>
+                        <td className="py-2.5 tabular px-3 text-right font-medium text-foreground">
                           {formatCurrency(entry.amount, agent.asset)}
                         </td>
                       </tr>
