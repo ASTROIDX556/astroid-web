@@ -18,6 +18,8 @@ import { useActivity, useOverview } from '@/hooks/use-queries';
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { ActivityChart } from '@/features/dashboard/components/ActivityChart';
+import { SpendingCorrelationMatrix } from '@/features/analytics';
+import { agentSpendingCorrelations } from '@/services/mock/analytics';
 import { NvidiaAssistantWidget } from '@/features/chat/NvidiaAssistantWidget';
 
 const chartSkeleton = <div className="skeleton h-[260px] w-full rounded-md" />;
@@ -148,6 +150,8 @@ export default function AnalyticsPage() {
                   <WaterfallChart data={data.budgetWaterfall} />
                 </CardContent>
               </Card>
+
+              <SpendingCorrelationMatrix data={agentSpendingCorrelations} />
 
               <div className="pt-4 border-t border-border space-y-4">
                 <h3 className="font-display text-lg font-semibold tracking-tight">Interactive Nvidia NIM AI Briefings & Assistant</h3>
