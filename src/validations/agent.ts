@@ -16,3 +16,4 @@ export const agentSettingsSchema = agentCreationSchema.partial().extend({
 
 export type AgentCreationFormData = z.infer<typeof agentCreationSchema>;
 export type AgentSettingsFormData = z.infer<typeof agentSettingsSchema>;
+export const agentSettingsValidationSchema = agentSettingsSchema;
