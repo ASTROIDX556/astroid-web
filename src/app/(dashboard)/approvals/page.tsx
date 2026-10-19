@@ -26,15 +26,13 @@ import type { Proposal } from '@/types/domain';
 function ProposalCard({ proposal }: { proposal: Proposal }) {
   const status = proposalStatus(proposal.status);
   const isPending = proposal.status === 'pending';
-  const {
-    approvedWeight,
-    requiredApprovals,
-    isQuorumMet,
-    decision,
-  } = useProposalApproval(proposal);
+  const { approvedWeight, requiredApprovals, isQuorumMet, decision } =
+    useProposalApproval(proposal);
 
   // Confirmation gate — approve/reject buttons open the dialog first.
-  const [confirmAction, setConfirmAction] = useState<LocalApprovalDecision | null>(null);
+  const [confirmAction, setConfirmAction] = useState<LocalApprovalDecision | null>(
+    null,
+  );
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const openConfirmation = (action: LocalApprovalDecision) => {
@@ -102,7 +100,7 @@ function ProposalCard({ proposal }: { proposal: Proposal }) {
               ))}
             </div>
             <span className="text-2xs text-foreground-secondary">
-              {approvedWeight} of {requiredApprovals} approvals
+              {approvedWeight} of {requiredApprovals} signatures collected
               {isQuorumMet && ' · quorum met'}
             </span>
           </div>

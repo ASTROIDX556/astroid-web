@@ -1,8 +1,14 @@
 'use client';
 
-import { useQuery, useMutation, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { resources } from '@/services/resources';
+import { resources, type RecordProposalDecisionInput } from '@/services/resources';
+import { applyApprovalDecision } from '@/features/approvals/approval-state';
 import type {
   ActivityPoint,
   Agent,
@@ -135,6 +141,77 @@ export const useProposal = (id: string): UseQueryResult<Proposal> =>
     queryFn: () => resources.getProposal(id),
     enabled: Boolean(id),
   });
+
+interface RecordDecisionContext {
+  previousDetail?: Proposal;
+  previousList?: Proposal[];
+}
+
+/**
+ * Records an approve/reject decision with an optimistic cache update: the
+ * detail query and the proposal list are patched immediately (roster slot,
+ * quorum-derived status), rolled back on failure, and invalidated on settle.
+ */
+export const useRecordProposalDecision = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    Proposal,
+    Error,
+    RecordProposalDecisionInput,
+    RecordDecisionContext
+  >({
+    mutationFn: (input) => resources.recordProposalDecision(input),
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.proposal(input.proposalId),
+      });
+      await queryClient.cancelQueries({ queryKey: queryKeys.proposals });
+
+      const previousDetail = queryClient.getQueryData<Proposal>(
+        queryKeys.proposal(input.proposalId),
+      );
+      const previousList = queryClient.getQueryData<Proposal[]>(queryKeys.proposals);
+
+      const optimistic = (proposal: Proposal): Proposal =>
+        proposal.id === input.proposalId
+          ? applyApprovalDecision(proposal, input.actor, input.decision, {
+              comment: input.comment,
+              actorName: input.actor.name,
+            })
+          : proposal;
+
+      if (previousDetail) {
+        queryClient.setQueryData(
+          queryKeys.proposal(input.proposalId),
+          optimistic(previousDetail),
+        );
+      }
+      if (previousList) {
+        queryClient.setQueryData(queryKeys.proposals, previousList.map(optimistic));
+      }
+
+      return { previousDetail, previousList };
+    },
+    onError: (_error, input, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(
+          queryKeys.proposal(input.proposalId),
+          context.previousDetail,
+        );
+      }
+      if (context?.previousList) {
+        queryClient.setQueryData(queryKeys.proposals, context.previousList);
+      }
+    },
+    onSettled: (_data, _error, input) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.proposal(input.proposalId),
+      });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.proposals });
+    },
+  });
+};
 
 // -- financial memory -------------------------------------------------------
 export const useMemoryRecords = (): UseQueryResult<MemoryRecord[]> =>
