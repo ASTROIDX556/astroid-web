@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export type StellarWalletStatus = 'idle' | 'checking' | 'connected' | 'missing' | 'error';
+export type StellarWalletStatus =
+  | 'idle'
+  | 'checking'
+  | 'connected'
+  | 'disconnected'
+  | 'locked'
+  | 'missing'
+  | 'error';
 
 /**
  * Classification of Freighter connection failures so UI surfaces (banners,
@@ -12,6 +19,7 @@ export type StellarWalletStatus = 'idle' | 'checking' | 'connected' | 'missing' 
 export type FreighterErrorKind =
   | 'missing'
   | 'rejected'
+  | 'locked'
   | 'timeout'
   | 'transport'
   | 'unknown';
@@ -131,6 +139,18 @@ export function normalizeFreighterError(err: unknown, fallbackMessage = 'Freight
     };
   }
 
+  // Checked after `rejected`/`timeout` because Freighter's own timeout copy
+  // mentions unlocking; word boundaries keep "unlock" out of this match.
+  if (/\block(ed)?\b|password|passphrase/i.test(text)) {
+    return {
+      kind: 'locked',
+      message: 'Freighter is locked.',
+      hint: 'Unlock the extension with your password, then retry.',
+      retryable: true,
+      cause: err,
+    };
+  }
+
   if (/extension not connected|reconnect|transport|port|chrome-extension|moz-extension|network/.test(text)) {
     return {
       kind: 'transport',
@@ -148,6 +168,29 @@ export function normalizeFreighterError(err: unknown, fallbackMessage = 'Freight
     retryable: true,
     cause: err,
   };
+}
+
+/**
+ * Distinguish a locked extension from a plain disconnected one. Freighter has
+ * no `isLocked()` API, so we probe `getAddress()` non-interactively: an error
+ * mentioning the lock/password means the user just needs to unlock, anything
+ * else means the wallet is simply not connected to this site.
+ */
+async function probeWalletLock(api: FreighterModule): Promise<'locked' | 'disconnected'> {
+  try {
+    const response = await withTimeout(api.getAddress(), 4000);
+    const message =
+      typeof response === 'string'
+        ? ''
+        : String((response as { error?: string; message?: string } | null)?.error ?? '') +
+          String((response as { message?: string } | null)?.message ?? '');
+    if (/lock(ed)?|password|passphrase/i.test(message) && !/reject|denied|cancel/i.test(message)) {
+      return 'locked';
+    }
+    return 'disconnected';
+  } catch (err) {
+    return normalizeFreighterError(err).kind === 'locked' ? 'locked' : 'disconnected';
+  }
 }
 
 export function useStellarWallet() {
@@ -254,15 +297,31 @@ export function useStellarWallet() {
       const connected = await withRetry(() => withTimeout(api.isConnected()), () => {}, runId);
       if (activeRun.current !== runId) return Boolean(connected);
 
-      setStatus(connected ? 'connected' : 'idle');
       if (connected) {
+        setStatus('connected');
         const address = await withRetry(() => withTimeout(api.getAddress()), () => {}, runId);
         if (activeRun.current !== runId) return Boolean(connected);
         const nextKey = typeof address === 'string' ? address : address?.address ?? null;
         setPublicKey(nextKey);
         setFailure(null);
       } else {
-        setFailure(null);
+        // Explicit, user-actionable distinction between "locked" and
+        // "not connected" instead of a single vague idle state.
+        if (activeRun.current !== runId) return false;
+        const lockState = await probeWalletLock(api);
+        if (activeRun.current !== runId) return false;
+        setStatus(lockState);
+        setPublicKey(null);
+        if (lockState === 'locked') {
+          setFailure({
+            kind: 'locked',
+            message: 'Freighter is locked.',
+            hint: 'Unlock the extension with your password, then retry.',
+            retryable: true,
+          });
+        } else {
+          setFailure(null);
+        }
       }
       setRetryState((prev) => ({ ...prev, attempt: 0, isRetrying: false, canRetry: false }));
       return Boolean(connected);
@@ -333,7 +392,7 @@ export function useStellarWallet() {
       const nextKey = typeof address === 'string' ? address : address?.address ?? null;
 
       setPublicKey(nextKey);
-      setStatus(nextKey ? 'connected' : 'idle');
+      setStatus(nextKey ? 'connected' : 'disconnected');
       setFailure(null);
       setRetryState({ attempt: 0, maxAttempts: MAX_AUTOMATIC_RETRIES, isRetrying: false, canRetry: false });
       return nextKey;
@@ -422,6 +481,10 @@ export function useStellarWallet() {
     retryState,
     isAvailable: status !== 'missing' && status !== 'error',
     isConnected: status === 'connected',
+    /** Explicit "extension installed but not connected to this site" state. */
+    isDisconnected: status === 'disconnected',
+    /** Explicit "extension installed but locked" state (unlock to continue). */
+    isLocked: status === 'locked',
     refreshConnection,
     connect,
     /** Manual retry entry point for connection banners / toast actions. */
