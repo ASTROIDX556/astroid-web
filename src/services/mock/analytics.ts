@@ -203,3 +203,73 @@ function generateActivity(): ActivityPoint[] {
 }
 
 export const activityData: ActivityPoint[] = generateActivity();
+
+export interface AgentCorrelationPoint {
+  agentId: string;
+  agentName: string;
+  role: string;
+  correlations: Record<string, number>;
+}
+
+export const agentSpendingCorrelations: AgentCorrelationPoint[] = [
+  {
+    agentId: 'agt_orion',
+    agentName: 'Orion',
+    role: 'Operations',
+    correlations: {
+      agt_orion: 1.0,
+      agt_atlas: 0.85,
+      agt_kepler: 0.42,
+      agt_vega: 0.65,
+      agt_lyra: 0.12,
+    },
+  },
+  {
+    agentId: 'agt_atlas',
+    agentName: 'Atlas',
+    role: 'Finance',
+    correlations: {
+      agt_orion: 0.85,
+      agt_atlas: 1.0,
+      agt_kepler: 0.51,
+      agt_vega: 0.78,
+      agt_lyra: 0.20,
+    },
+  },
+  {
+    agentId: 'agt_kepler',
+    agentName: 'Kepler',
+    role: 'Research',
+    correlations: {
+      agt_orion: 0.42,
+      agt_atlas: 0.51,
+      agt_kepler: 1.0,
+      agt_vega: 0.33,
+      agt_lyra: 0.08,
+    },
+  },
+  {
+    agentId: 'agt_vega',
+    agentName: 'Vega',
+    role: 'Procurement',
+    correlations: {
+      agt_orion: 0.65,
+      agt_atlas: 0.78,
+      agt_kepler: 0.33,
+      agt_vega: 1.0,
+      agt_lyra: 0.15,
+    },
+  },
+  {
+    agentId: 'agt_lyra',
+    agentName: 'Lyra',
+    role: 'Custom',
+    correlations: {
+      agt_orion: 0.12,
+      agt_atlas: 0.20,
+      agt_kepler: 0.08,
+      agt_vega: 0.15,
+      agt_lyra: 1.0,
+    },
+  },
+];
