@@ -8,6 +8,9 @@ export interface AgentCreationFormProps {
 }
 
 export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }) => {
+  const handleSubmitEnhanced = (data: AgentCreationFormData) => {
+    onSubmit(data);
+  };
   const {
     register,
     handleSubmit,
@@ -26,7 +29,7 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleSubmitEnhanced)} className="space-y-4" noValidate>
       <div>
         <label className="block text-sm font-medium">Agent Name</label>
         <input {...register("name")} className="mt-1 block w-full border rounded p-2" />
