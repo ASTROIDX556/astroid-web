@@ -6,8 +6,10 @@ import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FormField, Input, Select, Textarea } from '@/components/ui/input';
-import { agentWizardSchema, providerOptions, type AgentWizardValues } from '@/features/agents/schema';
+import { FormField, Input, Textarea } from '@/components/ui/input';
+import { agentWizardSchema, type AgentWizardValues } from '@/features/agents/schema';
+import { ProviderPresetSelector } from '@/features/agents/components/ProviderPresetSelector';
+import { getProviderPreset, type AgentProviderPreset } from '@/features/agents/providerPresets';
 
 const steps = [
   { key: 'basic', label: 'Basic info' },
@@ -16,9 +18,11 @@ const steps = [
   { key: 'confirmation', label: 'Confirmation' },
 ] as const;
 
+const DEFAULT_PRESET = getProviderPreset('OpenAI');
+
 const stepFields: Record<number, (keyof AgentWizardValues)[]> = {
   0: ['name', 'description', 'ownerDepartment'],
-  1: ['provider', 'model', 'apiKey'],
+  1: ['provider', 'model', 'apiKey', 'endpointUrl', 'contextWindowTokens'],
   2: ['budget', 'singleTransactionCap'],
   3: [],
 };
@@ -31,14 +35,31 @@ export function AgentWizard() {
       name: '',
       description: '',
       ownerDepartment: '',
-      provider: 'OpenAI',
-      model: 'gpt-4o-mini',
+      provider: DEFAULT_PRESET?.id ?? 'OpenAI',
+      model: DEFAULT_PRESET?.defaultModel ?? 'gpt-4o-mini',
       apiKey: '',
+      endpointUrl: DEFAULT_PRESET?.endpointUrl ?? '',
+      contextWindowTokens: DEFAULT_PRESET?.contextWindowTokens ?? 128_000,
       budget: 5000,
       singleTransactionCap: 1500,
     },
     mode: 'onChange',
   });
+
+  const provider = form.watch('provider');
+  const contextWindowTokens = form.watch('contextWindowTokens');
+
+  /**
+   * Apply a chosen preset to the form: provider, default model, recommended
+   * endpoint, and context window. Validation runs inline (mode: 'onChange')
+   * so stale endpoint errors clear as soon as a preset fills the field.
+   */
+  const handlePresetSelect = (preset: AgentProviderPreset) => {
+    form.setValue('provider', preset.id, { shouldValidate: true });
+    form.setValue('model', preset.defaultModel, { shouldValidate: true });
+    form.setValue('endpointUrl', preset.endpointUrl, { shouldValidate: true });
+    form.setValue('contextWindowTokens', preset.contextWindowTokens, { shouldValidate: true });
+  };
 
   const currentStep = useMemo(() => steps[step] ?? steps[0], [step]);
 
@@ -128,34 +149,73 @@ export function AgentWizard() {
 
           {step === 1 && (
             <div className="space-y-4">
-              <FormField label="Model provider" htmlFor="provider" error={form.formState.errors.provider?.message} required>
-                <Select id="provider" {...form.register('provider')} invalid={Boolean(form.formState.errors.provider)}>
-                  {providerOptions.map((provider) => (
-                    <option key={provider} value={provider}>
-                      {provider}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+              <ProviderPresetSelector value={provider} onSelect={handlePresetSelect} />
 
-              <FormField label="Model/version" htmlFor="model" error={form.formState.errors.model?.message} required>
-                <Input
-                  id="model"
-                  {...form.register('model')}
-                  placeholder="gpt-4.1-mini"
-                  invalid={Boolean(form.formState.errors.model)}
-                />
-              </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  label="Model/version"
+                  htmlFor="model"
+                  error={form.formState.errors.model?.message}
+                  required
+                >
+                  <Input
+                    id="model"
+                    {...form.register('model')}
+                    placeholder="gpt-4.1-mini"
+                    invalid={Boolean(form.formState.errors.model)}
+                  />
+                </FormField>
 
-              <FormField label="Provider key" htmlFor="api-key" error={form.formState.errors.apiKey?.message}>
-                <Input
-                  id="api-key"
-                  type="password"
-                  {...form.register('apiKey')}
-                  placeholder="Optional provider secret"
-                  invalid={Boolean(form.formState.errors.apiKey)}
-                />
-              </FormField>
+                <FormField label="Provider key" htmlFor="api-key" error={form.formState.errors.apiKey?.message}>
+                  <Input
+                    id="api-key"
+                    type="password"
+                    {...form.register('apiKey')}
+                    placeholder="Optional provider secret"
+                    invalid={Boolean(form.formState.errors.apiKey)}
+                  />
+                </FormField>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  label="API endpoint URL"
+                  htmlFor="endpoint-url"
+                  error={form.formState.errors.endpointUrl?.message}
+                  required={provider === 'Custom'}
+                  hint={
+                    provider === 'Custom'
+                      ? 'Base URL of your OpenAI-compatible server.'
+                      : 'Pre-filled from the selected provider preset.'
+                  }
+                >
+                  <Input
+                    id="endpoint-url"
+                    type="url"
+                    inputMode="url"
+                    {...form.register('endpointUrl')}
+                    placeholder="https://api.example.com/v1"
+                    invalid={Boolean(form.formState.errors.endpointUrl)}
+                  />
+                </FormField>
+
+                <FormField
+                  label="Context window (tokens)"
+                  htmlFor="context-window"
+                  error={form.formState.errors.contextWindowTokens?.message}
+                  hint="Preset default; adjust for your deployment."
+                >
+                  <Input
+                    id="context-window"
+                    type="number"
+                    step="1024"
+                    min="1"
+                    {...form.register('contextWindowTokens')}
+                    placeholder={contextWindowTokens ? String(contextWindowTokens) : '128000'}
+                    invalid={Boolean(form.formState.errors.contextWindowTokens)}
+                  />
+                </FormField>
+              </div>
             </div>
           )}
 
@@ -207,6 +267,18 @@ export function AgentWizard() {
                 <div>
                   <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Model</dt>
                   <dd className="mt-1 text-sm text-foreground">{form.watch('model')}</dd>
+                </div>
+                <div>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Endpoint</dt>
+                  <dd className="mt-1 truncate font-mono text-sm text-foreground">
+                    {form.watch('endpointUrl') || '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Context window</dt>
+                  <dd className="mt-1 text-sm tabular text-foreground">
+                    {contextWindowTokens ? `${contextWindowTokens.toLocaleString()} tokens` : '—'}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Budget</dt>
