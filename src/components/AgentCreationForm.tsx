@@ -16,7 +16,7 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
     handleSubmit,
     formState: { errors },
   } = useForm<AgentCreationFormData>({
-    resolver: zodResolver(agentCreationSchema) as any,
+    resolver: zodResolver(agentCreationSchema),
     defaultValues: {
       name: "",
       provider: "",
