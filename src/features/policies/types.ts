@@ -31,3 +31,17 @@ export interface SimulationResult {
   isPolicyViolation: boolean;
   warnings: string[];
 }
+
+export interface PolicyRuleEvaluationLog {
+  ruleId: string;
+  ruleName: string;
+  status: 'pass' | 'block';
+  message: string;
+  timestamp: string;
+}
+
+export interface PolicySimulationModalResult {
+  success: boolean;
+  summary: string;
+  logs: PolicyRuleEvaluationLog[];
+}
