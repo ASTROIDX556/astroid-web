@@ -23,6 +23,7 @@ const DOCK_FOCUS =
 
 export function CommandDock() {
   const pathname = usePathname();
+  const commandOpen = useCommandStore((s) => s.open);
   const openCommand = useCommandStore((s) => s.setOpen);
   const openAssistant = useAssistantStore((s) => s.setOpen);
 
@@ -39,6 +40,8 @@ export function CommandDock() {
           hint="⌘K"
           icon={<Search className="h-[18px] w-[18px]" aria-hidden />}
           focusRing={DOCK_FOCUS}
+          expanded={commandOpen}
+          controls="command-palette"
         />
 
         <Divider />
@@ -126,12 +129,18 @@ function DockButton({
   hint,
   icon,
   focusRing,
+  expanded,
+  controls,
 }: {
   onClick: () => void;
   label: string;
   hint?: string;
   icon: React.ReactNode;
   focusRing?: string;
+  /** When the button opens a overlay, its expanded state for assistive tech. */
+  expanded?: boolean;
+  /** The id of the element the button controls, e.g. `command-palette`. */
+  controls?: string;
 }) {
   return (
     <button
@@ -139,6 +148,9 @@ function DockButton({
       onClick={onClick}
       aria-label={label}
       title={hint ? `${label} (${hint})` : label}
+      aria-haspopup={controls ? 'dialog' : undefined}
+      aria-expanded={expanded}
+      aria-controls={controls}
       className={cn(
         'grid h-11 w-11 shrink-0 place-items-center rounded-full text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground',
         focusRing,

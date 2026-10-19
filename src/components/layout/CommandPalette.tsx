@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import {
@@ -84,6 +84,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
   const agents = agentsQuery.data ?? [];
   const policies = policiesQuery.data ?? [];
   const proposals = proposalsQuery.data ?? [];
+  const [selectedLabel, setSelectedLabel] = useState('');
 
   const navigate = (href: string) => {
     onClose();
@@ -96,11 +97,18 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onClose();
       }}
+      id="command-palette"
       label="Search Astroid pages and entities"
+      aria-labelledby="command-palette-title"
+      aria-describedby="command-palette-description"
+      onValueChange={setSelectedLabel}
       loop
       overlayClassName="fixed inset-0 z-[100] animate-fade-in bg-foreground/40 backdrop-blur-sm"
       contentClassName="fixed left-1/2 top-[12vh] z-[101] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 animate-fade-up overflow-hidden rounded-dialog border border-border bg-surface shadow-soft-3"
     >
+      <h2 id="command-palette-title" className="sr-only">
+        Search Astroid pages and entities
+      </h2>
       <div className="flex items-center gap-3 border-b border-border px-4">
         <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden />
         <Command.Input
@@ -121,6 +129,14 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
           <X className="h-4 w-4" aria-hidden />
         </button>
       </div>
+
+      <p id="command-palette-description" className="sr-only">
+        Search application pages, agents, policies, and proposals. Use the arrow keys to move
+        between results, Enter to select, and Escape to close.
+      </p>
+      <p aria-live="polite" aria-atomic="true" className="sr-only">
+        {selectedLabel ? `Selected: ${selectedLabel}` : ''}
+      </p>
 
       <Command.List
         className="max-h-[min(60vh,32rem)] overflow-y-auto p-2"
