@@ -1,7 +1,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { agentCreationSchema, AgentCreationFormData } from "../validations/agent";
+import { agentCreationSchema, type AgentCreationFormData } from "../validations/agent";
 
 export interface AgentCreationFormProps {
   onSubmit: (data: AgentCreationFormData) => void;
@@ -16,7 +16,7 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
     handleSubmit,
     formState: { errors },
   } = useForm<AgentCreationFormData>({
-    resolver: zodResolver(agentCreationSchema),
+    resolver: zodResolver(agentCreationSchema) as any,
     defaultValues: {
       name: "",
       provider: "",
