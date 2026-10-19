@@ -8,9 +8,6 @@ export interface AgentCreationFormProps {
 }
 
 export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }) => {
-  const handleSubmitEnhanced = (data: AgentCreationFormData) => {
-    onSubmit(data);
-  };
   const {
     register,
     handleSubmit,
@@ -27,6 +24,10 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
       spendingThreshold: 0,
     },
   });
+
+  const handleSubmitEnhanced = (data: AgentCreationFormData) => {
+    onSubmit(data);
+  };
 
   return (
     <form onSubmit={handleSubmit(handleSubmitEnhanced)} className="space-y-4" noValidate>
