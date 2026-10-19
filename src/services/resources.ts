@@ -1,6 +1,8 @@
 import { isMockMode } from '@/lib/env';
-import { apiClient } from '@/services/client';
-import * as mock from '@/services/mock';
+import { apiClient, type ApiRequestInit, type ApiResult } from '@/services/client';
+import { resolveMockRequest } from '@/services/mock/handlers';
+import type { ListQuery } from '@/types/api';
+import type { AuditEvent } from '@/types/audit';
 import type {
   ActivityPoint,
   Agent,
@@ -26,183 +28,118 @@ import type {
 /**
  * Resource layer.
  *
- * Every screen calls these functions through TanStack Query hooks. In mock mode
- * they resolve local fixtures behind a small simulated latency so loading and
- * skeleton states are exercised. When `NEXT_PUBLIC_API_URL` is set the layer
- * calls the live REST API via the typed client and unwraps its `data` envelope —
- * the UI is agnostic to which path is active.
+ * Every screen calls these functions through TanStack Query hooks. Requests go
+ * through the typed API client, which switches transport automatically:
+ * in mock mode (`NEXT_PUBLIC_API_URL` unset) the local handler registry in
+ * `services/mock/handlers` resolves them — with simulated latency — and in
+ * live mode the real REST API is called. If a live request fails, the resource
+ * layer degrades gracefully to the local dataset instead of breaking the UI.
+ *
+ * Collection endpoints accept an optional `ListQuery` (page/limit/search/sort/
+ * filter) mirroring the live API; use {@link fetchResourcePage} when the
+ * pagination envelope meta (total/totalPages) is needed.
  */
 
-const LATENCY_MS = 320;
-
-async function resolve<T>(mockValue: T, live: () => Promise<T>): Promise<T> {
-  if (isMockMode) {
-    return new Promise((r) => setTimeout(() => r(mockValue), LATENCY_MS));
-  }
+async function request<T>(path: string, init: ApiRequestInit = {}): Promise<ApiResult<T>> {
   try {
-    const data = await live();
-    if (data !== undefined && data !== null) {
-      return data;
-    }
-    return mockValue;
+    return await apiClient.request<T>(path, init);
   } catch (err) {
+    // In mock mode the handler registry *is* the transport: rethrow so 404s and
+    // simulated transient failures surface to TanStack Query exactly once.
+    if (isMockMode) throw err;
+
     console.warn('[Astroid API] Live request failed, falling back to local dataset:', err);
-    return mockValue;
+    return resolveMockRequest<T>(path, init);
   }
 }
 
-
-function notFound(entity: string): never {
-  throw new Error(`${entity} not found`);
+/** Resolve a path to its typed payload. */
+async function data<T>(path: string, init?: ApiRequestInit): Promise<T> {
+  const result = await request<T>(path, init);
+  return result.data;
 }
 
-/** Fetch a collection in live mode. */
-function list<T>(path: string): Promise<T> {
-  return apiClient.request<T>(path).then((r) => r.data);
-}
-
-/** Fetch a single entity in live mode. */
-function one<T>(path: string): Promise<T> {
-  return apiClient.request<T>(path).then((r) => r.data);
-}
-
-/** Fire a side-effecting action in live mode (POST/SIMULATE etc.). */
-function action<T>(path: string, body: unknown = {}): Promise<T> {
-  return apiClient
-    .request<T>(path, { method: 'POST', body: JSON.stringify(body) })
-    .then((r) => r.data);
+/**
+ * Fetch a collection page while keeping the pagination envelope meta
+ * (`page`, `limit`, `total`, `totalPages`) for paginated views.
+ */
+export function fetchResourcePage<T>(path: string, query?: ListQuery): Promise<ApiResult<T>> {
+  return request<T>(path, { query });
 }
 
 export const resources = {
   // -- session / org ------------------------------------------------------
-  getCurrentUser: (): Promise<User> =>
-    resolve(mock.currentUser, () => one<User>('/auth/session')),
-  getOrganizations: (): Promise<Organization[]> =>
-    resolve(mock.organizations, () => list<Organization[]>('/organizations')),
-  getTeam: (): Promise<User[]> => resolve(mock.teamMembers, () => list<User[]>('/team')),
+  getCurrentUser: (): Promise<User> => data<User>('/auth/session'),
+  getOrganizations: (query?: ListQuery): Promise<Organization[]> =>
+    data<Organization[]>('/organizations', { query }),
+  getTeam: (query?: ListQuery): Promise<User[]> => data<User[]>('/team', { query }),
 
   // -- analytics ----------------------------------------------------------
-  getOverview: (): Promise<AnalyticsOverview> =>
-    resolve(mock.analyticsOverview, () => one<AnalyticsOverview>('/analytics/overview')),
-  getActivity: (): Promise<ActivityPoint[]> =>
-    resolve(mock.activityData, () => list<ActivityPoint[]>('/analytics/activity')),
+  getOverview: (): Promise<AnalyticsOverview> => data<AnalyticsOverview>('/analytics/overview'),
+  getActivity: (query?: ListQuery): Promise<ActivityPoint[]> =>
+    data<ActivityPoint[]>('/analytics/activity', { query }),
 
   // -- ai assistant -------------------------------------------------------
-  getBriefing: (): Promise<AiBriefing> =>
-    resolve(mock.aiBriefing, () => one<AiBriefing>('/ai/briefing')),
-  getAssistantSeed: (): Promise<ChatMessage[]> =>
-    resolve(mock.assistantSeed, () => one<ChatMessage[]>('/ai/assistant/seed')),
-
+  getBriefing: (): Promise<AiBriefing> => data<AiBriefing>('/ai/briefing'),
+  getAssistantSeed: (): Promise<ChatMessage[]> => data<ChatMessage[]>('/ai/assistant/seed'),
 
   // -- wallets ------------------------------------------------------------
-  getWallets: (): Promise<Wallet[]> => resolve(mock.wallets, () => list<Wallet[]>('/wallets')),
+  getWallets: (query?: ListQuery): Promise<Wallet[]> => data<Wallet[]>('/wallets', { query }),
   getWallet: (id: string): Promise<Wallet> =>
-    resolve(
-      mock.wallets.find((w) => w.id === id) ?? notFound('Wallet'),
-      () => one<Wallet>(`/wallets/${id}`),
-    ),
+    data<Wallet>(`/wallets/${encodeURIComponent(id)}`),
   getWalletBalances: (id: string): Promise<AssetBalance[]> =>
-    resolve(
-      mock.wallets.find((w) => w.id === id)?.balances ?? notFound('Balances'),
-      () => one<AssetBalance[]>(`/wallets/${id}/balances`),
-    ),
+    data<AssetBalance[]>(`/wallets/${encodeURIComponent(id)}/balances`),
 
   // -- agents -------------------------------------------------------------
-  getAgents: (): Promise<Agent[]> => resolve(mock.agents, () => list<Agent[]>('/agents')),
-  getAgent: (id: string): Promise<Agent> =>
-    resolve(
-      mock.agents.find((a) => a.id === id) ?? notFound('Agent'),
-      () => one<Agent>(`/agents/${id}`),
-    ),
+  getAgents: (query?: ListQuery): Promise<Agent[]> => data<Agent[]>('/agents', { query }),
+  getAgent: (id: string): Promise<Agent> => data<Agent>(`/agents/${encodeURIComponent(id)}`),
 
   // -- policies -----------------------------------------------------------
-  getPolicies: (): Promise<Policy[]> =>
-    resolve(mock.policies, () => list<Policy[]>('/policies')),
-  getPolicy: (id: string): Promise<Policy> =>
-    resolve(
-      mock.policies.find((p) => p.id === id) ?? notFound('Policy'),
-      () => one<Policy>(`/policies/${id}`),
-    ),
+  getPolicies: (query?: ListQuery): Promise<Policy[]> => data<Policy[]>('/policies', { query }),
+  getPolicy: (id: string): Promise<Policy> => data<Policy>(`/policies/${encodeURIComponent(id)}`),
   simulatePolicy: (amount: number): Promise<PolicySimulationResult> =>
-    resolve(
-      (() => {
-        const requiresApproval = amount >= 5_000;
-        const blocked = amount > 25_000;
-        const risk = Math.min(98, Math.round(6 + (amount / 25_000) * 60));
-        return {
-          passed: !blocked,
-          triggeredPolicies: [
-            { policyId: 'pol_max_txn', name: 'Maximum transaction ceiling', passed: !blocked },
-            {
-              policyId: 'pol_approval_5k',
-              name: 'Dual approval above 5,000',
-              passed: !requiresApproval,
-            },
-          ],
-          requiredApprovals: blocked ? 3 : requiresApproval ? 2 : 0,
-          estimatedRisk: risk,
-          budgetImpact: {
-            budgetId: 'bud_eng',
-            name: 'Engineering',
-            remainingAfter: Math.max(0, 41_400 - amount),
-          },
-          predictedOutcome: blocked
-            ? 'blocked'
-            : requiresApproval
-              ? 'requires_approval'
-              : 'auto_execute',
-        } satisfies PolicySimulationResult;
-      })(),
-      () =>
-        action<PolicySimulationResult>('/policies/simulate', { amount }),
-    ),
+    data<PolicySimulationResult>('/policies/simulate', {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    }),
 
   // -- budgets ------------------------------------------------------------
-  getBudgets: (): Promise<Budget[]> => resolve(mock.budgets, () => list<Budget[]>('/budgets')),
-  getBudget: (id: string): Promise<Budget> =>
-    resolve(
-      mock.budgets.find((b) => b.id === id) ?? notFound('Budget'),
-      () => one<Budget>(`/budgets/${id}`),
-    ),
+  getBudgets: (query?: ListQuery): Promise<Budget[]> => data<Budget[]>('/budgets', { query }),
+  getBudget: (id: string): Promise<Budget> => data<Budget>(`/budgets/${encodeURIComponent(id)}`),
 
   // -- transactions -------------------------------------------------------
-  getTransactions: (): Promise<Transaction[]> =>
-    resolve(mock.transactions, () => list<Transaction[]>('/transactions')),
+  getTransactions: (query?: ListQuery): Promise<Transaction[]> =>
+    data<Transaction[]>('/transactions', { query }),
   getTransaction: (id: string): Promise<Transaction> =>
-    resolve(
-      mock.transactions.find((t) => t.id === id) ?? notFound('Transaction'),
-      () => one<Transaction>(`/transactions/${id}`),
-    ),
+    data<Transaction>(`/transactions/${encodeURIComponent(id)}`),
 
   // -- proposals / approvals ---------------------------------------------
-  getProposals: (): Promise<Proposal[]> =>
-    resolve(mock.proposals, () => list<Proposal[]>('/proposals')),
+  getProposals: (query?: ListQuery): Promise<Proposal[]> =>
+    data<Proposal[]>('/proposals', { query }),
   getProposal: (id: string): Promise<Proposal> =>
-    resolve(
-      mock.proposals.find((p) => p.id === id) ?? notFound('Proposal'),
-      () => one<Proposal>(`/proposals/${id}`),
-    ),
+    data<Proposal>(`/proposals/${encodeURIComponent(id)}`),
 
   // -- financial memory ---------------------------------------------------
-  getMemoryRecords: (): Promise<MemoryRecord[]> =>
-    resolve(mock.memoryRecords, () => list<MemoryRecord[]>('/memory')),
+  getMemoryRecords: (query?: ListQuery): Promise<MemoryRecord[]> =>
+    data<MemoryRecord[]>('/memory', { query }),
   getMemoryRecord: (id: string): Promise<MemoryRecord> =>
-    resolve(
-      mock.memoryRecords.find((m) => m.id === id) ?? notFound('Memory record'),
-      () => one<MemoryRecord>(`/memory/${id}`),
-    ),
+    data<MemoryRecord>(`/memory/${encodeURIComponent(id)}`),
+
+  // -- audit log ----------------------------------------------------------
+  getAuditEvents: (query?: ListQuery): Promise<AuditEvent[]> =>
+    data<AuditEvent[]>('/audit/logs', { query }),
 
   // -- asset rates ---------------------------------------------------------
-  getAssetRates: (): Promise<AssetRate[]> =>
-    resolve(mock.assetRates, () => list<AssetRate[]>('/rates')),
+  getAssetRates: (query?: ListQuery): Promise<AssetRate[]> =>
+    data<AssetRate[]>('/rates', { query }),
 
   // -- notifications ------------------------------------------------------
-  getNotifications: (): Promise<AppNotification[]> =>
-    resolve(mock.notifications, () => list<AppNotification[]>('/notifications')),
+  getNotifications: (query?: ListQuery): Promise<AppNotification[]> =>
+    data<AppNotification[]>('/notifications', { query }),
 
   // -- developer ----------------------------------------------------------
-  getApiKeys: (): Promise<ApiKey[]> =>
-    resolve(mock.apiKeys, () => list<ApiKey[]>('/developer/keys')),
-  getWebhooks: (): Promise<Webhook[]> =>
-    resolve(mock.webhooks, () => list<Webhook[]>('/developer/webhooks')),
+  getApiKeys: (query?: ListQuery): Promise<ApiKey[]> =>
+    data<ApiKey[]>('/developer/keys', { query }),
+  getWebhooks: (query?: ListQuery): Promise<Webhook[]> =>
+    data<Webhook[]>('/developer/webhooks', { query }),
 };

@@ -24,6 +24,7 @@ import type {
   Wallet,
   Webhook,
 } from '@/types/domain';
+import type { AuditEvent } from '@/types/audit';
 
 /**
  * Typed TanStack Query hooks over the resource layer.
@@ -37,17 +38,17 @@ export const useCurrentUser = (): UseQueryResult<User> =>
   useQuery({ queryKey: queryKeys.session, queryFn: resources.getCurrentUser });
 
 export const useOrganizations = (): UseQueryResult<Organization[]> =>
-  useQuery({ queryKey: queryKeys.organizations, queryFn: resources.getOrganizations });
+  useQuery({ queryKey: queryKeys.organizations, queryFn: () => resources.getOrganizations() });
 
 export const useTeam = (): UseQueryResult<User[]> =>
-  useQuery({ queryKey: queryKeys.team, queryFn: resources.getTeam });
+  useQuery({ queryKey: queryKeys.team, queryFn: () => resources.getTeam() });
 
 // -- analytics --------------------------------------------------------------
 export const useOverview = (): UseQueryResult<AnalyticsOverview> =>
   useQuery({ queryKey: queryKeys.overview, queryFn: resources.getOverview });
 
 export const useActivity = (): UseQueryResult<ActivityPoint[]> =>
-  useQuery({ queryKey: queryKeys.activity, queryFn: resources.getActivity });
+  useQuery({ queryKey: queryKeys.activity, queryFn: () => resources.getActivity() });
 
 // -- ai assistant -----------------------------------------------------------
 export const useBriefing = (): UseQueryResult<AiBriefing> =>
@@ -58,7 +59,7 @@ export const useAssistantSeed = (): UseQueryResult<ChatMessage[]> =>
 
 // -- wallets ----------------------------------------------------------------
 export const useWallets = (): UseQueryResult<Wallet[]> =>
-  useQuery({ queryKey: queryKeys.wallets, queryFn: resources.getWallets });
+  useQuery({ queryKey: queryKeys.wallets, queryFn: () => resources.getWallets() });
 
 export const useWallet = (id: string): UseQueryResult<Wallet> =>
   useQuery({
@@ -77,7 +78,7 @@ export const useWalletBalances = (id: string): UseQueryResult<AssetBalance[]> =>
 
 // -- agents -----------------------------------------------------------------
 export const useAgents = (): UseQueryResult<Agent[]> =>
-  useQuery({ queryKey: queryKeys.agents, queryFn: resources.getAgents });
+  useQuery({ queryKey: queryKeys.agents, queryFn: () => resources.getAgents() });
 
 export const useAgent = (id: string): UseQueryResult<Agent> =>
   useQuery({
@@ -88,7 +89,7 @@ export const useAgent = (id: string): UseQueryResult<Agent> =>
 
 // -- policies ---------------------------------------------------------------
 export const usePolicies = (): UseQueryResult<Policy[]> =>
-  useQuery({ queryKey: queryKeys.policies, queryFn: resources.getPolicies });
+  useQuery({ queryKey: queryKeys.policies, queryFn: () => resources.getPolicies() });
 
 export const usePolicy = (id: string): UseQueryResult<Policy> =>
   useQuery({
@@ -105,7 +106,7 @@ export const usePolicySimulation = () =>
 
 // -- budgets ----------------------------------------------------------------
 export const useBudgets = (): UseQueryResult<Budget[]> =>
-  useQuery({ queryKey: queryKeys.budgets, queryFn: resources.getBudgets });
+  useQuery({ queryKey: queryKeys.budgets, queryFn: () => resources.getBudgets() });
 
 export const useBudget = (id: string): UseQueryResult<Budget> =>
   useQuery({
@@ -116,7 +117,7 @@ export const useBudget = (id: string): UseQueryResult<Budget> =>
 
 // -- transactions -----------------------------------------------------------
 export const useTransactions = (): UseQueryResult<Transaction[]> =>
-  useQuery({ queryKey: queryKeys.transactions, queryFn: resources.getTransactions });
+  useQuery({ queryKey: queryKeys.transactions, queryFn: () => resources.getTransactions() });
 
 export const useTransaction = (id: string): UseQueryResult<Transaction> =>
   useQuery({
@@ -127,7 +128,7 @@ export const useTransaction = (id: string): UseQueryResult<Transaction> =>
 
 // -- proposals / approvals --------------------------------------------------
 export const useProposals = (): UseQueryResult<Proposal[]> =>
-  useQuery({ queryKey: queryKeys.proposals, queryFn: resources.getProposals });
+  useQuery({ queryKey: queryKeys.proposals, queryFn: () => resources.getProposals() });
 
 export const useProposal = (id: string): UseQueryResult<Proposal> =>
   useQuery({
@@ -138,7 +139,7 @@ export const useProposal = (id: string): UseQueryResult<Proposal> =>
 
 // -- financial memory -------------------------------------------------------
 export const useMemoryRecords = (): UseQueryResult<MemoryRecord[]> =>
-  useQuery({ queryKey: queryKeys.memory, queryFn: resources.getMemoryRecords });
+  useQuery({ queryKey: queryKeys.memory, queryFn: () => resources.getMemoryRecords() });
 
 export const useMemoryRecord = (id: string): UseQueryResult<MemoryRecord> =>
   useQuery({
@@ -147,21 +148,25 @@ export const useMemoryRecord = (id: string): UseQueryResult<MemoryRecord> =>
     enabled: Boolean(id),
   });
 
+// -- audit log ---------------------------------------------------------------
+export const useAuditEvents = (): UseQueryResult<AuditEvent[]> =>
+  useQuery({ queryKey: queryKeys.auditEvents, queryFn: () => resources.getAuditEvents() });
+
 // -- asset rates -------------------------------------------------------------
 export const useAssetRates = (): UseQueryResult<AssetRate[]> =>
   useQuery({
     queryKey: queryKeys.rates,
-    queryFn: resources.getAssetRates,
+    queryFn: () => resources.getAssetRates(),
     refetchInterval: 30_000,
   });
 
 // -- notifications ----------------------------------------------------------
 export const useNotifications = (): UseQueryResult<AppNotification[]> =>
-  useQuery({ queryKey: queryKeys.notifications, queryFn: resources.getNotifications });
+  useQuery({ queryKey: queryKeys.notifications, queryFn: () => resources.getNotifications() });
 
 // -- developer --------------------------------------------------------------
 export const useApiKeys = (): UseQueryResult<ApiKey[]> =>
-  useQuery({ queryKey: queryKeys.apiKeys, queryFn: resources.getApiKeys });
+  useQuery({ queryKey: queryKeys.apiKeys, queryFn: () => resources.getApiKeys() });
 
 export const useWebhooks = (): UseQueryResult<Webhook[]> =>
-  useQuery({ queryKey: queryKeys.webhooks, queryFn: resources.getWebhooks });
+  useQuery({ queryKey: queryKeys.webhooks, queryFn: () => resources.getWebhooks() });
