@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { X, Sparkles } from 'lucide-react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { navSections } from '@/lib/nav';
 import { cn } from '@/lib/cn';
 
@@ -28,45 +29,15 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // Escape dismissal, focus trap, and body scroll lock while the drawer is open.
-  useEffect(() => {
-    if (!open) return undefined;
-
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    closeButtonRef.current?.focus();
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-      if (e.key === 'Tab') {
-        const focusables = panelRef.current?.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-        if (!focusables || focusables.length === 0) return;
-        const first = focusables[0]!;
-        const last = focusables[focusables.length - 1]!;
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus?.();
-    };
-  }, [open, onClose]);
+  // Escape dismissal, focus trap, body scroll lock and trigger focus
+  // restoration while the drawer is open.
+  useFocusTrap({
+    active: open,
+    containerRef: panelRef,
+    onEscape: onClose,
+    initialFocus: closeButtonRef,
+    lockScroll: true,
+  });
 
   return (
     <div className="lg:hidden" aria-hidden={!open}>

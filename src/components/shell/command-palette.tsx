@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import { Search, Sparkles, Moon, Sun, X } from 'lucide-react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { navSections } from '@/lib/nav';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
 import { useThemeStore } from '@/stores/theme-store';
@@ -20,6 +21,7 @@ export function CommandPalette() {
   const openAssistant = useAssistantStore((s) => s.setOpen);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -32,18 +34,12 @@ export function CommandPalette() {
     return () => document.removeEventListener('keydown', onKey);
   }, [toggleCommand]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    const onEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', onEscape);
-    return () => document.removeEventListener('keydown', onEscape);
-  }, [open, setOpen]);
+  useFocusTrap({
+    active: open,
+    containerRef: panelRef,
+    onEscape: () => setOpen(false),
+    lockScroll: true,
+  });
 
   const run = (fn: () => void) => {
     setOpen(false);
@@ -54,22 +50,24 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-background/60 p-4 pt-[12vh] backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[60] flex animate-fade-in items-start justify-center bg-background/60 p-4 pt-[12vh] backdrop-blur-sm"
       onClick={() => setOpen(false)}
       role="presentation"
     >
       <Command
+        ref={panelRef}
         label="Command palette"
-        className="glass w-full max-w-xl overflow-hidden rounded-dialog shadow-soft-3"
+        className="glass w-full max-w-xl overflow-hidden rounded-dialog shadow-soft-3 focus:outline-none"
         onClick={(e) => e.stopPropagation()}
         loop
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
         aria-describedby="command-palette-description"
+        tabIndex={-1}
       >
         <div className="flex items-center justify-between gap-3 border-b border-border px-4">
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex flex-1 items-center gap-3">
             <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden />
             <Command.Input
               autoFocus
@@ -111,7 +109,11 @@ export function CommandPalette() {
             <PaletteItem
               onSelect={() => run(() => setMode(mode === 'dark' ? 'light' : 'dark'))}
               icon={
-                mode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
+                mode === 'dark' ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )
               }
               label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
               description="Toggle the app theme"
@@ -164,7 +166,7 @@ function PaletteItem({
       onSelect={onSelect}
       aria-label={label}
       title={description ?? label}
-      className="flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-sm text-foreground transition-colors duration-fast data-[selected=true]:bg-surface-secondary"
+      className="py-2.5 flex cursor-pointer items-center gap-3 rounded-sm px-3 text-sm text-foreground transition-colors duration-fast data-[selected=true]:bg-surface-secondary"
     >
       {icon}
       <span>{label}</span>
