@@ -18,8 +18,9 @@ import {
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { formatCurrency, formatRelativeTime } from '@/lib/format';
+import { formatRelativeTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { FinancialBriefingCard } from '@/components/chat/FinancialBriefingCard';
 import type { ChatMessage, QuickPromptChip } from './types';
 
 const PRESET_CHIPS: QuickPromptChip[] = [
@@ -71,6 +72,9 @@ const INITIAL_MESSAGES: ChatMessage[] = [
       topSpenderAgent: 'Soroban Relayer Sentinel (8,200 USDC)',
       recommendation:
         'Replenish Soroban Relayer Sentinel wallet before next scheduled batch settlement at 18:00 UTC.',
+      spendRate: 'increasing' as const,
+      budgetStatus: 'warning' as const,
+      anomalyDetected: false,
     },
   },
 ];
@@ -179,6 +183,9 @@ export function NvidiaAssistantWidget() {
           lowBalanceWalletsCount: 0,
           topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
           recommendation: 'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
+          spendRate: 'increasing' as const,
+          budgetStatus: 'healthy' as const,
+          anomalyDetected: false,
         };
       } else if (text.toLowerCase().includes('balance') || text.toLowerCase().includes('wallet')) {
         replyText =
@@ -333,39 +340,8 @@ export function NvidiaAssistantWidget() {
 
                   {/* Structured Briefing Widget */}
                   {msg.structuredBriefing && (
-                    <div className="mt-3 space-y-2.5 rounded-button border border-border bg-surface p-3 text-2xs text-foreground">
-                      <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                        <span className="font-bold uppercase tracking-wider text-gold">Executive Summary</span>
-                        <Badge variant="outline" size="sm">
-                          Live On-Chain
-                        </Badge>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-2xs">
-                        <div>
-                          <span className="text-foreground-muted">Total Daily Spend:</span>
-                          <p className="font-mono font-bold text-foreground">
-                            {formatCurrency(msg.structuredBriefing.totalDailySpend, msg.structuredBriefing.currency)}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-foreground-muted">Active Agents:</span>
-                          <p className="font-bold text-foreground">{msg.structuredBriefing.activeAgentsCount} Agents</p>
-                        </div>
-                        <div>
-                          <span className="text-foreground-muted">Top Spender:</span>
-                          <p className="font-semibold text-foreground truncate">{msg.structuredBriefing.topSpenderAgent}</p>
-                        </div>
-                        <div>
-                          <span className="text-foreground-muted">Low Balance Wallets:</span>
-                          <p className="font-bold text-amber-400">{msg.structuredBriefing.lowBalanceWalletsCount} Warning</p>
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-border/50 text-2xs">
-                        <span className="text-foreground-muted">AI Recommendation:</span>
-                        <p className="text-foreground font-medium italic mt-0.5">{msg.structuredBriefing.recommendation}</p>
-                      </div>
+                    <div className="mt-3">
+                      <FinancialBriefingCard briefing={msg.structuredBriefing} />
                     </div>
                   )}
                 </div>

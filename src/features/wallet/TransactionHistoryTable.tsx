@@ -22,12 +22,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
+import { SkeletonTable } from '@/components/ui/skeleton';
 import { cn } from '@/lib/cn';
 import type { Transaction } from '@/types/domain';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 
 interface TransactionHistoryTableProps {
   transactions: Transaction[];
+  isLoading?: boolean;
   className?: string;
 }
 
@@ -67,7 +69,7 @@ function useActiveFilterCount(
   );
 }
 
-export function TransactionHistoryTable({ transactions, className }: TransactionHistoryTableProps) {
+export function TransactionHistoryTable({ transactions, isLoading = false, className }: TransactionHistoryTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -433,7 +435,13 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
           </thead>
 
           <tbody className="divide-y divide-border">
-            {filteredRows.length === 0 ? (
+            {isLoading && filteredRows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="p-0">
+                  <SkeletonTable rows={pagination.pageSize} cols={columns.length} />
+                </td>
+              </tr>
+            ) : filteredRows.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="p-6">
                   <EmptyState
@@ -476,16 +484,88 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
 
       {/* Pagination ------------------------------------------------------- */}
       <div className="flex flex-col gap-3 border-t border-border bg-surface-secondary/20 px-4 py-3 text-xs text-foreground-secondary sm:flex-row sm:items-center sm:justify-between">
-        <p className="tabular-nums">
-          {filteredRows.length === 0 ? '0 rows' : `${pagination.pageIndex * pagination.pageSize + 1}-${Math.min((pagination.pageIndex + 1) * pagination.pageSize, filteredRows.length)} of ${filteredRows.length}`}
-        </p>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+          <p className="tabular-nums">
+            {filteredRows.length === 0 ? '0 rows' : `${pagination.pageIndex * pagination.pageSize + 1}-${Math.min((pagination.pageIndex + 1) * pagination.pageSize, filteredRows.length)} of ${filteredRows.length}`}
+          </p>
+          <label className="flex items-center gap-2">
+            <span className="sr-only">Rows per page</span>
+            <select
+              aria-label="Rows per page"
+              value={pagination.pageSize}
+              onChange={(e) => {
+                const newSize = Number(e.target.value);
+                setPagination((p) => ({ ...p, pageSize: newSize, pageIndex: 0 }));
+              }}
+              className={cn(
+                'h-7 rounded-md border border-border bg-surface py-1 px-2 text-xs text-foreground transition-colors hover:border-border-strong',
+                CONTROL_FOCUS,
+              )}
+            >
+              <option value={5}>5 rows</option>
+              <option value={10}>10 rows</option>
+              <option value={25}>25 rows</option>
+              <option value={50}>50 rows</option>
+              <option value={100}>100 rows</option>
+            </select>
+          </label>
+        </div>
 
         <div className="flex items-center gap-2">
-          <Button type="button" variant="secondary" size="sm" disabled={pagination.pageIndex === 0} onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.max(p.pageIndex - 1, 0) }))}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={pagination.pageIndex === 0 || isLoading}
+            onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.max(p.pageIndex - 1, 0) }))}
+            aria-label="Previous page"
+          >
             Prev
           </Button>
-          <span className="tabular-nums">{pagination.pageIndex + 1} / {pageCount}</span>
-          <Button type="button" variant="secondary" size="sm" disabled={pagination.pageIndex >= pageCount - 1} onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.min(p.pageIndex + 1, pageCount - 1) }))}>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(5, pageCount) }).map((_, i) => {
+              let pageNum;
+              if (pageCount <= 5) {
+                pageNum = i + 1;
+              } else if (pagination.pageIndex < 3) {
+                pageNum = i + 1;
+              } else if (pagination.pageIndex >= pageCount - 3) {
+                pageNum = pageCount - 4 + i;
+              } else {
+                pageNum = pagination.pageIndex - 1 + i;
+              }
+
+              const isCurrent = pageNum === pagination.pageIndex + 1;
+              return (
+                <button
+                  key={pageNum}
+                  type="button"
+                  onClick={() => setPagination((p) => ({ ...p, pageIndex: pageNum - 1 }))}
+                  disabled={isLoading}
+                  aria-label={`Go to page ${pageNum}`}
+                  aria-current={isCurrent ? 'page' : undefined}
+                  className={cn(
+                    'h-7 w-7 rounded-md text-xs font-medium transition-colors',
+                    isCurrent
+                      ? 'bg-gold text-surface-dark'
+                      : 'bg-surface text-foreground hover:bg-surface-secondary',
+                    isLoading && 'opacity-50 cursor-not-allowed',
+                    CONTROL_FOCUS,
+                  )}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={pagination.pageIndex >= pageCount - 1 || isLoading}
+            onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.min(p.pageIndex + 1, pageCount - 1) }))}
+            aria-label="Next page"
+          >
             Next
           </Button>
         </div>

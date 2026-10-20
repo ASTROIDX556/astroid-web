@@ -1,3 +1,5 @@
+import type { FinancialBriefingData } from '@/components/chat/FinancialBriefingCard';
+
 export type MessageRole = 'user' | 'assistant' | 'system';
 
 export interface ChatMessage {
@@ -5,14 +7,7 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   timestamp: string;
-  structuredBriefing?: {
-    totalDailySpend: number;
-    currency: string;
-    activeAgentsCount: number;
-    lowBalanceWalletsCount: number;
-    topSpenderAgent: string;
-    recommendation: string;
-  };
+  structuredBriefing?: FinancialBriefingData;
 }
 
 export interface QuickPromptChip {

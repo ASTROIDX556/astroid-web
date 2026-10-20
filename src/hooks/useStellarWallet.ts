@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFreighterStore } from '@/stores/freighter-store';
 
 export type StellarWalletStatus = 'idle' | 'checking' | 'connected' | 'missing' | 'error';
 
@@ -39,47 +40,10 @@ export interface StellarWalletRetryState {
   canRetry: boolean;
 }
 
-type FreighterModule = typeof import('@stellar/freighter-api');
-
-const FREIGHTER_TIMEOUT_MS = 15000;
 const MAX_AUTOMATIC_RETRIES = 2;
-const RETRY_BASE_DELAY_MS = 400;
 
 const MISSING_EXTENSION_MESSAGE =
   'Freighter is not installed. Please install the wallet extension and try again.';
-
-const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
-const withTimeout = async <T>(promise: Promise<T>, ms = FREIGHTER_TIMEOUT_MS): Promise<T> => {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error('Freighter timed out. Install the extension or unlock it before continuing.'));
-    }, ms);
-
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      },
-    );
-  });
-};
-
-async function loadFreighter(): Promise<FreighterModule | null> {
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const api = await import('@stellar/freighter-api');
-    return api;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Map any raw Freighter / extension error to a typed, user-friendly error.
@@ -125,7 +89,7 @@ export function normalizeFreighterError(err: unknown, fallbackMessage = 'Freight
     return {
       kind: 'rejected',
       message: 'You rejected the connection request in Freighter.',
-      hint: 'Click “Connect” again and approve the prompt in the extension.',
+      hint: 'Click "Connect" again and approve the prompt in the extension.',
       retryable: false,
       cause: err,
     };
@@ -150,10 +114,25 @@ export function normalizeFreighterError(err: unknown, fallbackMessage = 'Freight
   };
 }
 
+/**
+ * Hook that provides a simplified interface to the Freighter wallet store.
+ * This hook is a thin wrapper around the Zustand store, providing additional
+ * retry logic and type-safe error handling for components.
+ */
 export function useStellarWallet() {
-  const [status, setStatus] = useState<StellarWalletStatus>('checking');
-  const [publicKey, setPublicKey] = useState<string | null>(null);
-  const [walletError, setWalletError] = useState<FreighterWalletError | null>(null);
+  const {
+    status: storeStatus,
+    isInstalled,
+    publicKey,
+    network,
+    error: storeError,
+    checkExtension,
+    connect: storeConnect,
+    disconnect,
+    requestSignature,
+    hydrate,
+  } = useFreighterStore();
+
   const [isLoading, setIsLoading] = useState(false);
   const [retryState, setRetryState] = useState<StellarWalletRetryState>({
     attempt: 0,
@@ -176,172 +155,83 @@ export function useStellarWallet() {
    */
   const walletErrorRef = useRef<FreighterWalletError | null>(null);
 
-  const setFailure = useCallback((normalized: FreighterWalletError | null) => {
-    walletErrorRef.current = normalized;
-    setWalletError(normalized);
-  }, []);
-
-  /**
-   * Run an action with bounded exponential-backoff retries for transient
-   * Freighter failures. Rejections and missing-extension states fail fast —
-   * retrying those cannot succeed.
-   */
-  const withRetry = useCallback(
-    async <T>(
-      action: (attempt: number) => Promise<T>,
-      onRetry: (error: FreighterWalletError, nextAttempt: number) => void,
-      runId: number,
-    ): Promise<T> => {
-      let lastError: FreighterWalletError | null = null;
-
-      for (let attempt = 0; attempt <= MAX_AUTOMATIC_RETRIES; attempt += 1) {
-        if (activeRun.current !== runId) {
-          throw new Error('Freighter attempt superseded by a newer connection request.');
-        }
-
-        try {
-          const result = await action(attempt);
-          setRetryState((prev) => ({ ...prev, isRetrying: false }));
-          return result;
-        } catch (err) {
-          lastError = normalizeFreighterError(err);
-          const isLastAttempt = attempt >= MAX_AUTOMATIC_RETRIES;
-
-          if (!lastError.retryable || isLastAttempt) {
-            break;
-          }
-
-          setRetryState({
-            attempt: attempt + 1,
-            maxAttempts: MAX_AUTOMATIC_RETRIES,
-            isRetrying: true,
-            canRetry: true,
-          });
-          onRetry(lastError, attempt + 1);
-          await wait(RETRY_BASE_DELAY_MS * 2 ** attempt);
-        }
-      }
-
-      throw lastError ?? new Error('Freighter request failed.');
-    },
-    [],
-  );
-
   const claimRun = useCallback((): number => {
     activeRun.current += 1;
     return activeRun.current;
   }, []);
 
-  const refreshConnection = useCallback(async (): Promise<boolean> => {
-    const runId = activeRun.current;
-    const api = await loadFreighter();
-    if (activeRun.current !== runId) return false;
+  /**
+   * Convert store status to hook status type for backward compatibility
+   */
+  const status: StellarWalletStatus = storeStatus === 'connecting' ? 'checking' : storeStatus === 'disconnected' ? 'idle' : storeStatus;
 
-    if (!api) {
-      setStatus('missing');
-      setPublicKey(null);
-      setFailure({
-        kind: 'missing',
-        message: MISSING_EXTENSION_MESSAGE,
-        hint: 'Add Freighter from your browser extension store, unlock it, then reconnect.',
-        retryable: false,
-      });
-      setRetryState((prev) => ({ ...prev, isRetrying: false, canRetry: false }));
-      return false;
-    }
+  /**
+   * Convert store error to normalized FreighterWalletError
+   */
+  const walletError = storeError
+    ? normalizeFreighterError(storeError, 'Freighter connection failed.')
+    : null;
+
+  /**
+   * Update ref whenever walletError changes
+   */
+  useEffect(() => {
+    walletErrorRef.current = walletError;
+  }, [walletError]);
+
+  /**
+   * Refresh connection with retry logic
+   */
+  const refreshConnection = useCallback(async (): Promise<boolean> => {
+    const runId = claimRun();
+    setIsLoading(true);
+    setRetryState({ attempt: 0, maxAttempts: MAX_AUTOMATIC_RETRIES, isRetrying: false, canRetry: false });
 
     try {
-      const connected = await withRetry(() => withTimeout(api.isConnected()), () => {}, runId);
-      if (activeRun.current !== runId) return Boolean(connected);
-
-      setStatus(connected ? 'connected' : 'idle');
-      if (connected) {
-        const address = await withRetry(() => withTimeout(api.getAddress()), () => {}, runId);
-        if (activeRun.current !== runId) return Boolean(connected);
-        const nextKey = typeof address === 'string' ? address : address?.address ?? null;
-        setPublicKey(nextKey);
-        setFailure(null);
-      } else {
-        setFailure(null);
-      }
+      await checkExtension();
+      await hydrate();
       setRetryState((prev) => ({ ...prev, attempt: 0, isRetrying: false, canRetry: false }));
-      return Boolean(connected);
+      return isInstalled;
     } catch (err) {
-      if (activeRun.current !== runId) return false;
       const normalized = normalizeFreighterError(err, 'Could not connect to the Freighter wallet.');
-      setStatus('error');
-      setFailure(normalized);
+      walletErrorRef.current = normalized;
       setRetryState((prev) => ({
         ...prev,
         isRetrying: false,
         canRetry: normalized.retryable,
       }));
       return false;
+    } finally {
+      if (activeRun.current === runId) setIsLoading(false);
     }
-  }, [setFailure, withRetry]);
+  }, [checkExtension, hydrate, isInstalled, claimRun]);
 
+  /**
+   * Initialize connection on mount
+   */
   useEffect(() => {
     const runId = claimRun();
     void refreshConnection();
     return () => {
-      // Invalidate in-flight checks if this effect is torn down early.
       if (activeRun.current === runId) activeRun.current += 1;
     };
   }, [claimRun, refreshConnection]);
 
+  /**
+   * Connect with retry logic
+   */
   const connect = useCallback(async (): Promise<string | null> => {
     const runId = claimRun();
-    const api = await loadFreighter();
-
-    if (!api) {
-      setStatus('missing');
-      setFailure({
-        kind: 'missing',
-        message: MISSING_EXTENSION_MESSAGE,
-        hint: 'Add Freighter from your browser extension store, unlock it, then reconnect.',
-        retryable: false,
-      });
-      setRetryState((prev) => ({ ...prev, isRetrying: false, canRetry: false }));
-      return null;
-    }
-
     setIsLoading(true);
-    setFailure(null);
     setRetryState({ attempt: 0, maxAttempts: MAX_AUTOMATIC_RETRIES, isRetrying: false, canRetry: false });
 
     try {
-      const allowed = await withRetry(
-        () => withTimeout(api.setAllowed()),
-        () => {},
-        runId,
-      );
-      const isAllowed =
-        typeof allowed === 'boolean'
-          ? allowed
-          : (allowed as { isAllowed?: boolean } | null)?.isAllowed ?? false;
-
-      if (!isAllowed) {
-        throw new Error('Freighter approval was rejected. Please approve the connection in the browser extension.');
-      }
-
-      const address = await withRetry(
-        () => withTimeout(api.getAddress()),
-        () => {},
-        runId,
-      );
-      if (activeRun.current !== runId) return null;
-      const nextKey = typeof address === 'string' ? address : address?.address ?? null;
-
-      setPublicKey(nextKey);
-      setStatus(nextKey ? 'connected' : 'idle');
-      setFailure(null);
+      const key = await storeConnect();
       setRetryState({ attempt: 0, maxAttempts: MAX_AUTOMATIC_RETRIES, isRetrying: false, canRetry: false });
-      return nextKey;
+      return key;
     } catch (err) {
-      if (activeRun.current !== runId) return null;
       const normalized = normalizeFreighterError(err, 'Freighter connection failed.');
-      setStatus('error');
-      setFailure(normalized);
+      walletErrorRef.current = normalized;
       setRetryState((prev) => ({
         ...prev,
         isRetrying: false,
@@ -351,52 +241,29 @@ export function useStellarWallet() {
     } finally {
       if (activeRun.current === runId) setIsLoading(false);
     }
-  }, [claimRun, setFailure, withRetry]);
+  }, [storeConnect, claimRun]);
 
+  /**
+   * Manual retry
+   */
   const retry = useCallback(async (): Promise<string | null> => {
     setRetryState((prev) => ({ ...prev, attempt: 0, isRetrying: true }));
     return connect();
   }, [connect]);
 
+  /**
+   * Sign transaction with error handling
+   */
   const signTransaction = useCallback(async (xdr: string): Promise<string | null> => {
     const runId = claimRun();
-    const api = await loadFreighter();
-
-    if (!api) {
-      setStatus('missing');
-      setFailure({
-        kind: 'missing',
-        message: MISSING_EXTENSION_MESSAGE,
-        hint: 'Add Freighter from your browser extension store, unlock it, then reconnect.',
-        retryable: false,
-      });
-      setRetryState((prev) => ({ ...prev, isRetrying: false, canRetry: false }));
-      return null;
-    }
-
     setIsLoading(true);
-    setFailure(null);
 
     try {
-      const response = await withRetry(
-        () => withTimeout(api.signTransaction(xdr)),
-        () => {},
-        runId,
-      );
-      if (activeRun.current !== runId) return null;
-      const signature =
-        typeof response === 'string'
-          ? response
-          : (response as { signedTxXdr?: string } | null)?.signedTxXdr ?? null;
-
-      setStatus(signature ? 'connected' : 'idle');
-      setFailure(null);
+      const signature = await requestSignature(xdr);
       return signature;
     } catch (err) {
-      if (activeRun.current !== runId) return null;
       const normalized = normalizeFreighterError(err, 'Transaction signing failed.');
-      setStatus('error');
-      setFailure(normalized);
+      walletErrorRef.current = normalized;
       setRetryState((prev) => ({
         ...prev,
         isRetrying: false,
@@ -406,11 +273,12 @@ export function useStellarWallet() {
     } finally {
       if (activeRun.current === runId) setIsLoading(false);
     }
-  }, [claimRun, setFailure, withRetry]);
+  }, [requestSignature, claimRun]);
 
   return {
     status,
     publicKey,
+    network,
     /** Typed, user-friendly description of the last Freighter failure. */
     walletError,
     /** Ref mirror of `walletError`, readable in the same tick `connect()` resolves. */
@@ -420,13 +288,14 @@ export function useStellarWallet() {
     isLoading,
     isRetrying: retryState.isRetrying,
     retryState,
-    isAvailable: status !== 'missing' && status !== 'error',
+    isAvailable: isInstalled,
     isConnected: status === 'connected',
     refreshConnection,
     connect,
     /** Manual retry entry point for connection banners / toast actions. */
     retry,
     signTransaction,
+    disconnect,
   };
 }
 
