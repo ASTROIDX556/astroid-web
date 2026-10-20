@@ -125,6 +125,24 @@ export const agentConfigSchema = z
       .number({ invalid_type_error: 'Monthly budget must be a number' })
       .positive('Monthly budget must be greater than 0')
       .max(1_000_000, 'Monthly budget cannot exceed 1,000,000 USDC'),
+    dailyBudget: z
+      .number({ invalid_type_error: 'Daily budget must be a number' })
+      .positive('Daily budget must be greater than 0')
+      .max(1_000_000, 'Daily budget cannot exceed 1,000,000 USDC'),
+    maxSpendPerTransaction: z
+      .number({ invalid_type_error: 'Transaction cap must be a number' })
+      .positive('Transaction cap must be greater than 0')
+      .max(1_000_000, 'Transaction cap cannot exceed 1,000,000 USDC'),
+    rateLimitPerMinute: z
+      .number({ invalid_type_error: 'Rate limit must be a number' })
+      .int('Rate limit must be a whole number of requests')
+      .min(1, 'Rate limit must allow at least 1 request per minute')
+      .max(600, 'Rate limit cannot exceed 600 requests per minute'),
+    maxTokensPerRequest: z
+      .number({ invalid_type_error: 'Token threshold must be a number' })
+      .int('Token threshold must be a whole number of tokens')
+      .min(1, 'Token threshold must be at least 1 token')
+      .max(1_000_000, 'Token threshold cannot exceed 1,000,000 tokens'),
   })
   .superRefine((values, ctx) => {
     // Provider-specific parameters: self-hosted / custom providers must point
@@ -134,6 +152,24 @@ export const agentConfigSchema = z
         code: z.ZodIssueCode.custom,
         path: ['endpointUrl'],
         message: 'A valid API endpoint URL is required for this provider',
+      });
+    }
+
+    // Spend guardrails nest: a day can never be allowed more than its month,
+    // and a single transaction can never be allowed more than its day.
+    if (values.dailyBudget > values.monthlyBudget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['dailyBudget'],
+        message: 'Daily budget cannot exceed the monthly budget',
+      });
+    }
+
+    if (values.maxSpendPerTransaction > values.dailyBudget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maxSpendPerTransaction'],
+        message: 'Transaction cap cannot exceed the daily budget',
       });
     }
   });

@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Bot, Gauge, Link2, Sparkles } from 'lucide-react';
+import { Bot, Coins, Gauge, Link2, ShieldCheck, Sparkles, Timer, Cpu } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -45,11 +45,17 @@ export function AgentConfigForm() {
       mode: 'assisted',
       temperature: 0.2,
       monthlyBudget: 500,
+      dailyBudget: 100,
+      maxSpendPerTransaction: 25,
+      rateLimitPerMinute: 60,
+      maxTokensPerRequest: 4096,
     },
   });
 
   const provider = watch('provider');
   const model = watch('model');
+  const monthlyBudget = watch('monthlyBudget');
+  const dailyBudget = watch('dailyBudget');
 
   // Model options flip with the provider; `Custom` offers a free-form model id.
   const modelOptions = useMemo(() => PROVIDER_MODELS[provider], [provider]);
@@ -236,10 +242,98 @@ export function AgentConfigForm() {
               step="1"
               invalid={Boolean(errors.monthlyBudget)}
               leftIcon={<Gauge className="h-4 w-4" aria-hidden />}
-              {...register('monthlyBudget', { valueAsNumber: true })}
+              {...register('monthlyBudget', {
+                valueAsNumber: true,
+                // The daily cap is validated against this ceiling.
+                onChange: () => void trigger('dailyBudget'),
+              })}
             />
           </FormField>
         </div>
+
+        <fieldset className="space-y-4">
+          <legend className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-foreground-secondary">
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+            Spend and usage guardrails
+          </legend>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField
+              label="Daily budget (USDC)"
+              required
+              error={errors.dailyBudget?.message}
+              hint={`Cannot exceed the monthly budget${monthlyBudget > 0 ? ` (${monthlyBudget} USDC)` : ''}.`}
+            >
+              <Input
+                id="agent-daily-budget"
+                type="number"
+                min={1}
+                step="1"
+                invalid={Boolean(errors.dailyBudget)}
+                leftIcon={<Coins className="h-4 w-4" aria-hidden />}
+                {...register('dailyBudget', {
+                  valueAsNumber: true,
+                  onChange: () => void trigger('maxSpendPerTransaction'),
+                })}
+              />
+            </FormField>
+
+            <FormField
+              label="Max spend per transaction (USDC)"
+              required
+              error={errors.maxSpendPerTransaction?.message}
+              hint={`Hard ceiling for a single Stellar payment${dailyBudget > 0 ? ` · up to ${dailyBudget} USDC/day` : ''}.`}
+            >
+              <Input
+                id="agent-tx-cap"
+                type="number"
+                min={0.01}
+                step="0.01"
+                invalid={Boolean(errors.maxSpendPerTransaction)}
+                leftIcon={<Gauge className="h-4 w-4" aria-hidden />}
+                {...register('maxSpendPerTransaction', { valueAsNumber: true })}
+              />
+            </FormField>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField
+              label="Rate limit (requests / min)"
+              required
+              error={errors.rateLimitPerMinute?.message}
+              hint="1 – 600 · throttles inference and payment calls."
+            >
+              <Input
+                id="agent-rate-limit"
+                type="number"
+                min={1}
+                max={600}
+                step="1"
+                invalid={Boolean(errors.rateLimitPerMinute)}
+                leftIcon={<Timer className="h-4 w-4" aria-hidden />}
+                {...register('rateLimitPerMinute', { valueAsNumber: true })}
+              />
+            </FormField>
+
+            <FormField
+              label="Token threshold per request"
+              required
+              error={errors.maxTokensPerRequest?.message}
+              hint="Requests above this budget are truncated or rejected."
+            >
+              <Input
+                id="agent-token-threshold"
+                type="number"
+                min={1}
+                max={1_000_000}
+                step="256"
+                invalid={Boolean(errors.maxTokensPerRequest)}
+                leftIcon={<Cpu className="h-4 w-4" aria-hidden />}
+                {...register('maxTokensPerRequest', { valueAsNumber: true })}
+              />
+            </FormField>
+          </div>
+        </fieldset>
 
         <FormField
           label="Description"
