@@ -18,7 +18,8 @@ import { useActivity, useOverview } from '@/hooks/use-queries';
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { ActivityChart } from '@/features/dashboard/components/ActivityChart';
-import { SpendingCorrelationMatrix } from '@/features/analytics';
+import { SpendTrendChart, SpendingCorrelationMatrix } from '@/features/analytics';
+import { MOCK_SPEND_TREND_POINTS } from '@/features/analytics/mock-data';
 import { agentSpendingCorrelations } from '@/services/mock/analytics';
 import { NvidiaAssistantWidget } from '@/features/chat/NvidiaAssistantWidget';
 
@@ -100,6 +101,8 @@ export default function AnalyticsPage() {
               >
                 {(activityData) => <ActivityChart data={activityData} />}
               </QueryBoundary>
+
+              <SpendTrendChart data={MOCK_SPEND_TREND_POINTS} />
 
               <Card>
                 <CardHeader>
