@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import { PieChart as PieChartIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable } from '@/components/ui/data-table';
 import { CATEGORICAL } from '@/components/charts';
 import { formatCurrency, formatPercent } from '@/lib/format';
 import { cn } from '@/lib/cn';
