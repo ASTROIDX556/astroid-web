@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Topbar } from '@/components/shell/topbar';
 import { CommandDock } from '@/components/shell/command-dock';
 import { MobileNav } from '@/components/shell/mobile-nav';
-import { CommandPalette } from '@/components/shell/command-palette';
+import { CommandMenu } from '@/components/CommandMenu';
 import { AssistantDrawer } from '@/components/shell/assistant-drawer';
 import { usePreferencesStore, useHydrated } from '@/stores';
 import { cn } from '@/lib/cn';
@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <CommandDock />
       <MobileNav open={navOpen} onClose={() => setNavOpen(false)} />
-      <CommandPalette />
+      <CommandMenu />
       <AssistantDrawer />
     </div>
   );
