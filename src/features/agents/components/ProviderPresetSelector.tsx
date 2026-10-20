@@ -33,7 +33,9 @@ export function ProviderPresetSelector({ value, onSelect, className }: ProviderP
     <div className={cn('space-y-3', className)}>
       <p className="text-xs text-foreground-secondary">
         Choose an inference provider to pre-fill its recommended endpoint, default model, and
-        context window. You can customize every value below.
+        context window. You can customize every value below. The budget and cap lines on each card
+        are suggestions for the wizard&apos;s budget fields — selecting a preset does not change
+        them.
       </p>
 
       <div
@@ -104,6 +106,22 @@ function ProviderPresetCard({
         <div className="flex items-baseline gap-2">
           <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">Context</dt>
           <dd className="tabular">{preset.contextWindowTokens.toLocaleString()} tokens</dd>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">Budget</dt>
+          <dd className="tabular">
+            {preset.monthlyBudgetGuideUsdc === 0
+              ? 'no metered API spend'
+              : `${preset.monthlyBudgetGuideUsdc} USDC/mo (guide)`}
+          </dd>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">Txn cap</dt>
+          <dd className="tabular">
+            {preset.singleTxnCapGuideUsdc === 0
+              ? 'no suggestion (set your own)'
+              : `${preset.singleTxnCapGuideUsdc} USDC/tx (guide)`}
+          </dd>
         </div>
       </dl>
 
