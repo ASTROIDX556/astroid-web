@@ -63,7 +63,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 flex flex-col border-b border-border bg-background-primary/95 backdrop-blur-xl">
       {/* Top Tier: Brand & Global Actions */}
-      <div className="min-h-16 flex flex-wrap items-center gap-3 px-4 py-2 sm:px-6 lg:py-0 lg:min-h-0">
+      <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
         <Link
           href="/overview"
           className={cn(
