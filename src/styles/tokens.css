@@ -52,6 +52,7 @@
   --chart-8: 227 73 72; /* #e34948 red */
   --chart-grid: 231 223 209; /* hairline */
   --chart-axis: 201 187 166;
+  --chart-on-fill: 255 255 255; /* text on a colored chart fill */
 }
 
 [data-theme='dark'] {
@@ -96,6 +97,7 @@
   --chart-8: 230 103 103; /* #e66767 */
   --chart-grid: 44 44 42;
   --chart-axis: 56 56 53;
+  --chart-on-fill: 255 255 255;
 }
 
 /* High-contrast mode — strengthen ink and borders (AAA-leaning) */

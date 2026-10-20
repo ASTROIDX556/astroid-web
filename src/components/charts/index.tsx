@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -15,6 +14,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { ChartFrame, RESIZE_DEBOUNCE_MS } from '@/components/charts/chart-frame';
+import { AXIS_TICK, CHART_COLORS, CHART_SERIES } from '@/components/charts/theme';
 import { formatCurrency } from '@/lib/format';
 import type {
   AgentSpend,
@@ -23,37 +24,15 @@ import type {
   TimeseriesPoint,
 } from '@/types/domain';
 
-function useMounted() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  return mounted;
-}
+const AXIS = CHART_COLORS.axis;
+const GRID = CHART_COLORS.grid;
+const GOLD = CHART_COLORS.accent;
+const SUCCESS = CHART_COLORS.success;
+const DANGER = CHART_COLORS.danger;
 
-const AXIS = 'rgb(var(--chart-axis))';
-const GRID = 'rgb(var(--chart-grid))';
-const TEXT = 'rgb(var(--text-muted))';
-const GOLD = 'rgb(var(--gold))';
-const SUCCESS = 'rgb(var(--success))';
-const DANGER = 'rgb(var(--danger))';
+export const CATEGORICAL = CHART_SERIES;
 
-export const CATEGORICAL = [
-  'rgb(var(--chart-1))',
-  'rgb(var(--chart-2))',
-  'rgb(var(--chart-3))',
-  'rgb(var(--chart-4))',
-  'rgb(var(--chart-5))',
-  'rgb(var(--chart-6))',
-  'rgb(var(--chart-7))',
-  'rgb(var(--chart-8))',
-];
-
-const axisTick = {
-  fill: TEXT,
-  fontSize: 11,
-  fontFamily: 'var(--font-mono)',
-};
+const axisTick = AXIS_TICK;
 
 export interface TooltipPayloadItem {
   name?: string | number;
@@ -96,14 +75,17 @@ export function CashflowChart({
   data?: TimeseriesPoint[];
   height?: number;
 }) {
-  const mounted = useMounted();
-  if (!mounted || !data || !Array.isArray(data)) {
-    return <div className="skeleton w-full rounded-md" style={{ height }} />;
-  }
+  const rows = Array.isArray(data) ? data : null;
   return (
-
-    <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+    <ChartFrame
+      label="Cashflow, inflow and outflow"
+      height={height}
+      loading={rows === null}
+      empty={rows?.length === 0}
+      emptyTitle="No cashflow yet"
+      emptyDescription="Inflow and outflow appear here once funds start moving."
+    >
+      <AreaChart data={rows ?? []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="inflow" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={SUCCESS} stopOpacity={0.28} />
@@ -165,6 +147,7 @@ export function CashflowChart({
           stroke={SUCCESS}
           strokeWidth={2}
           fill="url(#inflow)"
+          dot={rows?.length === 1}
         />
         <Area
           type="monotone"
@@ -173,9 +156,10 @@ export function CashflowChart({
           stroke={GOLD}
           strokeWidth={2}
           fill="url(#outflow)"
+          dot={rows?.length === 1}
         />
       </AreaChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }
 
@@ -189,14 +173,18 @@ export function CategoryBarChart({
   data?: SpendingByCategory[];
   height?: number;
 }) {
-  const mounted = useMounted();
-  if (!mounted || !data || !Array.isArray(data)) {
-    return <div className="skeleton w-full rounded-md" style={{ height }} />;
-  }
+  const rows = Array.isArray(data) ? data : null;
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ChartFrame
+      label="Spending by category"
+      height={height}
+      loading={rows === null}
+      empty={rows?.length === 0}
+      emptyTitle="No spending yet"
+      emptyDescription="Spend per category appears here once agents make payments."
+    >
       <BarChart
-        data={data}
+        data={rows ?? []}
         layout="vertical"
         margin={{ top: 4, right: 16, left: 8, bottom: 4 }}
       >
@@ -232,12 +220,12 @@ export function CategoryBarChart({
           }}
         />
         <Bar dataKey="amount" radius={[0, 6, 6, 0]} barSize={18}>
-          {data.map((_, i) => (
+          {(rows ?? []).map((_, i) => (
             <Cell key={i} fill={CATEGORICAL[i % CATEGORICAL.length]} />
           ))}
         </Bar>
       </BarChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }
 
@@ -251,13 +239,17 @@ export function AgentSpendChart({
   data?: AgentSpend[];
   height?: number;
 }) {
-  const mounted = useMounted();
-  if (!mounted || !data || !Array.isArray(data)) {
-    return <div className="skeleton w-full rounded-md" style={{ height }} />;
-  }
+  const rows = Array.isArray(data) ? data : null;
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+    <ChartFrame
+      label="Spend by agent"
+      height={height}
+      loading={rows === null}
+      empty={rows?.length === 0}
+      emptyTitle="No agent spend yet"
+      emptyDescription="Each agent's spend appears here once it makes a payment."
+    >
+      <BarChart data={rows ?? []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <XAxis
           dataKey="agentName"
           tick={{ ...axisTick, fontFamily: 'var(--font-sans)' }}
@@ -294,12 +286,12 @@ export function AgentSpendChart({
           }}
         />
         <Bar dataKey="spent" radius={[6, 6, 0, 0]} barSize={36}>
-          {data.map((_, i) => (
+          {(rows ?? []).map((_, i) => (
             <Cell key={i} fill={CATEGORICAL[i % CATEGORICAL.length]} />
           ))}
         </Bar>
       </BarChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }
 
@@ -323,17 +315,23 @@ export function DonutChart({
   centerLabel?: string;
   centerValue?: string;
 }) {
-  const mounted = useMounted();
-  if (!mounted || !data || !Array.isArray(data)) {
-    return <div className="skeleton w-full rounded-md" style={{ height }} />;
-  }
+  const rows = Array.isArray(data) ? data : null;
+  // Slices of zero (or no slices) leave nothing to draw.
+  const isEmpty = rows !== null && !rows.some((d) => d.value > 0);
 
   return (
     <div className="relative" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ChartFrame
+        label="Distribution"
+        height="100%"
+        loading={rows === null}
+        empty={isEmpty}
+        emptyTitle="Nothing to show yet"
+        emptyDescription="This breakdown appears once there is a value to split."
+      >
         <PieChart>
           <Pie
-            data={data}
+            data={rows ?? []}
             dataKey="value"
             nameKey="name"
             innerRadius="62%"
@@ -341,7 +339,7 @@ export function DonutChart({
             paddingAngle={2}
             strokeWidth={0}
           >
-            {data.map((d, i) => (
+            {(rows ?? []).map((d, i) => (
               <Cell key={i} fill={d.color ?? CATEGORICAL[i % CATEGORICAL.length]} />
             ))}
           </Pie>
@@ -360,8 +358,8 @@ export function DonutChart({
             }}
           />
         </PieChart>
-      </ResponsiveContainer>
-      {(centerLabel || centerValue) && (
+      </ChartFrame>
+      {!isEmpty && rows !== null && (centerLabel || centerValue) && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           {centerValue && (
             <span className="font-display text-3xl font-semibold tracking-tight">
@@ -414,7 +412,13 @@ export function WaterfallChart({
     kind === 'total' ? GOLD : kind === 'remaining' ? SUCCESS : 'rgb(var(--chart-2))';
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ChartFrame
+      label="Budget waterfall"
+      height={height}
+      empty={bars.length === 0}
+      emptyTitle="No budget steps yet"
+      emptyDescription="The budget walk from total to remaining appears here once spend is recorded."
+    >
       <BarChart data={bars} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <XAxis
           dataKey="label"
@@ -455,7 +459,7 @@ export function WaterfallChart({
           ))}
         </Bar>
       </BarChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }
 
@@ -475,7 +479,7 @@ export function Sparkline({
 }) {
   const color = positive ? SUCCESS : DANGER;
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height} debounce={RESIZE_DEBOUNCE_MS}>
       <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id={`spark-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
