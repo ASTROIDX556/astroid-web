@@ -200,5 +200,17 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
   },
 });
 
-export const useFreighterStore = create<FreighterWalletState>()(storeCreator);
+import { persist } from 'zustand/middleware';
+
+export const useFreighterStore = create<FreighterWalletState>()(
+  persist(storeCreator, {
+    name: 'freighter-wallet-storage',
+    partialize: (state) => ({
+      status: state.status,
+      publicKey: state.publicKey,
+      network: state.network,
+      isInstalled: state.isInstalled,
+    }),
+  }),
+);
 export const isValidStellarPublicKey = isValidStellarAddress;
