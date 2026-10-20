@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Textarea } from '@/components/ui/input';
-import { agentWizardSchema, type AgentWizardValues } from '@/features/agents/schema';
+import { agentWizardSchema, type AgentWizardValues } from '@/lib/validations/agent';
 import { ProviderPresetSelector } from '@/features/agents/components/ProviderPresetSelector';
 import { getProviderPreset, type AgentProviderPreset } from '@/features/agents/providerPresets';
 

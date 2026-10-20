@@ -11,13 +11,13 @@ import { Badge } from '@/components/ui/badge';
 import { FormField, Input, Select } from '@/components/ui/input';
 import { toast } from 'sonner';
 import {
-  AGENT_PROVIDER_IDS,
+  AGENT_PROVIDERS,
   PROVIDER_LABELS,
   PROVIDER_MODELS,
-  agentConfigSchema,
+  agentCreateSchema,
   requiresEndpoint,
-  type AgentConfigFormValues,
-} from './schema';
+  type AgentCreateValues,
+} from '@/lib/validations/agent';
 
 /**
  * Controlled agent configuration form. Model options are derived from the
@@ -33,8 +33,8 @@ export function AgentConfigForm() {
     trigger,
     watch,
     formState: { errors, isSubmitting, isSubmitSuccessful },
-  } = useForm<AgentConfigFormValues>({
-    resolver: zodResolver(agentConfigSchema),
+  } = useForm<AgentCreateValues>({
+    resolver: zodResolver(agentCreateSchema),
     mode: 'onBlur',
     defaultValues: {
       name: '',
@@ -77,7 +77,7 @@ export function AgentConfigForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
-  const onSubmit = (values: AgentConfigFormValues) => {
+  const onSubmit = (values: AgentCreateValues) => {
     // Mock-mode deployment: the API contract is defined in astroid-api
     // (POST /agents); wire the payload there once the backend ships.
     toast.success(`${values.name} configured`, {
@@ -116,10 +116,9 @@ export function AgentConfigForm() {
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField label="Agent name" required error={errors.name?.message}>
             <Input
-              id="agent-name"
+              id="agent-config-name"
               placeholder="e.g. Treasury Rebalancer"
               invalid={Boolean(errors.name)}
-              aria-describedby={errors.name ? 'agent-name-error' : undefined}
               {...register('name')}
             />
           </FormField>
@@ -131,11 +130,11 @@ export function AgentConfigForm() {
             hint="Model options update to match the selected provider."
           >
             <Select
-              id="agent-provider"
+              id="agent-config-provider"
               invalid={Boolean(errors.provider)}
               {...register('provider')}
             >
-              {AGENT_PROVIDER_IDS.map((id) => (
+              {AGENT_PROVIDERS.map((id) => (
                 <option key={id} value={id}>
                   {PROVIDER_LABELS[id]}
                 </option>
@@ -156,14 +155,14 @@ export function AgentConfigForm() {
         >
           {isCustomModel ? (
             <Input
-              id="agent-model"
+              id="agent-config-model"
               placeholder="e.g. my-org/finance-agent-v1"
               invalid={Boolean(errors.model)}
               {...register('model')}
             />
           ) : (
             <Select
-              id="agent-model"
+              id="agent-config-model"
               invalid={Boolean(errors.model)}
               {...register('model')}
             >
@@ -188,7 +187,7 @@ export function AgentConfigForm() {
             }
           >
             <Input
-              id="agent-endpoint"
+              id="agent-config-endpoint"
               type="url"
               inputMode="url"
               placeholder="https://inference.example.com/v1"
@@ -201,7 +200,7 @@ export function AgentConfigForm() {
 
         <div className="grid gap-5 sm:grid-cols-3">
           <FormField label="Operating mode" required error={errors.mode?.message}>
-            <Select id="agent-mode" invalid={Boolean(errors.mode)} {...register('mode')}>
+            <Select id="agent-config-mode" invalid={Boolean(errors.mode)} {...register('mode')}>
               <option value="assisted">Assisted</option>
               <option value="autonomous">Autonomous</option>
             </Select>
@@ -214,7 +213,7 @@ export function AgentConfigForm() {
             hint="0 – 2 · sampling creativity"
           >
             <Input
-              id="agent-temperature"
+              id="agent-config-temperature"
               type="number"
               step="0.1"
               min={0}
@@ -230,7 +229,7 @@ export function AgentConfigForm() {
             error={errors.monthlyBudget?.message}
           >
             <Input
-              id="agent-budget"
+              id="agent-config-budget"
               type="number"
               min={1}
               step="1"
@@ -247,7 +246,7 @@ export function AgentConfigForm() {
           hint="Optional · shown on the agent detail page."
         >
           <Input
-            id="agent-description"
+            id="agent-config-description"
             placeholder="What does this agent do?"
             invalid={Boolean(errors.description)}
             {...register('description')}
