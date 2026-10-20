@@ -2,18 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Search, FileSpreadsheet, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface TransactionAuditToolbarProps {
   totalRecordsCount: number;
   filteredRecordsCount: number;
-  onExportCSV?: () => void;
+  onFiltersChange?: (filters: { search: string; status: string; asset: string }) => void;
 }
 
 export function TransactionAuditToolbar({
   totalRecordsCount,
   filteredRecordsCount,
-  onExportCSV,
+  onFiltersChange,
 }: TransactionAuditToolbarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -56,6 +56,10 @@ export function TransactionAuditToolbar({
 
     return () => clearTimeout(handler);
   }, [searchTerm, statusFilter, assetFilter, pathname, router, searchParams]);
+
+  useEffect(() => {
+    onFiltersChange?.({ search: searchTerm.trim(), status: statusFilter, asset: assetFilter });
+  }, [assetFilter, onFiltersChange, searchTerm, statusFilter]);
 
   // Clear filters
   const handleClearFilters = () => {
@@ -129,17 +133,6 @@ export function TransactionAuditToolbar({
           )}
         </div>
 
-        {/* CSV Export Button */}
-        {onExportCSV && (
-          <button
-            type="button"
-            onClick={onExportCSV}
-            className="flex items-center gap-1.5 rounded-button border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-secondary hover:border-gold hover:text-foreground transition-colors"
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Export CSV</span>
-          </button>
-        )}
       </div>
 
       {/* Record Counter */}

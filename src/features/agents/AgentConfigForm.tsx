@@ -44,12 +44,17 @@ export function AgentConfigForm() {
       endpointUrl: '',
       mode: 'assisted',
       temperature: 0.2,
+      topP: 0.9,
+      maxTokens: 4096,
       monthlyBudget: 500,
     },
   });
 
   const provider = watch('provider');
   const model = watch('model');
+  const temperature = watch('temperature');
+  const topP = watch('topP');
+  const maxTokens = watch('maxTokens');
 
   // Model options flip with the provider; `Custom` offers a free-form model id.
   const modelOptions = useMemo(() => PROVIDER_MODELS[provider], [provider]);
@@ -199,7 +204,7 @@ export function AgentConfigForm() {
           </FormField>
         )}
 
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <FormField label="Operating mode" required error={errors.mode?.message}>
             <Select id="agent-mode" invalid={Boolean(errors.mode)} {...register('mode')}>
               <option value="assisted">Assisted</option>
@@ -211,16 +216,54 @@ export function AgentConfigForm() {
             label="Temperature"
             required
             error={errors.temperature?.message}
-            hint="0 – 2 · sampling creativity"
+            hint={`${Number(temperature).toFixed(1)} · 0 – 2`}
           >
-            <Input
+            <input
               id="agent-temperature"
-              type="number"
-              step="0.1"
+              type="range"
               min={0}
               max={2}
-              invalid={Boolean(errors.temperature)}
+              step="0.1"
+              aria-valuetext={Number(temperature).toFixed(1)}
+              aria-invalid={Boolean(errors.temperature)}
+              className="h-10 w-full accent-gold"
               {...register('temperature', { valueAsNumber: true })}
+            />
+          </FormField>
+
+          <FormField
+            label="Top-p"
+            required
+            error={errors.topP?.message}
+            hint={`${Number(topP).toFixed(2)} · 0 – 1`}
+          >
+            <input
+              id="agent-top-p"
+              type="range"
+              min={0}
+              max={1}
+              step="0.01"
+              aria-valuetext={Number(topP).toFixed(2)}
+              className="h-10 w-full accent-gold"
+              {...register('topP', { valueAsNumber: true })}
+            />
+          </FormField>
+
+          <FormField
+            label="Maximum tokens"
+            required
+            error={errors.maxTokens?.message}
+            hint={`${Number(maxTokens).toLocaleString()} · 256 – 32,768`}
+          >
+            <input
+              id="agent-max-tokens"
+              type="range"
+              min={256}
+              max={32768}
+              step={256}
+              aria-valuetext={Number(maxTokens).toLocaleString()}
+              className="h-10 w-full accent-gold"
+              {...register('maxTokens', { valueAsNumber: true })}
             />
           </FormField>
 

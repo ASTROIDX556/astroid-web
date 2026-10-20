@@ -25,6 +25,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 import type { Transaction } from '@/types/domain';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
+import { downloadCsv, type CsvColumn } from '@/utils/exportCsv';
+import { toast } from 'sonner';
 
 interface TransactionHistoryTableProps {
   transactions: Transaction[];
@@ -212,21 +214,34 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
   };
 
   function exportCSV() {
-    const headers = columns.map((c) => (typeof c.header === 'string' ? c.header : ''));
-    const rows = filteredRows.map((r) =>
-      columns.map((c) => {
-        const key = (c as unknown as { accessorKey?: string }).accessorKey;
-        return String(key ? r.getValue(key) : '');
-      }),
+    if (filteredRows.length === 0) {
+      toast.info('No transactions to export', {
+        description: 'Adjust your search or filters and try again.',
+      });
+      return;
+    }
+
+    const exportColumns: CsvColumn<Transaction>[] = [
+      { header: 'Transaction ID', value: (tx) => tx.id },
+      { header: 'Counterparty', value: (tx) => tx.counterparty },
+      { header: 'Counterparty Address', value: (tx) => tx.counterpartyAddress },
+      { header: 'Agent', value: (tx) => tx.agentName },
+      { header: 'Direction', value: (tx) => tx.direction },
+      { header: 'Amount', value: (tx) => tx.amount },
+      { header: 'Asset', value: (tx) => tx.asset },
+      { header: 'Status', value: (tx) => tx.status },
+      { header: 'Memo', value: (tx) => tx.memo },
+      { header: 'Purpose', value: (tx) => tx.purpose },
+      { header: 'Created At', value: (tx) => new Date(tx.createdAt) },
+      { header: 'Stellar Hash', value: (tx) => tx.stellarHash },
+    ];
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadCsv(
+      filteredRows.map((row) => row.original),
+      exportColumns,
+      `transactions-${timestamp}.csv`,
     );
-    const csv = [headers.join(','), ...rows.map((r) => r.map((cell) => JSON.stringify(cell)).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'transactions.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    toast.success(`${filteredRows.length} transaction${filteredRows.length === 1 ? '' : 's'} exported`);
   }
 
   function exportJSON() {

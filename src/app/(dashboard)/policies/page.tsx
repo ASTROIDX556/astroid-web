@@ -15,7 +15,7 @@ import { formatNumber } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { PolicyRulesBuilder } from '@/features/policies/PolicyRulesBuilder';
 import { BudgetSimulator } from '@/features/policies/BudgetSimulator';
-import { PolicySandboxWidget } from '@/features/policies/PolicySandboxWidget';
+import { PolicySimulationModal } from '@/features/policies/components/PolicySimulationModal';
 import { SpendingPolicyBuilder } from '@/features/policies/SpendingPolicyBuilder';
 
 const titleCase = (value: string): string =>
@@ -54,7 +54,7 @@ export default function PoliciesPage() {
       >
         {(data) => (
           <div className="space-y-6">
-            <PolicySandboxWidget policies={data} />
+            <PolicySimulationModal policies={data} />
 
             <SectionLabel>Spending policy studio</SectionLabel>
             <SpendingPolicyBuilder />

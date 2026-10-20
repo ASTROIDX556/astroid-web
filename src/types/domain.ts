@@ -234,6 +234,7 @@ export interface Proposal {
   id: string;
   organizationId: string;
   transactionId: string;
+  xdr?: string;
   title: string;
   description: string;
   status: ProposalStatus;

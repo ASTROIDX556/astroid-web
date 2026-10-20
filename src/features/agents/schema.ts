@@ -121,6 +121,15 @@ export const agentConfigSchema = z
       .number({ invalid_type_error: 'Temperature must be a number' })
       .min(0, 'Temperature cannot be below 0')
       .max(2, 'Temperature cannot exceed 2'),
+    topP: z
+      .number({ invalid_type_error: 'Top-p must be a number' })
+      .min(0, 'Top-p cannot be below 0')
+      .max(1, 'Top-p cannot exceed 1'),
+    maxTokens: z
+      .number({ invalid_type_error: 'Max tokens must be a number' })
+      .int('Max tokens must be a whole number')
+      .min(256, 'Max tokens must be at least 256')
+      .max(32768, 'Max tokens cannot exceed 32,768'),
     monthlyBudget: z
       .number({ invalid_type_error: 'Monthly budget must be a number' })
       .positive('Monthly budget must be greater than 0')

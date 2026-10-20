@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -13,6 +14,7 @@ import { TransactionHistory } from '@/features/transactions/TransactionHistory';
 
 export default function TransactionsPage() {
   const transactions = useTransactions();
+  const [filters, setFilters] = useState({ search: '', status: 'all', asset: 'all' });
 
   return (
     <PageTransition className="space-y-8">
@@ -36,30 +38,32 @@ export default function TransactionsPage() {
           />
         }
       >
-        {(data) => (
-          <div className="space-y-8">
-            <FeeOptimizationPanel />
+        {(data) => {
+          const filteredData = data.filter((transaction) => {
+            const matchesSearch = !filters.search || Object.values(transaction)
+              .filter(Boolean)
+              .some((value) => String(value).toLowerCase().includes(filters.search.toLowerCase()));
+            const matchesStatus = filters.status === 'all' || (filters.status === 'success'
+              ? ['completed', 'confirmed', 'approved'].includes(transaction.status)
+              : transaction.status === filters.status);
+            const matchesAsset = filters.asset === 'all' || transaction.asset === filters.asset;
+            return matchesSearch && matchesStatus && matchesAsset;
+          });
 
-            <div className="space-y-4 pt-4 border-t border-border">
-              <TransactionAuditToolbar
-                totalRecordsCount={data.length}
-                filteredRecordsCount={data.length}
-                onExportCSV={() => {
-                  const headers = ['ID', 'Counterparty', 'Purpose', 'Agent', 'Amount', 'Asset', 'Status'];
-                  const rows = data.map((t) => [t.id, `"${t.counterparty}"`, `"${t.purpose}"`, `"${t.agentName || ''}"`, t.amount, t.asset, t.status]);
-                  const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `agent-transactions-${Date.now()}.csv`;
-                  a.click();
-                }}
-              />
-              <TransactionHistory transactions={data} />
+          return (
+            <div className="space-y-8">
+              <FeeOptimizationPanel />
+              <div className="space-y-4 border-t border-border pt-4">
+                <TransactionAuditToolbar
+                  totalRecordsCount={data.length}
+                  filteredRecordsCount={filteredData.length}
+                  onFiltersChange={setFilters}
+                />
+                <TransactionHistory transactions={filteredData} />
+              </div>
             </div>
-          </div>
-        )}
+          );
+        }}
       </QueryBoundary>
     </PageTransition>
   );

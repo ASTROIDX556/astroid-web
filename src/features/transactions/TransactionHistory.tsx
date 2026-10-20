@@ -7,15 +7,19 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { transactionStatus } from '@/lib/status';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { TransactionDetailDrawer } from './TransactionDetailDrawer';
+import { downloadCsv, type CsvColumn } from '@/utils/exportCsv';
+import { toast } from 'sonner';
 
 type StatusFilter = 'all' | Transaction['status'];
 
@@ -23,6 +27,7 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [searchFilteredTransactions, setSearchFilteredTransactions] = useState<Transaction[]>([]);
 
   const agentOptions = useMemo(() => {
     const unique = Array.from(
@@ -54,6 +59,32 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
     () => transactions.find((transaction) => transaction.id === selectedId) ?? null,
     [selectedId, transactions],
   );
+
+  const exportTransactions = () => {
+    if (searchFilteredTransactions.length === 0) {
+      toast.info('No transactions to export', {
+        description: 'Adjust your search or filters and try again.',
+      });
+      return;
+    }
+    const columns: CsvColumn<Transaction>[] = [
+      { header: 'Transaction ID', value: (tx) => tx.id },
+      { header: 'Counterparty', value: (tx) => tx.counterparty },
+      { header: 'Counterparty Address', value: (tx) => tx.counterpartyAddress },
+      { header: 'Agent', value: (tx) => tx.agentName },
+      { header: 'Direction', value: (tx) => tx.direction },
+      { header: 'Amount', value: (tx) => tx.amount },
+      { header: 'Asset', value: (tx) => tx.asset },
+      { header: 'Status', value: (tx) => tx.status },
+      { header: 'Memo', value: (tx) => tx.memo },
+      { header: 'Purpose', value: (tx) => tx.purpose },
+      { header: 'Created At', value: (tx) => new Date(tx.createdAt) },
+      { header: 'Stellar Hash', value: (tx) => tx.stellarHash },
+    ];
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadCsv(searchFilteredTransactions, columns, `transactions-${timestamp}.csv`);
+    toast.success(`${searchFilteredTransactions.length} transaction${searchFilteredTransactions.length === 1 ? '' : 's'} exported`);
+  };
 
   const summary = useMemo(
     () => ({
@@ -138,6 +169,9 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
             ))}
           </select>
         </label>
+        <Button type="button" variant="secondary" size="sm" onClick={exportTransactions} leftIcon={<FileSpreadsheet className="h-4 w-4" aria-hidden />}>
+          Export CSV
+        </Button>
       </div>
 
       <DataTable
@@ -147,6 +181,7 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
         pageSize={8}
         caption="Transaction activity"
         onRowClick={(transaction) => setSelectedId(transaction.id)}
+        onFilteredRowsChange={setSearchFilteredTransactions}
         getRowId={(row) => row.id}
         columns={[
           {
