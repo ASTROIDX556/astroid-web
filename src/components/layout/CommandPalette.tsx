@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import {
@@ -44,6 +44,35 @@ export function CommandPalette() {
   const setOpen = useCommandStore((s) => s.setOpen);
   const toggle = useCommandStore((s) => s.toggle);
   const pathname = usePathname();
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  // Capture the trigger the moment the palette opens — before the dialog
+  // mounts and moves focus into its input — so focus can be restored on close.
+  useEffect(() => {
+    const unsubscribe = useCommandStore.subscribe((state, previousState) => {
+      if (state.open && !previousState.open) {
+        previouslyFocusedRef.current =
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // Give focus back to whatever opened the palette once it closes.
+  useEffect(() => {
+    if (!open) return undefined;
+    return () => {
+      const previouslyFocused = previouslyFocusedRef.current;
+      previouslyFocusedRef.current = null;
+      if (
+        previouslyFocused &&
+        previouslyFocused !== document.body &&
+        previouslyFocused.isConnected
+      ) {
+        previouslyFocused.focus({ preventScroll: true });
+      }
+    };
+  }, [open]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
