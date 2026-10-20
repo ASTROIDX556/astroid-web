@@ -118,24 +118,11 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
       const networkResult = typeof freighter.getNetwork === 'function' ? await withTimeout(freighter.getNetwork()) : null;
       const network = resolveNetwork(networkResult) ?? 'testnet';
 
-      set({
-        status: 'connected',
-        isInstalled: true,
-        publicKey,
-        network,
-        error: null,
-      });
-
+      set({ status: 'connected', isInstalled: true, publicKey, network, error: null });
       return publicKey;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to connect to the Freighter wallet.';
-      set({
-        status: 'disconnected',
-        isInstalled: false,
-        publicKey: null,
-        network: null,
-        error: message,
-      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to connect Freighter wallet.';
+      set({ status: 'disconnected', error: message });
       return null;
     }
   },
@@ -145,60 +132,57 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
   },
 
   requestSignature: async (xdr: string) => {
-    if (!xdr || !xdr.trim()) {
-      throw new Error('Transaction XDR is required to request a signature.');
+    const freighter = await getFreighter();
+    if (typeof freighter.signTransaction !== 'function') {
+      throw new Error('Freighter signTransaction is not available.');
     }
-
-    try {
-      const freighter = await getFreighter();
-      if (typeof freighter.signTransaction !== 'function') {
-        throw new Error('Freighter does not expose transaction signing support.');
-      }
-
-      const response = await withTimeout(freighter.signTransaction(xdr));
-      const signedXdr =
-        typeof response === 'string'
-          ? response
-          : (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.signedTxXdr ??
-            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.signedXDR ??
-            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.xdr;
-
-      if (!signedXdr) {
-        throw new Error('Freighter did not return a signed transaction payload.');
-      }
-
-      return signedXdr;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Signature request failed.';
-      set({ error: message, status: 'disconnected' });
-      throw error;
+    const res = await withTimeout(freighter.signTransaction(xdr));
+    if (typeof res === 'string') return res;
+    if (res && typeof res === 'object') {
+      const signed = (res as { signedTxXdr?: string; signedXDR?: string; xdr?: string }).signedTxXdr
+        ?? (res as { signedTxXdr?: string; signedXDR?: string; xdr?: string }).signedXDR
+        ?? (res as { signedTxXdr?: string; signedXDR?: string; xdr?: string }).xdr;
+      if (typeof signed === 'string') return signed;
     }
+    throw new Error('Freighter did not return a signed transaction.');
   },
 
   hydrate: async () => {
-    const freighter = await getFreighter();
-    const walletAddress = resolveWalletAddress(
-      typeof freighter.getAddress === 'function' ? await withTimeout(freighter.getAddress()).catch(() => null) : null,
-    );
-
-    if (!walletAddress) {
-      set({ status: 'disconnected', publicKey: null, network: null, isInstalled: false, error: null });
-      return;
+    try {
+      const freighter = await getFreighter();
+      if (typeof freighter.isConnected === 'function') {
+        const connectedResult = await withTimeout(freighter.isConnected()).catch(() => false);
+        const connected = typeof connectedResult === 'boolean' ? connectedResult : Boolean((connectedResult as { isConnected?: boolean })?.isConnected);
+        if (connected && typeof freighter.getAddress === 'function') {
+          const addressResult = await withTimeout(freighter.getAddress()).catch(() => null);
+          const publicKey = resolveWalletAddress(addressResult);
+          if (publicKey) {
+            const networkResult = typeof freighter.getNetwork === 'function' ? await withTimeout(freighter.getNetwork()).catch(() => null) : null;
+            const network = resolveNetwork(networkResult) ?? 'testnet';
+            set({ status: 'connected', isInstalled: true, publicKey, network });
+            return;
+          }
+        }
+        set({ isInstalled: true, status: 'disconnected' });
+      }
+    } catch {
+      set({ isInstalled: false, status: 'disconnected' });
     }
-
-    const network = resolveNetwork(
-      typeof freighter.getNetwork === 'function' ? await withTimeout(freighter.getNetwork()).catch(() => null) : null,
-    );
-
-    set({
-      isInstalled: true,
-      status: 'connected',
-      publicKey: walletAddress,
-      network: network ?? 'testnet',
-      error: null,
-    });
   },
 });
 
-export const useFreighterStore = create<FreighterWalletState>()(storeCreator);
+import { persist } from 'zustand/middleware';
+
+export const useFreighterStore = create<FreighterWalletState>()(
+  persist(storeCreator, {
+    name: 'freighter-wallet-storage',
+    partialize: (state) => ({
+      status: state.status,
+      publicKey: state.publicKey,
+      network: state.network,
+      isInstalled: state.isInstalled,
+    }),
+  }),
+);
+
 export const isValidStellarPublicKey = isValidStellarAddress;
