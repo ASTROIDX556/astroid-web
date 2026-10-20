@@ -16,6 +16,7 @@ import { AlertTriangle, ShieldAlert, BarChart3, Table as TableIcon } from 'lucid
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/format';
+import { CHART_TOKENS, ChartTooltipShell, useMounted, ChartSkeleton, ChartEmptyState } from '@/components/charts/theme';
 
 export interface BudgetDepartmentData {
   id: string;
@@ -30,6 +31,7 @@ export interface BudgetAllocationChartProps {
   title?: string;
   description?: string;
   className?: string;
+  isLoading?: boolean;
 }
 
 const DEFAULT_BUDGET_DATA: BudgetDepartmentData[] = [
@@ -51,7 +53,7 @@ export function getThresholdColor(utilizationPercent: number): {
   if (utilizationPercent >= 80) {
     return { color: 'var(--warning)', hex: '#D98A21', status: 'warning' };
   }
-  return { color: 'var(--chart-1)', hex: '#2A78D6', status: 'normal' };
+  return { color: CHART_TOKENS.categorical[0], hex: '#2A78D6', status: 'normal' };
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -66,11 +68,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   const { status, hex } = getThresholdColor(utilization);
 
   return (
-    <div
-      className="z-50 rounded-lg border border-border bg-surface-primary p-3 shadow-md text-xs space-y-1.5 min-w-[200px]"
-      style={{ borderColor: status !== 'normal' ? hex : undefined }}
-    >
-      <p className="font-semibold text-foreground border-b border-border/60 pb-1">{data.department}</p>
+    <ChartTooltipShell label={data.department}>
       <div className="space-y-1">
         <div className="flex justify-between gap-4">
           <span className="text-foreground-secondary">Consumed:</span>
@@ -111,7 +109,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           <span>Budget Limit Exceeded!</span>
         </div>
       )}
-    </div>
+    </ChartTooltipShell>
   );
 };
 
@@ -120,9 +118,11 @@ export function BudgetAllocationChart({
   title = 'Department Budget Allocation & Consumption',
   description = 'Real-time expenditure monitoring with automated 80% & 100% capacity threshold alerts.',
   className = '',
+  isLoading = false,
 }: BudgetAllocationChartProps) {
   const [showTableView, setShowTableView] = useState<boolean>(false);
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
+  const mounted = useMounted();
 
   const warnings = useMemo(() => {
     return data.filter((d) => {
@@ -130,6 +130,32 @@ export function BudgetAllocationChart({
       return pct >= 80;
     });
   }, [data]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className={`overflow-hidden ${className}`}>
+        <CardContent className="pt-6">
+          <ChartSkeleton height={320} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Empty state
+  if (!mounted || !data || data.length === 0) {
+    return (
+      <Card className={`overflow-hidden ${className}`}>
+        <CardContent className="pt-6">
+          <ChartEmptyState
+            height={320}
+            title="No budget data"
+            description="Configure department budgets to see allocation and consumption metrics."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={`overflow-hidden ${className}`}>
@@ -245,16 +271,16 @@ export function BudgetAllocationChart({
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3 text-2xs text-foreground-secondary">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#2A78D6]" />
-                  <span>Optimal (&lt;80%)</span>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_TOKENS.categorical[0] }} />
+                  <span>{'Optimal (<80%)'}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#D98A21]" />
-                  <span>Warning (80%–99%)</span>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_TOKENS.warning }} />
+                  <span>{'Warning (80%\u201399%)'}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#C84747]" />
-                  <span>Critical Exceeded (&ge;100%)</span>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_TOKENS.danger }} />
+                  <span>{'Critical Exceeded (\u2265100%)'}</span>
                 </span>
               </div>
               <span>Updated in real-time via telemetry</span>
@@ -323,4 +349,3 @@ export function BudgetAllocationChart({
 }
 
 export default BudgetAllocationChart;
-

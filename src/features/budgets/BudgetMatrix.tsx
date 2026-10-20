@@ -37,13 +37,7 @@ import { ProgressBar } from '@/components/dashboard/risk-badge';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
 import type { DepartmentBudget, AgentAllocation } from './types';
-
-const ASSET_COLORS: Record<string, string> = {
-  USDC: '#3b82f6', // blue
-  XLM: '#eab308',  // gold
-  ASTRO: '#a855f7', // purple
-  EURC: '#10b981', // green
-};
+import { CHART_TOKENS, axisTick, ChartTooltipShell } from '@/components/charts/theme';
 
 export function BudgetMatrix() {
   const [data] = useState<DepartmentBudget[]>(MOCK_DEPARTMENT_BUDGETS);
@@ -277,33 +271,53 @@ export function BudgetMatrix() {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#888' }} />
-                <YAxis tick={{ fontSize: 12, fill: '#888' }} unit="%" domain={[0, 100]} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ ...axisTick, fontFamily: 'var(--font-sans)' }}
+                  axisLine={{ stroke: CHART_TOKENS.axis }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={axisTick}
+                  axisLine={false}
+                  tickLine={false}
+                  unit="%"
+                  domain={[0, 100]}
+                  tickFormatter={(v: number) => `${v}%`}
+                />
                 <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length && payload[0]) {
-                      const d = payload[0].payload;
-                      if (!d) return null;
-                      return (
-                        <div className="rounded-button border border-border bg-surface p-3 shadow-xl space-y-1 text-xs">
-                          <p className="font-bold text-foreground">{d.fullName}</p>
-                          <p className="text-foreground-secondary">
-                            Utilization: <span className="font-mono text-gold font-bold">{d.spendPercent}%</span>
-                          </p>
-                          <p className="text-foreground-muted">
-                            Spent: {formatCurrency(d.spent, d.asset)} / {formatCurrency(d.limit, d.asset)}
-                          </p>
+                  cursor={{ fill: CHART_TOKENS.grid, fillOpacity: 0.3 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0]?.payload as typeof chartData[0] | undefined;
+                    if (!d) return null;
+                    return (
+                      <ChartTooltipShell label={label ? String(label) : d.fullName}>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-foreground-secondary">Utilization:</span>
+                          <span className="tabular font-bold text-gold">{d.spendPercent}%</span>
                         </div>
-                      );
-                    }
-                    return null;
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-foreground-secondary">Spent:</span>
+                          <span className="tabular font-medium text-foreground">
+                            {formatCurrency(d.spent, d.asset)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-foreground-secondary">Limit:</span>
+                          <span className="tabular font-medium text-foreground">
+                            {formatCurrency(d.limit, d.asset)}
+                          </span>
+                        </div>
+                      </ChartTooltipShell>
+                    );
                   }}
                 />
                 <Bar dataKey="spendPercent" radius={[6, 6, 0, 0]}>
                   {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={ASSET_COLORS[entry.asset] || '#eab308'}
+                      fill={CHART_TOKENS.assets[entry.asset as keyof typeof CHART_TOKENS.assets] ?? CHART_TOKENS.categorical[index % CHART_TOKENS.categorical.length]}
                     />
                   ))}
                 </Bar>

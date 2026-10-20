@@ -23,6 +23,21 @@ import type {
   TimeseriesPoint,
 } from '@/types/domain';
 
+// Re-export theme utilities
+export {
+  useMounted,
+  CHART_TOKENS,
+  axisTick,
+  ChartTooltipShell,
+  shortDate,
+  ChartSkeleton,
+  ChartEmptyState,
+  CHART_MARGINS,
+  formatChartCurrency,
+} from './theme';
+
+import { ChartTooltipShell as ThemeChartTooltipShell } from './theme';
+
 function useMounted() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -30,6 +45,8 @@ function useMounted() {
   }, []);
   return mounted;
 }
+
+const ChartTooltipShell = ThemeChartTooltipShell;
 
 const AXIS = 'rgb(var(--chart-axis))';
 const GRID = 'rgb(var(--chart-grid))';
@@ -61,23 +78,6 @@ export interface TooltipPayloadItem {
   color?: string;
   dataKey?: string | number;
   payload?: Record<string, unknown>;
-}
-
-export function ChartTooltipShell({
-  label,
-  children,
-}: {
-  label?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="glass min-w-[160px] rounded-md px-3 py-2 text-xs shadow-soft-2">
-      {label != null && (
-        <p className="mb-1.5 font-medium text-foreground">{label}</p>
-      )}
-      <div className="flex flex-col gap-1">{children}</div>
-    </div>
-  );
 }
 
 function shortDate(value: string): string {

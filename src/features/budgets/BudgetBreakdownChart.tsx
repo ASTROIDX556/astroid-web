@@ -13,12 +13,14 @@ import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getThresholdColor } from '@/features/budgets/BudgetAllocationChart';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
 import type { AgentAllocation, DepartmentBudget } from './types';
+import { CHART_TOKENS, useMounted, ChartSkeleton, ChartEmptyState, ChartTooltipShell } from '@/components/charts/theme';
 
 export interface BudgetBreakdownChartProps {
   data?: DepartmentBudget[];
   title?: string;
   description?: string;
   className?: string;
+  isLoading?: boolean;
 }
 
 /** A single treemap node, normalized from either a department or a sub-department (agent) row. */
@@ -80,7 +82,7 @@ function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapCo
         style={{
           fill: hex,
           fillOpacity: 0.85,
-          stroke: 'rgb(var(--chart-surface))',
+          stroke: CHART_TOKENS.surface,
           strokeWidth: 2,
           cursor: 'pointer',
           transition: 'fill-opacity 0.15s ease-in-out',
@@ -110,30 +112,31 @@ function BreakdownTooltip({ active, payload }: { active?: boolean; payload?: { p
   const isOver = variance < 0;
 
   return (
-    <div className="z-50 min-w-[200px] space-y-1.5 rounded-lg border border-border bg-surface-primary p-3 text-xs shadow-md">
-      <p className="border-b border-border/60 pb-1 font-semibold text-foreground">{node.name}</p>
-      <div className="flex justify-between gap-4">
-        <span className="text-foreground-secondary">Consumed:</span>
-        <span className="tabular font-medium text-foreground">{formatCurrency(node.consumed, node.asset)}</span>
+    <ChartTooltipShell label={node.name}>
+      <div className="space-y-1">
+        <div className="flex justify-between gap-4">
+          <span className="text-foreground-secondary">Consumed:</span>
+          <span className="tabular font-medium text-foreground">{formatCurrency(node.consumed, node.asset)}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-foreground-secondary">Allocated:</span>
+          <span className="tabular font-medium text-foreground">{formatCurrency(node.allocated, node.asset)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-border/40 pt-1">
+          <span className="font-medium text-foreground-secondary">Variance:</span>
+          <span className={`tabular font-bold ${isOver ? 'text-danger' : 'text-success'}`}>
+            {isOver ? '−' : '+'}
+            {formatCurrency(Math.abs(variance), node.asset)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="font-medium text-foreground-secondary">% Consumed:</span>
+          <span className="tabular font-bold">{Math.round(pct)}%</span>
+        </div>
+        {node.agent && <p className="pt-1 text-2xs text-foreground-muted">Click to view ledger history</p>}
+        {!node.agent && <p className="pt-1 text-2xs text-foreground-muted">Click to drill into sub-departments</p>}
       </div>
-      <div className="flex justify-between gap-4">
-        <span className="text-foreground-secondary">Allocated:</span>
-        <span className="tabular font-medium text-foreground">{formatCurrency(node.allocated, node.asset)}</span>
-      </div>
-      <div className="flex items-center justify-between gap-4 border-t border-border/40 pt-1">
-        <span className="font-medium text-foreground-secondary">Variance:</span>
-        <span className={`tabular font-bold ${isOver ? 'text-danger' : 'text-success'}`}>
-          {isOver ? '−' : '+'}
-          {formatCurrency(Math.abs(variance), node.asset)}
-        </span>
-      </div>
-      <div className="flex items-center justify-between gap-4">
-        <span className="font-medium text-foreground-secondary">% Consumed:</span>
-        <span className="tabular font-bold">{Math.round(pct)}%</span>
-      </div>
-      {node.agent && <p className="pt-1 text-2xs text-foreground-muted">Click to view ledger history</p>}
-      {!node.agent && <p className="pt-1 text-2xs text-foreground-muted">Click to drill into sub-departments</p>}
-    </div>
+    </ChartTooltipShell>
   );
 }
 
@@ -147,9 +150,11 @@ export function BudgetBreakdownChart({
   title = 'Department Budget Breakdown',
   description = 'Click a department to drill into agent-level allocations, then an agent to view its ledger history.',
   className = '',
+  isLoading = false,
 }: BudgetBreakdownChartProps) {
   const [activeDeptId, setActiveDeptId] = useState<string | null>(null);
   const [ledgerAgent, setLedgerAgent] = useState<AgentAllocation | null>(null);
+  const mounted = useMounted();
 
   const activeDept = useMemo(
     () => data.find((d) => d.id === activeDeptId) ?? null,
@@ -161,11 +166,24 @@ export function BudgetBreakdownChart({
     return activeDept.agents.map((a) => toAgentNode(a, activeDept.asset));
   }, [data, activeDept]);
 
-  if (data.length === 0) {
+  // Loading state
+  if (isLoading) {
     return (
       <Card className={className}>
         <CardContent className="pt-6">
-          <EmptyState
+          <ChartSkeleton height={384} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Empty state
+  if (!mounted || !data || data.length === 0) {
+    return (
+      <Card className={className}>
+        <CardContent className="pt-6">
+          <ChartEmptyState
+            height={384}
             title="No department budgets"
             description="Once departments and agent allocations are configured, their spend breakdown will appear here."
           />
@@ -224,7 +242,7 @@ export function BudgetBreakdownChart({
                 data={nodes}
                 dataKey="size"
                 nameKey="name"
-                stroke="rgb(var(--chart-surface))"
+                stroke={CHART_TOKENS.surface}
                 content={<TreemapCell />}
                 isAnimationActive={false}
                 onClick={(node: unknown) => {
@@ -245,16 +263,16 @@ export function BudgetBreakdownChart({
 
         <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-border/60 pt-3 text-2xs text-foreground-secondary">
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#2A78D6]" />
-            <span>Optimal (&lt;80%)</span>
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_TOKENS.categorical[0] }} />
+            <span>{'Optimal (<80%)'}</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#D98A21]" />
-            <span>Warning (80%–99%)</span>
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_TOKENS.warning }} />
+            <span>{'Warning (80%\u201399%)'}</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#C84747]" />
-            <span>Over budget (&ge;100%)</span>
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_TOKENS.danger }} />
+            <span>{'Over budget (\u2265100%)'}</span>
           </span>
         </div>
       </CardContent>
