@@ -4,6 +4,7 @@ export { default as BudgetSimulator } from './BudgetSimulator';
 export { PolicySandboxWidget } from './PolicySandboxWidget';
 export { SpendingPolicyBuilder } from './SpendingPolicyBuilder';
 export { PolicyTemplateModal } from './PolicyTemplateModal';
+export { TransactionSimulationPreviewModal } from './TransactionSimulationPreviewModal';
 export * from './policyTemplates';
 export {
   spendingPolicySchema,

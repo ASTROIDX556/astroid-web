@@ -19,7 +19,12 @@ import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
 import type { Policy } from '@/types/domain';
-import { defaultPolicyRules, mapPoliciesToSandboxRules, type PolicyRule } from './usePolicySimulation';
+import {
+  defaultPolicyRules,
+  mapPoliciesToSandboxRules,
+  type PolicyRule,
+} from './usePolicySimulation';
+import { TransactionSimulationPreviewModal } from './TransactionSimulationPreviewModal';
 
 // ---------------------------------------------------------------------------
 // Zod schema for sandbox transaction input
@@ -38,10 +43,7 @@ const sandboxTransactionSchema = z.object({
   asset: z.enum(['XLM', 'USDC', 'BTC', 'ETH', 'EURC'], {
     message: 'Asset must be one of XLM, USDC, BTC, ETH, or EURC.',
   }),
-  agentId: z
-    .string()
-    .trim()
-    .min(1, 'Agent ID is required.'),
+  agentId: z.string().trim().min(1, 'Agent ID is required.'),
   memo: z.string().max(140, 'Memo must be 140 characters or fewer.').optional(),
 });
 
@@ -100,8 +102,11 @@ interface PolicySandboxWidgetProps {
 }
 
 export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
+  const [simulationOpen, setSimulationOpen] = useState(false);
   const [values, setValues] = useState<SandboxFormValues>(defaultFormValues);
-  const [errors, setErrors] = useState<Partial<Record<keyof SandboxFormValues, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof SandboxFormValues, string>>
+  >({});
   const [result, setResult] = useState<SandboxEvaluationResult | null>(null);
 
   // -- Handlers -----------------------------------------------------------
@@ -169,6 +174,17 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
           break;
         }
 
+        case 'min_amount': {
+          if (rule.threshold !== undefined) {
+            passed = validated.amount >= rule.threshold;
+            message = passed
+              ? `Amount $${validated.amount.toLocaleString()} meets the $${rule.threshold.toLocaleString()} minimum.`
+              : `Amount $${validated.amount.toLocaleString()} is below the $${rule.threshold.toLocaleString()} minimum.`;
+            reasonCode = passed ? 'AMOUNT_MEETS_MINIMUM' : 'AMOUNT_BELOW_MINIMUM';
+          }
+          break;
+        }
+
         case 'allowed_assets': {
           const allowed = rule.allowedAssets ?? [];
           passed = allowed.includes(validated.asset);
@@ -192,7 +208,9 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
 
         case 'allowed_recipients': {
           const allowed = rule.allowedRecipients ?? [];
-          passed = allowed.length === 0 || allowed.some((r) => validated.recipient.includes(r));
+          passed =
+            allowed.length === 0 ||
+            allowed.some((r) => validated.recipient.includes(r));
           message = passed
             ? `Recipient is on the approved vendor list.`
             : `Recipient is not on the approved vendor list (${allowed.join(', ')}).`;
@@ -273,6 +291,7 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
       const hasBlocking = failedSteps.some(
         (s) =>
           s.reasonCode === 'AMOUNT_EXCEEDS_THRESHOLD' ||
+          s.reasonCode === 'AMOUNT_BELOW_MINIMUM' ||
           s.reasonCode === 'ASSET_BLOCKED' ||
           s.reasonCode === 'RECIPIENT_BLOCKED' ||
           s.reasonCode === 'EMERGENCY_ACTIVE' ||
@@ -331,13 +350,23 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
             <FlaskConical className="h-4 w-4 text-gold" aria-hidden />
             Policy evaluation sandbox
           </CardTitle>
-          <Badge variant="gold" size="sm">
-            Real-time
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="gold" size="sm">
+              Real-time
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => setSimulationOpen(true)}
+            >
+              Preview transaction
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-foreground-secondary">
-          Test hypothetical transactions against active spending rules. See
-          whether a transaction would be approved, flagged, or rejected.
+          Test hypothetical transactions against active spending rules. See whether a
+          transaction would be approved, flagged, or rejected.
         </p>
       </CardHeader>
 
@@ -389,7 +418,9 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
             <Select
               id="sandbox-asset"
               value={values.asset}
-              onChange={(e) => updateField('asset', e.target.value as SandboxFormValues['asset'])}
+              onChange={(e) =>
+                updateField('asset', e.target.value as SandboxFormValues['asset'])
+              }
               aria-invalid={Boolean(errors.asset)}
             >
               <option value="XLM">XLM — Stellar Lumens</option>
@@ -420,7 +451,7 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
             label="Memo (optional)"
             htmlFor="sandbox-memo"
             error={errors.memo}
-            className="md:col-span-2 gap-2"
+            className="gap-2 md:col-span-2"
           >
             <Input
               id="sandbox-memo"
@@ -472,14 +503,18 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
                 role="status"
                 aria-live="polite"
               >
-                <outcomeConfig.icon className={cn('h-5 w-5', outcomeConfig.color)} aria-hidden />
+                <outcomeConfig.icon
+                  className={cn('h-5 w-5', outcomeConfig.color)}
+                  aria-hidden
+                />
                 <div className="flex-1">
                   <p className={cn('text-sm font-semibold', outcomeConfig.color)}>
                     Transaction {outcomeConfig.label}
                   </p>
                   <p className="text-xs text-foreground-secondary">
                     Risk score: {result.riskScore}/100 ·{' '}
-                    {result.steps.filter((s) => s.passed).length}/{result.steps.length} rules passed
+                    {result.steps.filter((s) => s.passed).length}/{result.steps.length}{' '}
+                    rules passed
                   </p>
                 </div>
                 <Badge variant={outcomeConfig.badgeVariant} dot size="md">
@@ -499,7 +534,7 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.06, duration: 0.2 }}
                     className={cn(
-                      'flex items-start gap-3 rounded-sm border px-3 py-2.5',
+                      'py-2.5 flex items-start gap-3 rounded-sm border px-3',
                       step.passed
                         ? 'border-success/20 bg-success-soft/20'
                         : 'border-danger/20 bg-danger-soft/20',
@@ -514,7 +549,9 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-xs font-medium text-foreground">{step.ruleName}</p>
+                        <p className="text-xs font-medium text-foreground">
+                          {step.ruleName}
+                        </p>
                         <Badge variant={step.passed ? 'success' : 'danger'} size="sm">
                           {step.passed ? 'PASS' : 'FAIL'}
                         </Badge>
@@ -532,13 +569,16 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
 
               {/* Summary row */}
               <div className="flex items-center gap-2 rounded-card border border-border bg-surface p-3 text-xs">
-                <Shield className="h-4 w-4 text-gold shrink-0" aria-hidden />
+                <Shield className="h-4 w-4 shrink-0 text-gold" aria-hidden />
                 <span className="text-foreground-secondary">
                   Evaluated {result.steps.length} policy rules against a{' '}
-                  <span className="font-medium text-foreground">${values.amount.toLocaleString()}</span>{' '}
-                  <span className="font-medium text-foreground">{values.asset}</span> transaction.
+                  <span className="font-medium text-foreground">
+                    ${values.amount.toLocaleString()}
+                  </span>{' '}
+                  <span className="font-medium text-foreground">{values.asset}</span>{' '}
+                  transaction.
                 </span>
-                <ArrowRight className="h-3 w-3 text-foreground-muted shrink-0" />
+                <ArrowRight className="h-3 w-3 shrink-0 text-foreground-muted" />
                 <span className={cn('font-semibold', outcomeConfig.color)}>
                   {outcomeConfig.label}
                 </span>
@@ -547,6 +587,11 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
           )}
         </AnimatePresence>
       </CardContent>
+      <TransactionSimulationPreviewModal
+        open={simulationOpen}
+        onClose={() => setSimulationOpen(false)}
+        policies={policies}
+      />
     </Card>
   );
 }
