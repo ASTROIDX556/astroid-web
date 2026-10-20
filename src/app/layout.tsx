@@ -4,6 +4,7 @@ import { fontVariables } from '@/lib/fonts';
 import { AppProviders } from '@/providers';
 import { CursorProvider } from '@/components/effects/user-cursor';
 import { THEME_COOKIE, readThemeCookie, resolveThemeValue } from '@/lib/theme-cookie';
+import '@/styles/tokens.css';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
