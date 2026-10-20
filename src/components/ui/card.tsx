@@ -31,7 +31,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         },
       }}
       className={cn(
-        'rounded-card border border-border bg-surface',
+        'rounded-card border border-border bg-surface-primary',
         elevationClass[elevation],
         interactive &&
           'transition-all duration-base ease-astroid hover:-translate-y-0.5 hover:shadow-soft-2',
