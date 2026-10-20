@@ -14,4 +14,3 @@ export {
 } from './spendingPolicySchema';
 export type { PolicySimulationInputValues } from './spendingPolicySchema';
 export { usePolicySimulation } from './usePolicySimulation';
-export * from './types';
