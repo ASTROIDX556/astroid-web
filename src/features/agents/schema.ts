@@ -40,6 +40,13 @@ export const PROVIDER_LABELS: Record<AgentProviderId, string> = {
 /** Providers whose models run against a self-managed or third-party endpoint. */
 const CUSTOM_ENDPOINT_PROVIDERS: readonly AgentProviderId[] = ['Ollama', 'Custom'];
 
+const API_KEY_PATTERNS: Partial<Record<AgentProviderId, RegExp>> = {
+  Nvidia: /^nvapi-[A-Za-z0-9_-]{20,}$/,
+  OpenAI: /^sk-(?:proj-)?[A-Za-z0-9_-]{20,}$/,
+  Anthropic: /^sk-ant-[A-Za-z0-9_-]{20,}$/,
+  Gemini: /^AIza[A-Za-z0-9_-]{20,}$/,
+};
+
 export const requiresEndpoint = (provider: AgentProviderId): boolean =>
   CUSTOM_ENDPOINT_PROVIDERS.includes(provider);
 
@@ -116,6 +123,7 @@ export const agentConfigSchema = z
       .url('Enter a valid URL, e.g. http://localhost:11434')
       .optional()
       .or(z.literal('')),
+    apiKey: z.string().trim().max(200, 'API key cannot exceed 200 characters.').optional().or(z.literal('')),
     mode: z.enum(['assisted', 'autonomous']),
     temperature: z
       .number({ invalid_type_error: 'Temperature must be a number' })
@@ -135,6 +143,34 @@ export const agentConfigSchema = z
         path: ['endpointUrl'],
         message: 'A valid API endpoint URL is required for this provider',
       });
+    }
+
+    if (!requiresEndpoint(values.provider) && !values.apiKey) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['apiKey'],
+        message: `An API key is required for ${PROVIDER_LABELS[values.provider]}.`,
+      });
+    } else if (values.apiKey && API_KEY_PATTERNS[values.provider] && !API_KEY_PATTERNS[values.provider]!.test(values.apiKey)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['apiKey'],
+        message: `Enter a valid ${PROVIDER_LABELS[values.provider]} API key format.`,
+      });
+    }
+    if (values.endpointUrl) {
+      try {
+        const endpoint = new URL(values.endpointUrl);
+        if (!['http:', 'https:'].includes(endpoint.protocol)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['endpointUrl'],
+            message: 'Endpoint URL must use HTTP or HTTPS.',
+          });
+        }
+      } catch {
+        // The URL schema reports malformed endpoint values.
+      }
     }
   });
 

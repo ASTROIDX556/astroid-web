@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   CheckCircle,
   Clock,
@@ -15,6 +15,7 @@ import {
   Key,
 } from 'lucide-react';
 import { useXdrSigner } from './useXdrSigner';
+import { XdrSigningTracker } from './XdrSigningTracker';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
@@ -35,6 +36,8 @@ export interface XdrSignatureStatusProps {
   signers?: SignerInfo[];
   requiredThreshold?: number;
   transactionTitle?: string;
+  transactionHash?: string | null;
+  network?: 'public' | 'testnet';
   onSignatureSuccess?: (newXdr: string) => void;
   className?: string;
 }
@@ -65,7 +68,7 @@ const DEFAULT_MOCK_SIGNERS: SignerInfo[] = [
 ];
 
 const DEFAULT_MOCK_XDR =
-  'AAAAAgAAAAD2k5L8a3N+...MOCK_STELLAR_TRANSACTION_ENVELOPE_XDR_DATA_STRING_FOR_DEMO...==';
+  'AAAAAgAAAAB6i0tPnXFdlBqOSAGCcFOFbLZWlUvJHrxJNfmB0kAYRAAAAGQCMYNlAAAAAQAAAAEAAAAAAAAAAAAAAABm1p0nAAAAAAAAAAEAAAAAAAAAAQAAAADXpEeXHkuvVR1yBqz1c8u3jXwSHRJIvhBQNjLPElsHzwAAAAFVU0RDAAAAADuZ0ZI0iUqQ8h4vBBTMEZuHU0DPbLYqL6DE1p9c1LcxAAAAAAdzWUAAAAAAAAAAAA==';
 
 export function isValidXdrString(input?: string): boolean {
   if (!input || typeof input !== 'string') return false;
@@ -86,21 +89,28 @@ export function XdrSignatureStatus({
   signers = DEFAULT_MOCK_SIGNERS,
   requiredThreshold = 2,
   transactionTitle = 'Multi-Sign Transaction Envelope',
+  transactionHash,
+  network = 'testnet',
   onSignatureSuccess,
   className = '',
 }: XdrSignatureStatusProps) {
   const [currentXdr, setCurrentXdr] = useState<string>(xdr);
   const [signerList, setSignerList] = useState<SignerInfo[]>(signers);
   const [copied, setCopied] = useState<boolean>(false);
+  const [isMockSignature, setIsMockSignature] = useState(false);
+  const signatureInFlight = useRef(false);
 
   const {
     activeKey,
     isConnected,
     isPending: isSigning,
     error: walletError,
+    status: signingStatus,
     connectWallet,
     signXdr,
     setActiveKey,
+    beginMockSignature,
+    completeMockSignature,
   } = useXdrSigner();
 
   const isValidXdr = useMemo(() => isValidXdrString(currentXdr), [currentXdr]);
@@ -133,37 +143,47 @@ export function XdrSignatureStatus({
   }, [activeKey, signerList]);
 
   const handleSignTransaction = useCallback(async () => {
+    if (signatureInFlight.current || isSigning || isThresholdMet) return;
+    signatureInFlight.current = true;
     let key = activeKey;
-    if (!key) {
-      key = await connectWallet();
+    let hasConnectedWallet = isConnected;
+    try {
+      if (!key) {
+        key = await connectWallet();
+        hasConnectedWallet = Boolean(key);
+      }
+      if (!key) return;
+
+      let signedXdrResult: string | null;
+      if (hasConnectedWallet) {
+        setIsMockSignature(false);
+        signedXdrResult = await signXdr(currentXdr);
+      } else {
+        beginMockSignature();
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        signedXdrResult = currentXdr;
+        setIsMockSignature(true);
+        completeMockSignature();
+      }
+      if (!signedXdrResult) return;
+
+      const matchingPendingSigner = signerList.find((signer) =>
+        signer.status === 'pending' && signer.publicKey.toLowerCase() === key?.toLowerCase(),
+      );
+      if (matchingPendingSigner) {
+        setSignerList((previous) => previous.map((signer) => signer.publicKey === matchingPendingSigner.publicKey
+          ? { ...signer, status: 'signed', signedAt: new Date().toISOString() }
+          : signer));
+      }
+
+      if (hasConnectedWallet) setCurrentXdr(signedXdrResult);
+      if (hasConnectedWallet && onSignatureSuccess) {
+        onSignatureSuccess(signedXdrResult);
+      }
+    } finally {
+      signatureInFlight.current = false;
     }
-    if (!key) return;
-
-    const signedXdrResult = await signXdr(currentXdr);
-    const newXdr = signedXdrResult || `${currentXdr}_SIGNED_BY_${key.slice(0, 8)}`;
-
-    setSignerList((prev) =>
-      prev.map((s) => {
-        if (
-          s.publicKey.toLowerCase() === key.toLowerCase() ||
-          truncateKey(s.publicKey).toLowerCase() === truncateKey(key).toLowerCase() ||
-          s.status === 'pending'
-        ) {
-          return {
-            ...s,
-            status: 'signed',
-            signedAt: new Date().toISOString(),
-          };
-        }
-        return s;
-      })
-    );
-
-    setCurrentXdr(newXdr);
-    if (onSignatureSuccess) {
-      onSignatureSuccess(newXdr);
-    }
-  }, [activeKey, connectWallet, signXdr, currentXdr, onSignatureSuccess]);
+  }, [activeKey, beginMockSignature, completeMockSignature, connectWallet, currentXdr, isConnected, isSigning, isThresholdMet, onSignatureSuccess, signXdr, signerList]);
 
   const handleCopyXdr = useCallback(() => {
     if (!isValidXdr) return;
@@ -222,6 +242,14 @@ export function XdrSignatureStatus({
       </CardHeader>
 
       <CardContent className="space-y-6 pt-5">
+        <XdrSigningTracker
+          status={signingStatus}
+          error={walletError}
+          transactionHash={transactionHash}
+          network={network}
+          isMock={isMockSignature}
+        />
+
         {!isValidXdr ? (
           <div
             className="flex items-center gap-3 rounded-md border border-danger/30 bg-danger-soft/40 p-4 text-xs text-danger"
@@ -288,12 +316,6 @@ export function XdrSignatureStatus({
               </div>
             </div>
 
-            {walletError && (
-              <p className="text-2xs text-danger" role="alert">
-                {walletError}
-              </p>
-            )}
-
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
@@ -314,9 +336,18 @@ export function XdrSignatureStatus({
                   return (
                     <div
                       key={signer.publicKey + index}
-                      role="listitem"
-                      onClick={() => handleSelectSimulatedKey(signer.publicKey)}
-                      className={`group relative flex items-start justify-between gap-3 rounded-lg border p-3.5 transition-all cursor-pointer ${
+                      role="button"
+                      tabIndex={signer.status === 'pending' ? 0 : -1}
+                      aria-pressed={Boolean(isUserKey)}
+                      aria-label={`Select signer ${signer.name ?? signer.publicKey}, ${signer.status}`}
+                      onClick={() => signer.status === 'pending' && handleSelectSimulatedKey(signer.publicKey)}
+                      onKeyDown={(event) => {
+                        if (signer.status === 'pending' && (event.key === 'Enter' || event.key === ' ')) {
+                          event.preventDefault();
+                          handleSelectSimulatedKey(signer.publicKey);
+                        }
+                      }}
+                      className={`group relative flex items-start justify-between gap-3 rounded-lg border p-3.5 transition-all ${signer.status === 'pending' ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring' : 'cursor-default'} ${
                         signer.status === 'signed'
                           ? 'border-success/40 bg-success-soft/20 hover:border-success/60'
                           : signer.status === 'pending'
@@ -420,7 +451,7 @@ export function XdrSignatureStatus({
                 {isSigning ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                    <span>Signing Transaction...</span>
+                    <span>{signingStatus === 'requesting' ? 'Waiting for wallet…' : 'Signing transaction…'}</span>
                   </>
                 ) : isThresholdMet ? (
                   <>
@@ -430,7 +461,7 @@ export function XdrSignatureStatus({
                 ) : (
                   <>
                     <Key className="h-4 w-4" aria-hidden="true" />
-                    <span>Sign Transaction</span>
+                    <span>{signingStatus === 'failed' || signingStatus === 'rejected' ? 'Retry signing' : 'Sign Transaction'}</span>
                   </>
                 )}
               </button>

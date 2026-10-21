@@ -205,6 +205,8 @@ export function AgentProviderConfigForm({
             >
               <Input
                 id="provider-config-endpoint"
+                type="url"
+                inputMode="url"
                 {...form.register('endpointUrl')}
                 placeholder={
                   provider === 'ollama'

@@ -12,6 +12,7 @@ import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
 import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
 import { CircuitBreakerControl } from '@/features/security';
 import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
+import { AccountSwitcher } from '@/components/layout/AccountSwitcher';
 import { cn } from '@/lib/cn';
 
 /** Shared, brand-tinted focus ring for every top-bar control (WCAG AA). */
@@ -116,6 +117,8 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
           }
           items={orgItems}
         />
+
+        <AccountSwitcher />
 
         <div className="flex-1" />
 

@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import type { StateCreator } from 'zustand';
+import type { Wallet } from '@/types/domain';
 
 export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -10,10 +11,17 @@ interface FreighterWalletState {
   isInstalled: boolean;
   publicKey: string | null;
   network: string | null;
+  connectedPublicKey: string | null;
+  connectedNetwork: string | null;
+  activeAccountSource: 'freighter' | 'managed' | null;
+  selectedWalletId: string | null;
   error: string | null;
   checkExtension: () => Promise<boolean>;
   connect: () => Promise<string | null>;
   disconnect: () => void;
+  selectManagedAccount: (wallet: Pick<Wallet, 'id' | 'stellarAddress' | 'network'>) => void;
+  selectFreighterAccount: () => void;
+  startWatching: () => Promise<() => void>;
   requestSignature: (xdr: string) => Promise<string>;
   hydrate: () => Promise<void>;
 }
@@ -48,6 +56,10 @@ const getFreighter = async () =>
     getAddress?: () => Promise<string | { address?: string; publicKey?: string }>;
     getNetwork?: () => Promise<string | { network?: string }>;
     signTransaction?: (xdr: string, options?: Record<string, unknown>) => Promise<string | { signedTxXdr?: string; signedXDR?: string; xdr?: string }>;
+    WatchWalletChanges?: new (timeout?: number) => {
+      watch: (callback: (params: { address: string; network: string; error?: unknown }) => void) => { error?: unknown };
+      stop: () => void;
+    };
   };
 
 const isValidStellarAddress = (value: string | null | undefined): value is string =>
@@ -75,6 +87,10 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
   isInstalled: false,
   publicKey: null,
   network: null,
+  connectedPublicKey: null,
+  connectedNetwork: null,
+  activeAccountSource: null,
+  selectedWalletId: null,
   error: null,
 
   checkExtension: async () => {
@@ -123,25 +139,103 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
         isInstalled: true,
         publicKey,
         network,
+        connectedPublicKey: publicKey,
+        connectedNetwork: network,
+        activeAccountSource: 'freighter',
+        selectedWalletId: null,
         error: null,
       });
 
       return publicKey;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to connect to the Freighter wallet.';
-      set({
+      set((state) => ({
         status: 'disconnected',
         isInstalled: false,
-        publicKey: null,
-        network: null,
+        connectedPublicKey: null,
+        connectedNetwork: null,
+        ...(state.activeAccountSource === 'managed'
+          ? {}
+          : {
+              publicKey: null,
+              network: null,
+              activeAccountSource: null,
+              selectedWalletId: null,
+            }),
         error: message,
-      });
+      }));
       return null;
     }
   },
 
   disconnect: () => {
-    set({ status: 'disconnected', publicKey: null, network: null, error: null });
+    set((state) => ({
+      status: 'disconnected',
+      connectedPublicKey: null,
+      connectedNetwork: null,
+      ...(state.activeAccountSource === 'managed'
+        ? {}
+        : {
+            publicKey: null,
+            network: null,
+            activeAccountSource: null,
+            selectedWalletId: null,
+          }),
+      error: null,
+    }));
+  },
+
+  selectManagedAccount: (wallet) =>
+    set({
+      publicKey: wallet.stellarAddress,
+      network: wallet.network,
+      activeAccountSource: 'managed',
+      selectedWalletId: wallet.id,
+      error: null,
+    }),
+
+  selectFreighterAccount: () =>
+    set((state) => state.connectedPublicKey
+      ? {
+          publicKey: state.connectedPublicKey,
+          network: state.connectedNetwork,
+          status: 'connected',
+          activeAccountSource: 'freighter',
+          selectedWalletId: null,
+          error: null,
+        }
+      : state),
+
+  startWatching: async () => {
+    const freighter = await getFreighter();
+    if (!freighter.WatchWalletChanges) return () => undefined;
+    const watcher = new freighter.WatchWalletChanges(3000);
+    watcher.watch(({ address, network, error }) => {
+      if (error) {
+        set((state) => ({
+          isInstalled: false,
+          status: 'disconnected',
+          connectedPublicKey: null,
+          connectedNetwork: null,
+          ...(state.activeAccountSource === 'freighter'
+            ? { publicKey: null, network: null, activeAccountSource: null, selectedWalletId: null }
+            : {}),
+        }));
+        return;
+      }
+      const publicKey = resolveWalletAddress(address);
+      if (!publicKey) return;
+      set((state) => ({
+        isInstalled: true,
+        status: 'connected',
+        connectedPublicKey: publicKey,
+        connectedNetwork: network || state.connectedNetwork || 'testnet',
+        ...(state.activeAccountSource === 'freighter'
+          ? { publicKey, network: network || state.network || 'testnet' }
+          : {}),
+      }));
+    });
+    return () => watcher.stop();
   },
 
   requestSignature: async (xdr: string) => {
@@ -182,7 +276,16 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
     );
 
     if (!walletAddress) {
-      set({ status: 'disconnected', publicKey: null, network: null, isInstalled: false, error: null });
+      set((state) => ({
+        status: 'disconnected',
+        isInstalled: false,
+        connectedPublicKey: null,
+        connectedNetwork: null,
+        ...(state.activeAccountSource === 'managed'
+          ? {}
+          : { publicKey: null, network: null, activeAccountSource: null, selectedWalletId: null }),
+        error: null,
+      }));
       return;
     }
 
@@ -195,6 +298,10 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
       status: 'connected',
       publicKey: walletAddress,
       network: network ?? 'testnet',
+      connectedPublicKey: walletAddress,
+      connectedNetwork: network ?? 'testnet',
+      activeAccountSource: 'freighter',
+      selectedWalletId: null,
       error: null,
     });
   },

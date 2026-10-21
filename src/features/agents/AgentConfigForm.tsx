@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Bot, Gauge, Link2, Sparkles } from 'lucide-react';
+import { Bot, Gauge, KeyRound, Link2, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -42,6 +42,7 @@ export function AgentConfigForm() {
       provider: 'Nvidia',
       model: 'meta/llama-3.1-405b-instruct',
       endpointUrl: '',
+      apiKey: '',
       mode: 'assisted',
       temperature: 0.2,
       monthlyBudget: 500,
@@ -62,16 +63,18 @@ export function AgentConfigForm() {
   useEffect(() => {
     if (isCustomModel) {
       if (model) setValue('model', '');
-      setValue('endpointUrl', '');
+      setValue('endpointUrl', '', { shouldValidate: true });
+      setValue('apiKey', '', { shouldValidate: true });
       return;
     }
+    setValue('apiKey', '', { shouldValidate: true });
     if (!modelOptions.includes(model)) {
       setValue('model', modelOptions[0] ?? '');
       if (errors.model) trigger('model');
     }
     if (!needsEndpoint && errors.endpointUrl) {
       // Field is now hidden and empty; re-run validation to drop the stale error.
-      setValue('endpointUrl', '');
+      setValue('endpointUrl', '', { shouldValidate: true });
       trigger('endpointUrl');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,7 +117,7 @@ export function AgentConfigForm() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <FormField label="Agent name" required error={errors.name?.message}>
+          <FormField label="Agent name" htmlFor="agent-name" required error={errors.name?.message}>
             <Input
               id="agent-name"
               placeholder="e.g. Treasury Rebalancer"
@@ -126,6 +129,7 @@ export function AgentConfigForm() {
 
           <FormField
             label="Provider"
+            htmlFor="agent-provider"
             required
             error={errors.provider?.message}
             hint="Model options update to match the selected provider."
@@ -146,6 +150,7 @@ export function AgentConfigForm() {
 
         <FormField
           label={isCustomModel ? 'Custom model identifier' : 'Model'}
+          htmlFor="agent-model"
           required
           error={errors.model?.message}
           hint={
@@ -179,6 +184,7 @@ export function AgentConfigForm() {
         {needsEndpoint && (
           <FormField
             label="API endpoint URL"
+            htmlFor="agent-endpoint"
             required
             error={errors.endpointUrl?.message}
             hint={
@@ -199,8 +205,31 @@ export function AgentConfigForm() {
           </FormField>
         )}
 
+        {!needsEndpoint && (
+          <FormField
+            label="API key"
+            htmlFor="agent-api-key"
+            required
+            error={errors.apiKey?.message}
+            hint={`Credential for ${PROVIDER_LABELS[provider]}; stored only with this configuration.`}
+          >
+            <Input
+              id="agent-api-key"
+              type="password"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="Enter provider API key"
+              leftIcon={<KeyRound className="h-4 w-4" aria-hidden />}
+              invalid={Boolean(errors.apiKey)}
+              aria-describedby={errors.apiKey ? 'agent-api-key-error' : undefined}
+              {...register('apiKey')}
+            />
+          </FormField>
+        )}
+
         <div className="grid gap-5 sm:grid-cols-3">
-          <FormField label="Operating mode" required error={errors.mode?.message}>
+          <FormField label="Operating mode" htmlFor="agent-mode" required error={errors.mode?.message}>
             <Select id="agent-mode" invalid={Boolean(errors.mode)} {...register('mode')}>
               <option value="assisted">Assisted</option>
               <option value="autonomous">Autonomous</option>
@@ -209,6 +238,7 @@ export function AgentConfigForm() {
 
           <FormField
             label="Temperature"
+            htmlFor="agent-temperature"
             required
             error={errors.temperature?.message}
             hint="0 – 2 · sampling creativity"
@@ -226,6 +256,7 @@ export function AgentConfigForm() {
 
           <FormField
             label="Monthly budget (USDC)"
+            htmlFor="agent-budget"
             required
             error={errors.monthlyBudget?.message}
           >
@@ -243,6 +274,7 @@ export function AgentConfigForm() {
 
         <FormField
           label="Description"
+          htmlFor="agent-description"
           error={errors.description?.message}
           hint="Optional · shown on the agent detail page."
         >

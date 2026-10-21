@@ -20,6 +20,13 @@ export const providerModelOptions: Record<AgentProviderType, string[]> = {
   custom: [],
 };
 
+const apiKeyPatterns: Partial<Record<AgentProviderType, RegExp>> = {
+  nvidia: /^nvapi-[A-Za-z0-9_-]{20,}$/,
+  openai: /^sk-(?:proj-)?[A-Za-z0-9_-]{20,}$/,
+  anthropic: /^sk-ant-[A-Za-z0-9_-]{20,}$/,
+  gemini: /^AIza[A-Za-z0-9_-]{20,}$/,
+};
+
 const baseFields = {
   name: z.string().min(2, 'Configuration name is required.').max(80),
   provider: z.enum(agentProviderTypes),
@@ -35,8 +42,8 @@ const baseFields = {
 export const agentProviderConfigSchema = z
   .object({
     ...baseFields,
-    endpointUrl: z.string().url('Enter a valid URL.').optional().or(z.literal('')),
-    apiKey: z.string().max(200).optional().or(z.literal('')),
+    endpointUrl: z.string().trim().url('Enter a valid URL.').optional().or(z.literal('')),
+    apiKey: z.string().trim().max(200).optional().or(z.literal('')),
   })
   .superRefine((values, ctx) => {
     const needsApiKey = values.provider !== 'ollama' && values.provider !== 'custom';
@@ -47,6 +54,13 @@ export const agentProviderConfigSchema = z
         message: 'An API key is required for this provider.',
       });
     }
+    if (needsApiKey && values.apiKey && !apiKeyPatterns[values.provider]?.test(values.apiKey)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['apiKey'],
+        message: `Enter a valid ${values.provider} API key format.`,
+      });
+    }
 
     const needsEndpoint = values.provider === 'ollama' || values.provider === 'custom';
     if (needsEndpoint && !values.endpointUrl) {
@@ -55,6 +69,20 @@ export const agentProviderConfigSchema = z
         path: ['endpointUrl'],
         message: 'An endpoint URL is required for this provider.',
       });
+    }
+    if (values.endpointUrl) {
+      try {
+        const endpoint = new URL(values.endpointUrl);
+        if (endpoint.protocol !== 'https:' && endpoint.protocol !== 'http:') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['endpointUrl'],
+            message: 'Endpoint URL must use HTTP or HTTPS.',
+          });
+        }
+      } catch {
+        // The base URL validator reports malformed endpoint values.
+      }
     }
   });
 

@@ -6,6 +6,8 @@ import { cn } from '@/lib/cn';
 export interface DropdownItem {
   label: string;
   icon?: React.ReactNode;
+  description?: string;
+  trailing?: React.ReactNode;
   onSelect?: () => void;
   href?: string;
   destructive?: boolean;
@@ -127,15 +129,23 @@ export function Dropdown({ trigger, items, align = 'end', className, triggerClas
               return <div key={`sep-${i}`} className="my-1 h-px bg-border" role="separator" />;
             }
             const content = (
-              <>
+              <div className="flex min-w-0 flex-1 items-center gap-2.5">
                 {item.icon && (
                   <span className="shrink-0 text-foreground-secondary">{item.icon}</span>
                 )}
-                <span>{item.label}</span>
-              </>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{item.label}</span>
+                  {item.description && (
+                    <span className="mt-1 block truncate text-2xs font-normal text-foreground-muted">
+                      {item.description}
+                    </span>
+                  )}
+                </span>
+                {item.trailing}
+              </div>
             );
             const classes = cn(
-              'flex w-full items-center gap-2.5 rounded-sm px-2.5 py-2 text-left text-xs font-medium transition-colors duration-fast',
+              'flex w-full items-center rounded-sm px-2.5 py-2 text-left text-xs font-medium transition-colors duration-fast',
               item.destructive
                 ? 'text-danger hover:bg-danger-soft'
                 : 'text-foreground hover:bg-surface-secondary',
