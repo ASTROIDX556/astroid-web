@@ -13,6 +13,10 @@ import { formatCurrency, formatNumber, formatPercent } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import type { AssetBalance } from '@/types/domain';
 
+/** Shared WCAG AA focus ring for the focusable allocation card. */
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+
 interface AllocationSlice {
   asset: string;
   balance: number;
@@ -88,7 +92,12 @@ export function AssetAllocationChart({
 
   if (slices.length === 0) {
     return (
-      <Card className={cn('p-5', className)}>
+      <Card
+        role="region"
+        aria-label="Asset allocation: no funded assets yet"
+        tabIndex={0}
+        className={cn('rounded-card p-5', FOCUS_RING, className)}
+      >
         <p className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
           Asset allocation
         </p>
@@ -108,7 +117,12 @@ export function AssetAllocationChart({
           .join(', ')}`;
 
   return (
-    <Card className={cn('p-5', className)}>
+    <Card
+      role="region"
+      aria-label={chartAriaLabel}
+      tabIndex={0}
+      className={cn('rounded-card p-5', FOCUS_RING, className)}
+    >
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
           Asset allocation
