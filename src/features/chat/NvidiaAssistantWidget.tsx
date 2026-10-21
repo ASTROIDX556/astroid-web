@@ -24,6 +24,8 @@ import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { MessageContent } from './MessageContent';
 import type { ChatMessage, QuickPromptChip } from './types';
+import { BriefingTemplateSelector } from './BriefingTemplateSelector';
+import type { FinancialBriefingTemplate } from './briefingTemplates';
 
 const PRESET_CHIPS: QuickPromptChip[] = [
   {
@@ -330,6 +332,16 @@ export function NvidiaAssistantWidget() {
     }, 700);
   };
 
+  /**
+   * Briefing-template selection (#166): auto-populates the composer with the
+   * template prompt, then dispatches it through the existing send path
+   * (`handleSendMessage`, same as the quick-prompt chips below).
+   */
+  const handleTemplateSelect = (template: FinancialBriefingTemplate) => {
+    setInputText(template.prompt);
+    handleSendMessage(template.prompt);
+  };
+
   // Keyboard shortcut listener
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -438,6 +450,7 @@ export function NvidiaAssistantWidget() {
               </button>
             );
           })}
+          <BriefingTemplateSelector disabled={isStreaming} onSelectTemplate={handleTemplateSelect} />
         </div>
       </div>
 
