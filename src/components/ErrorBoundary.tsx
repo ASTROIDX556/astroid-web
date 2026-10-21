@@ -1,6 +1,7 @@
 'use client';
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -14,6 +15,8 @@ export interface ErrorBoundaryProps {
   fallback?: (error: Error, retry: () => void) => ReactNode;
   /** Optional telemetry/observability hook invoked with the caught error. */
   onError?: (error: Error, info: ErrorInfo) => void;
+  /** Invoked after the error state has been cleared and the children retry. */
+  onReset?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -21,6 +24,13 @@ interface ErrorBoundaryState {
 }
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+/** React can technically throw any value; normalize it so the fallback is safe. */
+function toError(value: unknown): Error {
+  if (value instanceof Error) return value;
+  if (typeof value === 'string' && value.trim().length > 0) return new Error(value);
+  return new Error('An unexpected error occurred.');
+}
 
 /**
  * Reusable class-based error boundary. Catches render/lifecycle errors thrown
@@ -37,19 +47,20 @@ const isProduction = process.env.NODE_ENV === 'production';
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override state: ErrorBoundaryState = { error: null };
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { error };
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+    return { error: toError(error) };
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
+    const normalized = toError(error);
     const prefix = this.props.section ? `[ErrorBoundary: ${this.props.section}]` : '[ErrorBoundary]';
     if (isProduction) {
       // Avoid leaking stack traces / internal paths to the browser console in prod.
-      console.error(`${prefix} ${error.message}`);
+      console.error(`${prefix} ${normalized.message}`);
     } else {
-      console.error(`${prefix} caught a component error:`, error, info.componentStack);
+      console.error(`${prefix} caught a component error:`, normalized, info.componentStack);
     }
-    this.props.onError?.(error, info);
+    this.props.onError?.(normalized, info);
   }
 
   override componentDidUpdate(prevProps: ErrorBoundaryProps): void {
@@ -59,7 +70,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   private retry = (): void => {
-    this.setState({ error: null });
+    this.setState({ error: null }, () => {
+      this.props.onReset?.();
+    });
   };
 
   override render(): ReactNode {
@@ -69,8 +82,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.props.fallback) return this.props.fallback(error, this.retry);
 
     return (
-      <div
+      <motion.div
         role="alert"
+        data-testid="error-boundary-fallback"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
         className="flex flex-col items-center gap-4 rounded-card border border-dashed border-danger/40 bg-danger-soft/30 p-10 text-center"
       >
         <span className="grid h-14 w-14 place-items-center rounded-full bg-danger-soft text-danger">
@@ -86,10 +103,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               : error.message}
           </p>
         </div>
-        <Button variant="secondary" size="sm" onClick={this.retry} leftIcon={<RefreshCw className="h-3.5 w-3.5" aria-hidden />}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={this.retry}
+          leftIcon={<RefreshCw className="h-3.5 w-3.5" aria-hidden />}
+        >
           Try again
         </Button>
-      </div>
+      </motion.div>
     );
   }
 }

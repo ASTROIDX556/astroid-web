@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Topbar } from '@/components/shell/topbar';
 import { CommandDock } from '@/components/shell/command-dock';
 import { MobileNav } from '@/components/shell/mobile-nav';
@@ -19,6 +21,7 @@ import { cn } from '@/lib/cn';
  */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
+  const pathname = usePathname();
 
   // Density is a persisted preference; gate the read so SSR markup always
   // renders the default and upgrades after rehydration (no mismatch).
@@ -44,7 +47,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         <div className="pb-28 lg:pb-28 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          {children}
+          <ErrorBoundary section="Dashboard page" resetKey={pathname}>
+            {children}
+          </ErrorBoundary>
         </div>
       </main>
 
