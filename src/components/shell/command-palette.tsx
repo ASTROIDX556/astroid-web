@@ -54,7 +54,7 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-background/60 p-4 pt-[12vh] backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[60] flex items-start justify-center bg-background-primary/60 p-4 pt-[12vh] backdrop-blur-sm animate-fade-in"
       onClick={() => setOpen(false)}
       role="presentation"
     >
