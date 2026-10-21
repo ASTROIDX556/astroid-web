@@ -25,6 +25,7 @@ import { BudgetAllocationDashboard } from '@/features/budgets/components/BudgetA
 import { BudgetAllocationModal } from '@/features/budgets/BudgetAllocationModal';
 import { BudgetMatrix } from '@/features/budgets/BudgetMatrix';
 import { BudgetMeterCard } from '@/features/budgets/BudgetMeters';
+import { BudgetExportMenu } from '@/features/budgets/BudgetExportMenu';
 import { MOCK_DEPARTMENT_BUDGETS } from '@/features/budgets/mock-data';
 
 const ORG_TREASURY_CAP = MOCK_DEPARTMENT_BUDGETS.reduce(
@@ -43,14 +44,17 @@ export default function BudgetsPage() {
         title="Budgets"
         description="Spend envelopes by organization, department, project and agent — with live utilization."
         actions={
-          <Button
-            variant="gold"
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => setAllocationModalOpen(true)}
-          >
-            Allocate budget
-          </Button>
+          <>
+            <BudgetExportMenu departments={MOCK_DEPARTMENT_BUDGETS} />
+            <Button
+              variant="gold"
+              size="sm"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => setAllocationModalOpen(true)}
+            >
+              Allocate budget
+            </Button>
+          </>
         }
       />
 

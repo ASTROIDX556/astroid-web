@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { toast } from 'sonner';
 import {
   CheckCircle,
   Clock,
@@ -137,7 +138,13 @@ export function XdrSignatureStatus({
     if (!key) {
       key = await connectWallet();
     }
-    if (!key) return;
+    if (!key) {
+      toast.error('Wallet connection failed', {
+        description:
+          'Freighter did not return an active key. Install or connect the extension, then sign again.',
+      });
+      return;
+    }
 
     const signedXdrResult = await signXdr(currentXdr);
     const newXdr = signedXdrResult || `${currentXdr}_SIGNED_BY_${key.slice(0, 8)}`;
@@ -160,10 +167,34 @@ export function XdrSignatureStatus({
     );
 
     setCurrentXdr(newXdr);
+
+    if (signedXdrResult) {
+      toast.success('Transaction signed', {
+        description: `Envelope signed by ${truncateKey(key)}.`,
+      });
+    } else {
+      toast.warning('Signature simulated', {
+        description: `Freighter returned no signature, so ${truncateKey(key)} was applied locally for this demo envelope.`,
+      });
+    }
+
     if (onSignatureSuccess) {
       onSignatureSuccess(newXdr);
     }
   }, [activeKey, connectWallet, signXdr, currentXdr, onSignatureSuccess]);
+
+  const handleConnectWallet = useCallback(async () => {
+    const key = await connectWallet();
+    if (key) {
+      toast.success('Wallet connected', {
+        description: `Freighter key ${truncateKey(key)} is now the active signer.`,
+      });
+    } else {
+      toast.error('Wallet connection failed', {
+        description: 'The Freighter extension is not available or rejected the request.',
+      });
+    }
+  }, [connectWallet]);
 
   const handleCopyXdr = useCallback(() => {
     if (!isValidXdr) return;
@@ -273,7 +304,7 @@ export function XdrSignatureStatus({
               <div className="flex items-center gap-2">
                 {!isConnected ? (
                   <button
-                    onClick={connectWallet}
+                    onClick={handleConnectWallet}
                     disabled={isSigning}
                     className="inline-flex items-center gap-1.5 rounded-md bg-gold px-3 py-1.5 text-xs font-medium text-gold-foreground hover:bg-gold-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
