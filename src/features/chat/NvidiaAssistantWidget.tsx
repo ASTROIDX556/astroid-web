@@ -10,6 +10,11 @@ import {
   Minimize2,
   Copy,
   Download,
+  AlertCircle,
+  Check,
+  Clock,
+  TrendingDown,
+  type LucideIcon,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +22,41 @@ import { toast } from 'sonner';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { PromptChips } from '@/features/ai/components/PromptChips';
 import type { ChatMessage } from './types';
+import { cn } from '@/lib/cn';
+import { MessageContent } from './MessageContent';
+import type { ChatMessage, QuickPromptChip } from './types';
+import { BriefingTemplateSelector } from './BriefingTemplateSelector';
+import type { FinancialBriefingTemplate } from './briefingTemplates';
+
+const PRESET_CHIPS: QuickPromptChip[] = [
+  {
+    id: 'chip-1',
+    label: 'Daily Spend Briefing',
+    promptText: 'Summarize total daily spending across all AI agents and departments.',
+    iconName: 'Zap',
+  },
+  {
+    id: 'chip-2',
+    label: 'Low Balance Wallets',
+    promptText:
+      'Identify any agent wallets approaching minimum reserve or threshold balance.',
+    iconName: 'AlertCircle',
+  },
+  {
+    id: 'chip-3',
+    label: 'Gas Fee Optimization',
+    promptText:
+      'Analyze current Soroban contract RPC gas fees and recommend priority fee settings.',
+    iconName: 'TrendingDown',
+  },
+];
+
+/** Lucide icon registry for quick-prompt chips (iconName comes from data). */
+const CHIP_ICONS: Record<string, LucideIcon> = {
+  Zap,
+  AlertCircle,
+  TrendingDown,
+};
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
@@ -25,12 +65,14 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     content:
       'Greetings Operator! I am your Nvidia NIM Financial Assistant for the Astroid Control Plane. How can I assist with on-chain agent governance today?',
     timestamp: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+    status: 'complete',
   },
   {
     id: 'msg-2',
     role: 'assistant',
     content: 'Here is your current executive financial briefing:',
     timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+    status: 'complete',
     structuredBriefing: {
       totalDailySpend: 18750,
       currency: 'USDC',
@@ -43,12 +85,89 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   },
 ];
 
+/** Respect the OS "reduce motion" preference before animating scrolls. */
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function')
+    return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+interface AssistantReply {
+  text: string;
+  briefing?: ChatMessage['structuredBriefing'];
+}
+
+/** Deterministic mock replies for the Nvidia NIM demo transport. */
+function buildAssistantReply(query: string): AssistantReply {
+  const normalized = query.toLowerCase();
+
+  if (normalized.includes('daily') || normalized.includes('spend')) {
+    return {
+      text:
+        'Daily spend summary analysis completed — all 8 active agents are operating within their budget envelopes:\n\n' +
+        '- Velocity is **+12%** versus the 7-day trailing average\n' +
+        '- `Auto-Sweep Treasury Bot` leads outflow at 15,000 XLM\n' +
+        '- No policy violations detected in the last 24h',
+      briefing: {
+        totalDailySpend: 24500,
+        currency: 'USDC',
+        activeAgentsCount: 8,
+        lowBalanceWalletsCount: 0,
+        topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
+        recommendation:
+          'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
+      },
+    };
+  }
+
+  if (normalized.includes('balance') || normalized.includes('wallet')) {
+    return {
+      text: 'Wallet balance audit: **7 of 8** agent wallets are fully funded. One wallet (`agt-ci-bot`) is at 15.5% capacity — top it up before the next CI batch.',
+    };
+  }
+
+  if (normalized.includes('gas') || normalized.includes('fee')) {
+    return {
+      text:
+        'Soroban RPC network congestion is currently minimal. Recommended fee settings:\n\n' +
+        '```toml\nbase_fee = 100\npriority_fee = 250\nmax_fee = 1_000\n```\n\n' +
+        '- Estimated inclusion: 1–2 ledgers\n' +
+        '- Retry strategy: fee-bump once on timeout',
+    };
+  }
+
+  return {
+    text: `Nvidia NIM LLM Insights: analyzed query "${query}". On-chain telemetry indicates normal agent activity across Stellar Testnet.`,
+  };
+}
+
 export function NvidiaAssistantWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [activeChipId, setActiveChipId] = useState<string | null>(null);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  /** False once the operator scrolls up — stops us from yanking the transcript. */
+  const stickToBottomRef = useRef(true);
+  const previousMessageCountRef = useRef(INITIAL_MESSAGES.length);
+  const streamTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const replyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Any assistant turn still being typed out — drives the "generating" state. */
+  const isAwaitingReply =
+    isStreaming && !messages.some((message) => message.status === 'streaming');
+
+  // Cancel in-flight mock timers if the widget unmounts mid-stream.
+  useEffect(
+    () => () => {
+      if (streamTimerRef.current) clearInterval(streamTimerRef.current);
+      if (replyTimerRef.current) clearTimeout(replyTimerRef.current);
+    },
+    [],
+  );
 
   /** One-click export: copy the briefing transcript, or download it as text. */
   const buildTranscript = useCallback(
@@ -110,10 +229,85 @@ export function NvidiaAssistantWidget() {
     toast.success('Briefing transcript downloaded as text file');
   };
 
-  // Auto-scroll to bottom on new messages
+  /**
+   * Auto-scroll follow behaviour:
+   * — new bubbles glide into view with `scrollIntoView({ behavior: 'smooth' })`;
+   * — streamed chunks pin the container to the bottom directly (no animation
+   *   per token, which would fight itself at ~30ms cadence);
+   * — scrolling up opts out entirely until the operator returns to the bottom.
+   */
+  const handleTranscriptScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    stickToBottomRef.current =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 96;
+  }, []);
+
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = scrollContainerRef.current;
+    const grew = messages.length !== previousMessageCountRef.current;
+    previousMessageCountRef.current = messages.length;
+
+    if (!stickToBottomRef.current) return;
+
+    if (grew) {
+      chatBottomRef.current?.scrollIntoView({
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        block: 'nearest',
+      });
+    } else if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages, isStreaming]);
+
+  /** Streams the mock NIM reply token-by-token so new content appends live. */
+  const startStreamingReply = (userMessageId: string, reply: AssistantReply) => {
+    const assistantId = `ast-${Date.now()}`;
+
+    setMessages((prev) => [
+      ...prev.map((message) =>
+        message.id === userMessageId
+          ? { ...message, status: 'sent' as const }
+          : message,
+      ),
+      {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString(),
+        status: 'streaming',
+        structuredBriefing: reply.briefing,
+      },
+    ]);
+
+    const tokens = reply.text.match(/\S+\s*/g) ?? [reply.text];
+    let cursor = 0;
+
+    streamTimerRef.current = setInterval(() => {
+      cursor += 1;
+
+      if (cursor >= tokens.length) {
+        if (streamTimerRef.current) clearInterval(streamTimerRef.current);
+        streamTimerRef.current = null;
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId
+              ? { ...message, content: reply.text, status: 'complete' }
+              : message,
+          ),
+        );
+        setIsStreaming(false);
+        return;
+      }
+
+      const partial = tokens.slice(0, cursor).join('');
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === assistantId ? { ...message, content: partial } : message,
+        ),
+      );
+    }, 32);
+  };
 
   // Send message handler
   const handleSendMessage = (textToSend?: string) => {
@@ -125,6 +319,7 @@ export function NvidiaAssistantWidget() {
       role: 'user',
       content: text,
       timestamp: new Date().toISOString(),
+      status: 'sending',
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -172,10 +367,21 @@ export function NvidiaAssistantWidget() {
         timestamp: new Date().toISOString(),
         structuredBriefing: briefing,
       };
+    // Mock latency before the first streamed token lands.
+    replyTimerRef.current = setTimeout(() => {
+      replyTimerRef.current = null;
+      startStreamingReply(userMsg.id, buildAssistantReply(text));
+    }, 700);
+  };
 
-      setMessages((prev) => [...prev, assistantMsg]);
-      setIsStreaming(false);
-    }, 1000);
+  /**
+   * Briefing-template selection (#166): auto-populates the composer with the
+   * template prompt, then dispatches it through the existing send path
+   * (`handleSendMessage`, same as the quick-prompt chips below).
+   */
+  const handleTemplateSelect = (template: FinancialBriefingTemplate) => {
+    setInputText(template.prompt);
+    handleSendMessage(template.prompt);
   };
 
   /**
@@ -242,6 +448,12 @@ export function NvidiaAssistantWidget() {
       {/* Export toolbar + financial briefing quick prompts */}
       <div className="space-y-3 border-b border-border/60 bg-surface/80 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Export toolbar + Preset Quick Chips */}
+      <div className="space-y-2 border-b border-border/60 bg-surface/80 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-3xs font-bold uppercase tracking-wider text-foreground-muted">
+            Quick Prompts:
+          </span>
           <div
             className="gap-1.5 flex items-center"
             role="group"
@@ -272,13 +484,45 @@ export function NvidiaAssistantWidget() {
           disabled={isStreaming}
           busy={isStreaming}
         />
+        <div className="flex flex-wrap items-center gap-2">
+          {PRESET_CHIPS.map((chip) => {
+            const Icon = CHIP_ICONS[chip.iconName] ?? Zap;
+            const isActive = activeChipId === chip.id;
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => handleSendMessage(chip.promptText)}
+                onMouseEnter={() => setActiveChipId(chip.id)}
+                onMouseLeave={() => setActiveChipId(null)}
+                onFocus={() => setActiveChipId(chip.id)}
+                onBlur={() => setActiveChipId(null)}
+                disabled={isStreaming}
+                aria-pressed={isActive}
+                className={cn(
+                  'gap-1.5 px-2.5 flex items-center rounded-button border py-1 text-2xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-50',
+                  isActive
+                    ? 'border-gold bg-gold-soft text-foreground'
+                    : 'border-border bg-surface-secondary text-foreground-secondary hover:border-gold hover:text-foreground',
+                )}
+              >
+                <Icon className="h-3 w-3 text-gold" aria-hidden />
+                <span>{chip.label}</span>
+              </button>
+            );
+          })}
+          <BriefingTemplateSelector disabled={isStreaming} onSelectTemplate={handleTemplateSelect} />
+        </div>
       </div>
 
       {/* Chat Messages Stream */}
       <div
         className="flex-1 space-y-4 overflow-y-auto p-4 font-sans text-xs"
+        ref={scrollContainerRef}
+        onScroll={handleTranscriptScroll}
+        className="flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 font-sans text-xs"
         aria-live="polite"
-        aria-relevant="additions"
+        aria-relevant="additions text"
       >
         {messages.map((msg) => {
           const isAssistant = msg.role === 'assistant';
@@ -290,7 +534,7 @@ export function NvidiaAssistantWidget() {
             >
               {isAssistant && (
                 <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gold-soft text-gold-strong">
-                  <Bot className="h-4 w-4" />
+                  <Bot className="h-4 w-4" aria-hidden />
                 </div>
               )}
 
@@ -299,12 +543,16 @@ export function NvidiaAssistantWidget() {
               >
                 <div
                   className={`p-3.5 shadow-xs rounded-card text-xs leading-relaxed ${
+                className={`min-w-0 max-w-[85%] space-y-2 ${isAssistant ? 'items-start' : 'items-end'}`}
+              >
+                <div
+                  className={`p-3.5 shadow-xs overflow-hidden rounded-card text-xs leading-relaxed ${
                     isAssistant
                       ? 'border border-border bg-surface-secondary text-foreground'
                       : 'text-surface-dark bg-gold font-medium'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <MessageContent content={msg.content} />
 
                   {/* Structured Briefing Widget */}
                   {msg.structuredBriefing && (
@@ -347,6 +595,14 @@ export function NvidiaAssistantWidget() {
                             Low Balance Wallets:
                           </span>
                           <p className="font-bold text-amber-400">
+                          <p
+                            className={cn(
+                              'font-bold',
+                              msg.structuredBriefing.lowBalanceWalletsCount > 0
+                                ? 'text-warning'
+                                : 'text-success',
+                            )}
+                          >
                             {msg.structuredBriefing.lowBalanceWalletsCount} Warning
                           </p>
                         </div>
@@ -366,6 +622,34 @@ export function NvidiaAssistantWidget() {
 
                 <div className="text-3xs px-1 font-mono text-foreground-muted">
                   {formatRelativeTime(msg.timestamp)}
+                {/* Message status indicator — delivery state + timestamp */}
+                <div className="gap-1.5 flex items-center px-1 font-mono text-2xs text-foreground-muted">
+                  <span>{formatRelativeTime(msg.timestamp)}</span>
+                  {isAssistant ? (
+                    msg.status === 'streaming' ? (
+                      <span
+                        role="status"
+                        className="inline-flex items-center gap-1 text-gold-strong"
+                      >
+                        <span className="gap-0.5 inline-flex" aria-hidden>
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-gold [animation-delay:-0.3s]" />
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-gold [animation-delay:-0.15s]" />
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-gold" />
+                        </span>
+                        Generating
+                      </span>
+                    ) : null
+                  ) : msg.status === 'sending' ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-3 w-3" aria-hidden />
+                      Sending
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-success">
+                      <Check className="h-3 w-3" aria-hidden />
+                      Sent
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -382,10 +666,25 @@ export function NvidiaAssistantWidget() {
           <div className="flex animate-pulse items-center gap-2 text-2xs text-foreground-muted">
             <Bot className="h-4 w-4 animate-spin text-gold" />
             <span>Nvidia NIM LLM is formulating insight...</span>
+        {isAwaitingReply && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-2 rounded-card border border-border bg-surface-secondary/60 px-3 py-2 text-2xs text-foreground-muted"
+          >
+            <Bot className="h-4 w-4 text-gold" aria-hidden />
+            <span className="gap-1.5 flex items-center">
+              Nvidia NIM LLM is formulating insight
+              <span className="gap-0.5 inline-flex" aria-hidden>
+                <span className="h-1 w-1 animate-bounce rounded-full bg-gold [animation-delay:-0.3s]" />
+                <span className="h-1 w-1 animate-bounce rounded-full bg-gold [animation-delay:-0.15s]" />
+                <span className="h-1 w-1 animate-bounce rounded-full bg-gold" />
+              </span>
+            </span>
           </div>
         )}
 
-        <div ref={chatBottomRef} />
+        <div ref={chatBottomRef} aria-hidden />
       </div>
 
       {/* Input Form */}

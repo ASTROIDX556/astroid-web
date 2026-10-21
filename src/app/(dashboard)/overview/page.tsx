@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   Sparkles,
 } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { StatCard, SectionLabel } from '@/components/dashboard/stat-card';
@@ -78,6 +79,19 @@ export default function OverviewPage() {
         >
           {(data) => (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <QueryBoundary
+        query={overview}
+        loading={
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        }
+      >
+        {(data) => (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <ErrorBoundary section="Wallet balance" compact className="h-full">
               <StatCard
                 label="Total balance"
                 rawNumber={data?.totalBalance ?? 0}
@@ -86,6 +100,8 @@ export default function OverviewPage() {
                 accent
                 href="/wallets"
               />
+            </ErrorBoundary>
+            <ErrorBoundary section="Monthly spend" compact className="h-full">
               <StatCard
                 label="Monthly spend"
                 rawNumber={data?.monthlySpend ?? 0}
@@ -96,6 +112,8 @@ export default function OverviewPage() {
                 icon={<TrendingDown className="h-4 w-4" />}
                 href="/analytics"
               />
+            </ErrorBoundary>
+            <ErrorBoundary section="Agent status" compact className="h-full">
               <StatCard
                 label="Active agents"
                 rawNumber={data?.activeAgents ?? 0}
@@ -104,6 +122,8 @@ export default function OverviewPage() {
                 footer="Executing this month"
                 href="/agents"
               />
+            </ErrorBoundary>
+            <ErrorBoundary section="Approvals" compact className="h-full">
               <StatCard
                 label="Pending approvals"
                 rawNumber={data?.pendingApprovals ?? 0}
@@ -223,6 +243,121 @@ export default function OverviewPage() {
             </QueryBoundary>
           </CardContent>
         </Card>
+            </ErrorBoundary>
+          </div>
+        )}
+      </QueryBoundary>
+
+      {/* Cashflow + briefing */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <ErrorBoundary section="Cashflow chart" className="lg:col-span-2">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle>Cashflow</CardTitle>
+              <Link
+                href="/analytics"
+                className="inline-flex items-center gap-1 text-2xs font-medium text-foreground-secondary transition-colors hover:text-foreground"
+              >
+                Full analytics <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <QueryBoundary
+                query={overview}
+                loading={<div className="skeleton h-[260px] w-full rounded-md" />}
+              >
+                {(data) => <CashflowChart data={data?.cashflow} />}
+              </QueryBoundary>
+            </CardContent>
+          </Card>
+        </ErrorBoundary>
+
+        {/* AI briefing */}
+        <ErrorBoundary section="AI briefing">
+          <Card elevation="soft" className="relative h-full overflow-hidden">
+            <div
+              className="pointer-events-none absolute inset-0 bg-gold-sheen"
+              aria-hidden
+            />
+            <CardHeader className="relative">
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-gold" aria-hidden />
+                Briefing
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative">
+              <QueryBoundary
+                query={briefing}
+                loading={
+                  <div className="space-y-3">
+                    <div className="skeleton h-4 w-3/4 rounded-sm" />
+                    <div className="skeleton h-16 w-full rounded-sm" />
+                    <div className="skeleton h-16 w-full rounded-sm" />
+                  </div>
+                }
+              >
+                {(data) => (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="font-display text-base font-semibold">
+                        {data?.greeting ?? 'Financial Executive Briefing'}
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-foreground-secondary">
+                        {data?.summary ?? 'Treasury systems operating normally.'}
+                      </p>
+                    </div>
+                    <ul className="space-y-2.5">
+                      {(data?.insights ?? []).slice(0, 3).map((insight) => (
+                        <li
+                          key={insight.id}
+                          className="rounded-sm border border-border bg-surface/60 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-xs font-medium text-foreground">
+                              {insight.title}
+                            </p>
+                            <Badge
+                              variant={severityBadge[insight.severity] ?? 'info'}
+                              size="sm"
+                            >
+                              {insight.severity}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-2xs leading-relaxed text-foreground-secondary">
+                            {insight.detail}
+                          </p>
+                          {insight.action && (
+                            <Link
+                              href={insight.action.href}
+                              className="mt-1.5 inline-flex items-center gap-1 text-2xs font-medium text-gold-strong hover:underline"
+                            >
+                              {insight.action.label}
+                              <ArrowUpRight className="h-3 w-3" aria-hidden />
+                            </Link>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => openAssistant(true)}
+                    >
+                      Open assistant
+                    </Button>
+                    <p className="text-center text-2xs text-foreground-muted">
+                      Generated{' '}
+                      {data?.generatedAt
+                        ? formatRelativeTime(data.generatedAt)
+                        : 'just now'}
+                    </p>
+                  </div>
+                )}
+              </QueryBoundary>
+            </CardContent>
+          </Card>
+        </ErrorBoundary>
       </div>
 
       {/* Spend breakdown */}
@@ -269,6 +404,52 @@ export default function OverviewPage() {
             </QueryBoundary>
           </CardContent>
         </Card>
+        <ErrorBoundary section="Spend by category">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Spend by category</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <QueryBoundary
+                query={overview}
+                loading={<div className="skeleton h-[260px] w-full rounded-md" />}
+              >
+                {(data) => <CategoryBarChart data={data?.spendingByCategory} />}
+              </QueryBoundary>
+            </CardContent>
+          </Card>
+        </ErrorBoundary>
+
+        <ErrorBoundary section="Risk distribution">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Risk distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <QueryBoundary
+                query={overview}
+                loading={<div className="skeleton h-[220px] w-full rounded-md" />}
+              >
+                {(data) => {
+                  const list = data?.riskDistribution ?? [];
+                  const donut: DonutDatum[] = list.map((r, i) => ({
+                    name: r.level,
+                    value: r.count,
+                    color: CATEGORICAL[i % CATEGORICAL.length],
+                  }));
+                  const total = list.reduce((sum, r) => sum + r.count, 0);
+                  return (
+                    <DonutChart
+                      data={donut}
+                      centerLabel="Assessed"
+                      centerValue={formatNumber(total)}
+                    />
+                  );
+                }}
+              </QueryBoundary>
+            </CardContent>
+          </Card>
+        </ErrorBoundary>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -296,18 +477,42 @@ export default function OverviewPage() {
                             {agent.role} · {formatNumber(agent.transactions)}{' '}
                             transactions
                           </p>
+          <ErrorBoundary section="Agent status">
+            <QueryBoundary query={overview} loading={<SkeletonCard />}>
+              {(data) => (
+                <Card>
+                  <CardContent className="divide-y divide-border p-0">
+                    {(data?.agentSpend ?? []).map((agent) => (
+                      <Link
+                        key={agent.agentId}
+                        href={`/agents/${agent.agentId}`}
+                        className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-surface-secondary/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="grid h-9 w-9 place-items-center rounded-md bg-surface-secondary text-foreground-secondary">
+                            <Bot className="h-4 w-4" aria-hidden />
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {agent.agentName}
+                            </p>
+                            <p className="text-2xs capitalize text-foreground-secondary">
+                              {agent.role} · {formatNumber(agent.transactions)}{' '}
+                              transactions
+                            </p>
+                          </div>
                         </div>
-                      </div>
 
-                      <span className="tabular font-display text-lg font-semibold">
-                        {formatCurrency(agent.spent, 'USD', { compact: true })}
-                      </span>
-                    </Link>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </QueryBoundary>
+                        <span className="tabular font-display text-lg font-semibold">
+                          {formatCurrency(agent.spent, 'USD', { compact: true })}
+                        </span>
+                      </Link>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </QueryBoundary>
+          </ErrorBoundary>
         </div>
 
         <div>
@@ -338,6 +543,29 @@ export default function OverviewPage() {
                   onReset={() => void budgets.refetch()}
                 >
                   <Card>
+          <ErrorBoundary section="Budget tracking">
+            <QueryBoundary
+              query={budgets}
+              loading={
+                <Card>
+                  <CardContent className="space-y-3 p-5">
+                    <div className="skeleton w-28 h-4 rounded-sm" />
+                    <div className="skeleton h-16 w-full rounded-sm" />
+                    <div className="skeleton h-16 w-full rounded-sm" />
+                  </CardContent>
+                </Card>
+              }
+            >
+              {(data) => {
+                const departments = [...data]
+                  .filter(
+                    (budget) => budget.scope === 'department' && budget.parentBudgetId,
+                  )
+                  .sort((a, b) => b.spent / b.limit - a.spent / a.limit)
+                  .slice(0, 4);
+
+                return (
+                  <Card className="h-full">
                     <CardHeader className="flex-row items-center justify-between gap-3">
                       <CardTitle>Department budgets</CardTitle>
                       <Link
@@ -392,6 +620,10 @@ export default function OverviewPage() {
               );
             }}
           </QueryBoundary>
+                );
+              }}
+            </QueryBoundary>
+          </ErrorBoundary>
         </div>
       </div>
     </PageTransition>

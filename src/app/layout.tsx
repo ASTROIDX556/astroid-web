@@ -5,6 +5,7 @@ import { AppProviders } from '@/providers';
 import { CursorProvider } from '@/components/effects/user-cursor';
 import { CommandPalette } from '@/components/layout/CommandPalette';
 import { THEME_COOKIE, readThemeCookie, resolveThemeValue } from '@/lib/theme-cookie';
+import '@/styles/tokens.css';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {

@@ -111,11 +111,13 @@ export function FormField({
       </label>
       {children}
       {error ? (
-        <p className="text-2xs text-danger" role="alert">
+        <p id={`${id}-error`} className="text-2xs text-danger" role="alert">
           {error}
         </p>
       ) : hint ? (
-        <p className="text-2xs text-foreground-secondary">{hint}</p>
+        <p id={`${id}-hint`} className="text-2xs text-foreground-secondary">
+          {hint}
+        </p>
       ) : null}
     </div>
   );

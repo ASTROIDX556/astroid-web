@@ -15,6 +15,7 @@ import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { XdrInspector } from '@/features/wallet/components/XdrInspector';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { WalletBalanceCards } from '@/features/wallet/components/WalletBalanceCards';
+import { WalletTransactionHistory } from '@/features/wallet/components/WalletTransactionHistory';
 
 export default function WalletDetailPage({ params }: { params: { id: string } }) {
   const wallet = useWallet(params.id);
@@ -103,6 +104,11 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
         <ErrorBoundary section="Wallet balances">
           <WalletBalanceCards walletId={params.id} />
         </ErrorBoundary>
+      </div>
+
+      <div className="space-y-4">
+        <SectionLabel>Transaction history</SectionLabel>
+        <WalletTransactionHistory walletId={params.id} />
       </div>
 
       <div className="space-y-4">

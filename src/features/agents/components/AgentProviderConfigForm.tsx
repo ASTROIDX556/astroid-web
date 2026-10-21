@@ -11,6 +11,7 @@ import { Input, Select } from '@/components/ui/input';
 import {
   agentProviderConfigSchema,
   agentProviderTypes,
+  isHostedProvider,
   providerModelOptions,
   type AgentProviderConfigValues,
   type AgentProviderType,
@@ -62,6 +63,7 @@ export function AgentProviderConfigForm({
   const provider = form.watch('provider');
   const isHosted = provider !== 'ollama' && provider !== 'custom';
   const isCustom = provider === 'custom';
+  const isHosted = isHostedProvider(provider);
   const modelOptions = providerModelOptions[provider];
   const previousProvider = useRef<AgentProviderType>(provider);
 
@@ -81,6 +83,17 @@ export function AgentProviderConfigForm({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
+
+  // Point each control at its inline error, or at its hint while valid, so
+  // screen readers announce the message tied to that specific field.
+  const describedBy = (
+    id: string,
+    field: keyof AgentProviderConfigValues,
+    hasHint = false,
+  ): string | undefined => {
+    if (form.formState.errors[field]) return `${id}-error`;
+    return hasHint ? `${id}-hint` : undefined;
+  };
 
   const handleSubmit = async (values: AgentProviderConfigValues) => {
     try {
@@ -118,9 +131,7 @@ export function AgentProviderConfigForm({
               {...form.register('name')}
               placeholder="Treasury agent — production"
               invalid={Boolean(form.formState.errors.name)}
-              aria-describedby={
-                form.formState.errors.name ? 'provider-config-name-error' : undefined
-              }
+              aria-describedby={describedBy('provider-config-name', 'name')}
             />
           </FormRow>
 
@@ -134,11 +145,7 @@ export function AgentProviderConfigForm({
               id="provider-config-provider"
               {...form.register('provider')}
               invalid={Boolean(form.formState.errors.provider)}
-              aria-describedby={
-                form.formState.errors.provider
-                  ? 'provider-config-provider-error'
-                  : undefined
-              }
+              aria-describedby={describedBy('provider-config-provider', 'provider')}
             >
               {agentProviderTypes.map((value) => (
                 <option key={value} value={value}>
@@ -159,11 +166,7 @@ export function AgentProviderConfigForm({
                 id="provider-config-model"
                 {...form.register('model')}
                 invalid={Boolean(form.formState.errors.model)}
-                aria-describedby={
-                  form.formState.errors.model
-                    ? 'provider-config-model-error'
-                    : undefined
-                }
+                aria-describedby={describedBy('provider-config-model', 'model')}
               >
                 {modelOptions.map((value) => (
                   <option key={value} value={value}>
@@ -177,11 +180,7 @@ export function AgentProviderConfigForm({
                 {...form.register('model')}
                 placeholder="e.g. llama3.1:70b"
                 invalid={Boolean(form.formState.errors.model)}
-                aria-describedby={
-                  form.formState.errors.model
-                    ? 'provider-config-model-error'
-                    : undefined
-                }
+                aria-describedby={describedBy('provider-config-model', 'model')}
               />
             )}
           </FormRow>
@@ -208,11 +207,7 @@ export function AgentProviderConfigForm({
                   isCustom ? 'Optional bearer token' : 'Paste provider API key'
                 }
                 invalid={Boolean(form.formState.errors.apiKey)}
-                aria-describedby={
-                  form.formState.errors.apiKey
-                    ? 'provider-config-api-key-error'
-                    : undefined
-                }
+                aria-describedby={describedBy('provider-config-api-key', 'apiKey')}
               />
             </FormRow>
           ) : null}
@@ -240,11 +235,11 @@ export function AgentProviderConfigForm({
                     : 'https://api.example.com/v1'
                 }
                 invalid={Boolean(form.formState.errors.endpointUrl)}
-                aria-describedby={
-                  form.formState.errors.endpointUrl
-                    ? 'provider-config-endpoint-error'
-                    : undefined
-                }
+                aria-describedby={describedBy(
+                  'provider-config-endpoint',
+                  'endpointUrl',
+                  provider === 'ollama',
+                )}
               />
             </FormRow>
           ) : null}
@@ -261,13 +256,13 @@ export function AgentProviderConfigForm({
               step="0.1"
               min={0}
               max={2}
-              {...form.register('temperature')}
+              {...form.register('temperature', { valueAsNumber: true })}
               invalid={Boolean(form.formState.errors.temperature)}
-              aria-describedby={
-                form.formState.errors.temperature
-                  ? 'provider-config-temperature-error'
-                  : undefined
-              }
+              aria-describedby={describedBy(
+                'provider-config-temperature',
+                'temperature',
+                true,
+              )}
             />
           </FormRow>
 
@@ -309,7 +304,9 @@ function FormRow({ id, label, required, error, hint, children }: FormRowProps) {
           {error}
         </p>
       ) : hint ? (
-        <p className="text-2xs text-foreground-secondary">{hint}</p>
+        <p id={`${id}-hint`} className="text-2xs text-foreground-secondary">
+          {hint}
+        </p>
       ) : null}
     </div>
   );
