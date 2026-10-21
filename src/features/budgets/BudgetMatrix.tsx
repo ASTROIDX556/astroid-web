@@ -23,7 +23,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
@@ -35,14 +34,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
+import { BudgetChartWrapper } from '@/components/charts/BudgetChartWrapper';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
 import type { DepartmentBudget, AgentAllocation } from './types';
 
 const ASSET_COLORS: Record<string, string> = {
-  USDC: '#3b82f6', // blue
-  XLM: '#eab308',  // gold
-  ASTRO: '#a855f7', // purple
-  EURC: '#10b981', // green
+  USDC: 'rgb(var(--chart-1))',
+  XLM: 'rgb(var(--chart-4))',
+  ASTRO: 'rgb(var(--chart-7))',
+  EURC: 'rgb(var(--chart-3))',
 };
 
 export function BudgetMatrix() {
@@ -275,10 +275,10 @@ export function BudgetMatrix() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <BudgetChartWrapper className="h-full">
               <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#888' }} />
-                <YAxis tick={{ fontSize: 12, fill: '#888' }} unit="%" domain={[0, 100]} />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'rgb(var(--text-muted))' }} />
+                <YAxis tick={{ fontSize: 12, fill: 'rgb(var(--text-muted))' }} unit="%" domain={[0, 100]} />
                 <RechartsTooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length && payload[0]) {
@@ -303,12 +303,12 @@ export function BudgetMatrix() {
                   {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={ASSET_COLORS[entry.asset] || '#eab308'}
+                      fill={ASSET_COLORS[entry.asset] || 'rgb(var(--chart-4))'}
                     />
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </BudgetChartWrapper>
           </div>
         </CardContent>
       </Card>

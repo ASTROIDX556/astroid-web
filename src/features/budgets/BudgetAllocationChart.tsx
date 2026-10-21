@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
@@ -16,6 +15,7 @@ import { AlertTriangle, ShieldAlert, BarChart3, Table as TableIcon } from 'lucid
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/format';
+import { BudgetChartWrapper } from '@/components/charts/BudgetChartWrapper';
 
 export interface BudgetDepartmentData {
   id: string;
@@ -42,16 +42,15 @@ const DEFAULT_BUDGET_DATA: BudgetDepartmentData[] = [
 
 export function getThresholdColor(utilizationPercent: number): {
   color: string;
-  hex: string;
   status: 'normal' | 'warning' | 'danger';
 } {
   if (utilizationPercent >= 100) {
-    return { color: 'var(--danger)', hex: '#C84747', status: 'danger' };
+    return { color: 'rgb(var(--danger))', status: 'danger' };
   }
   if (utilizationPercent >= 80) {
-    return { color: 'var(--warning)', hex: '#D98A21', status: 'warning' };
+    return { color: 'rgb(var(--warning))', status: 'warning' };
   }
-  return { color: 'var(--chart-1)', hex: '#2A78D6', status: 'normal' };
+  return { color: 'rgb(var(--chart-1))', status: 'normal' };
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -63,12 +62,12 @@ const CustomTooltip = ({ active, payload }: any) => {
   const utilization = data.allocated > 0 ? (data.consumed / data.allocated) * 100 : 0;
   const remaining = Math.max(0, data.allocated - data.consumed);
   const currency = data.currency || 'USDC';
-  const { status, hex } = getThresholdColor(utilization);
+  const { status, color } = getThresholdColor(utilization);
 
   return (
     <div
       className="z-50 rounded-lg border border-border bg-surface-primary p-3 shadow-md text-xs space-y-1.5 min-w-[200px]"
-      style={{ borderColor: status !== 'normal' ? hex : undefined }}
+      style={{ borderColor: status !== 'normal' ? color : undefined }}
     >
       <p className="font-semibold text-foreground border-b border-border/60 pb-1">{data.department}</p>
       <div className="space-y-1">
@@ -93,7 +92,7 @@ const CustomTooltip = ({ active, payload }: any) => {
         </div>
         <div className="flex justify-between items-center gap-4 pt-1 border-t border-border/40">
           <span className="text-foreground-secondary font-medium">Utilization:</span>
-          <span className="tabular font-bold" style={{ color: hex }}>
+          <span className="tabular font-bold" style={{ color }}>
             {Math.round(utilization)}%
           </span>
         </div>
@@ -175,24 +174,24 @@ export function BudgetAllocationChart({
       <CardContent className="pt-6">
         {!showTableView ? (
           <div className="space-y-4">
-            <div className="h-80 w-full" role="region" aria-label="Budget Allocation Chart Graph">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-80 w-full min-w-0" role="region" aria-label="Budget Allocation Chart Graph">
+              <BudgetChartWrapper className="h-full">
                 <BarChart
                   data={data}
                   layout="vertical"
                   margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="var(--border)" opacity={0.5} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgb(var(--border))" opacity={0.5} />
                   <XAxis
                     type="number"
                     tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
-                    stroke="var(--text-muted)"
+                    stroke="rgb(var(--text-muted))"
                     fontSize={11}
                   />
                   <YAxis
                     type="category"
                     dataKey="department"
-                    stroke="var(--text-secondary)"
+                    stroke="rgb(var(--text-secondary))"
                     fontSize={11}
                     width={140}
                     tickLine={false}
@@ -200,7 +199,7 @@ export function BudgetAllocationChart({
                   <Tooltip
                     content={<CustomTooltip />}
                     allowEscapeViewBox={{ x: false, y: false }}
-                    cursor={{ fill: 'var(--surface-secondary)', opacity: 0.4 }}
+                    cursor={{ fill: 'rgb(var(--surface-secondary))', opacity: 0.4 }}
                   />
                   <Legend
                     wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
@@ -209,7 +208,7 @@ export function BudgetAllocationChart({
                   <Bar
                     dataKey="allocated"
                     name="Allocated Limit"
-                    fill="var(--surface-secondary)"
+                    fill="rgb(var(--surface-secondary))"
                     radius={[0, 4, 4, 0]}
                     barSize={14}
                   />
@@ -223,12 +222,12 @@ export function BudgetAllocationChart({
                   >
                     {data.map((entry, index) => {
                       const pct = entry.allocated > 0 ? (entry.consumed / entry.allocated) * 100 : 0;
-                      const { hex } = getThresholdColor(pct);
+                      const { color } = getThresholdColor(pct);
                       const isHovered = activeBarIndex === index;
                       return (
                         <Cell
                           key={`cell-${index}`}
-                          fill={hex}
+                          fill={color}
                           opacity={activeBarIndex === null || isHovered ? 1 : 0.6}
                           style={{
                             transition: 'all 0.2s ease-in-out',
@@ -239,21 +238,21 @@ export function BudgetAllocationChart({
                     })}
                   </Bar>
                 </BarChart>
-              </ResponsiveContainer>
+              </BudgetChartWrapper>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3 text-2xs text-foreground-secondary">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#2A78D6]" />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'rgb(var(--chart-1))' }} />
                   <span>Optimal (&lt;80%)</span>
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#D98A21]" />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'rgb(var(--warning))' }} />
                   <span>Warning (80%–99%)</span>
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#C84747]" />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'rgb(var(--danger))' }} />
                   <span>Critical Exceeded (&ge;100%)</span>
                 </span>
               </div>

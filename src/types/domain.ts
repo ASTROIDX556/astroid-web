@@ -239,6 +239,8 @@ export interface Proposal {
   status: ProposalStatus;
   kind: ApprovalKind;
   agentName: string;
+  proposerName?: string;
+  proposerId?: string;
   amount: number;
   asset: Asset;
   counterparty: string;

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { Topbar } from '@/components/shell/topbar';
-import { CommandDock } from '@/components/shell/command-dock';
+import { DesktopSidebar } from '@/components/shell/desktop-sidebar';
 import { MobileNav } from '@/components/shell/mobile-nav';
 import { CommandPalette } from '@/components/shell/command-palette';
 import { AssistantDrawer } from '@/components/shell/assistant-drawer';
@@ -11,11 +11,11 @@ import { usePreferencesStore, useHydrated } from '@/stores';
 import { cn } from '@/lib/cn';
 
 /**
- * The authenticated workspace shell: a slim utility top bar, the floating
- * command dock (primary navigation on desktop), and the global overlays
+ * The authenticated workspace shell: a utility top bar, persistent desktop
+ * navigation, and the global overlays
  * (command palette, AI assistant, mobile nav drawer). Page content renders in
  * the scrollable main column, capped to the shell max width, with bottom room
- * so the dock never occludes it.
+ * while keeping the navigation rail visible on desktop.
  */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -42,13 +42,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </a>
       <Topbar navOpen={navOpen} onOpenNav={() => setNavOpen(true)} />
 
-      <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
-        <div className="pb-28 lg:pb-28 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          {children}
-        </div>
-      </main>
+      <div className="flex flex-1">
+        <DesktopSidebar />
+        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            {children}
+          </div>
+        </main>
+      </div>
 
-      <CommandDock />
       <MobileNav open={navOpen} onClose={() => setNavOpen(false)} />
       <CommandPalette />
       <AssistantDrawer />

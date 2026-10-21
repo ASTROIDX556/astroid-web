@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -59,10 +59,15 @@ const COLUMNS: ColumnDef<Proposal>[] = [
 export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
   const [filters, setFilters] = useState<ApprovalQueueFilters>(DEFAULT_APPROVAL_QUEUE_FILTERS);
   const [sort, setSort] = useState(DEFAULT_APPROVAL_QUEUE_SORT);
+  const deferredQuery = useDeferredValue(filters.query);
+  const appliedFilters = useMemo(
+    () => ({ ...filters, query: deferredQuery }),
+    [filters, deferredQuery],
+  );
 
   const filtered = useMemo(
-    () => filterApprovalQueue(proposals, filters),
-    [proposals, filters],
+    () => filterApprovalQueue(proposals, appliedFilters),
+    [proposals, appliedFilters],
   );
 
   const statusOptions = useMemo(() => collectApprovalStatusOptions(proposals), [proposals]);
@@ -123,8 +128,12 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
       {sortedProposals.length === 0 ? (
         <EmptyState
           illustration={<BellIllustration />}
-          title="No proposals match these filters"
-          description="Try widening the status, agent, or risk tier filters to see more of the queue."
+          title={filters.query ? 'No proposals match your search' : 'No proposals match these filters'}
+          description={
+            filters.query
+              ? 'Try another agent, proposer, asset, or amount, or clear the search and filters.'
+              : 'Try widening the status, agent, or risk tier filters to see more of the queue.'
+          }
           action={
             <button
               type="button"

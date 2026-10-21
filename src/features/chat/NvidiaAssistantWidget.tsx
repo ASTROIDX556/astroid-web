@@ -143,6 +143,63 @@ export function NvidiaAssistantWidget() {
     toast.success('Briefing transcript downloaded as text file');
   };
 
+  const buildBriefingMarkdown = (msg: ChatMessage) => {
+    const briefing = msg.structuredBriefing;
+    if (!briefing) return '';
+    return [
+      '# Financial Briefing',
+      '',
+      msg.content,
+      '',
+      `- **Generated:** ${new Date(msg.timestamp).toLocaleString()}`,
+      `- **Total daily spend:** ${formatCurrency(briefing.totalDailySpend, briefing.currency)}`,
+      `- **Active agents:** ${briefing.activeAgentsCount}`,
+      `- **Top spender:** ${briefing.topSpenderAgent}`,
+      `- **Low balance wallets:** ${briefing.lowBalanceWalletsCount}`,
+      '',
+      `**AI recommendation:** ${briefing.recommendation}`,
+      '',
+    ].join('\n');
+  };
+
+  const handleCopyBriefing = async (msg: ChatMessage) => {
+    const markdown = buildBriefingMarkdown(msg);
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(markdown);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = markdown;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (!copied) throw new Error('Clipboard unavailable');
+      }
+      toast.success('Financial briefing copied to clipboard');
+    } catch {
+      toast.error('Could not copy the briefing. Check clipboard permissions and try again.');
+    }
+  };
+
+  const handleDownloadBriefing = (msg: ChatMessage) => {
+    const blob = new Blob([buildBriefingMarkdown(msg)], {
+      type: 'text/markdown;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `astroid-financial-briefing-${msg.timestamp.slice(0, 10)}.md`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    toast.success('Financial briefing exported as Markdown');
+  };
+
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -365,6 +422,26 @@ export function NvidiaAssistantWidget() {
                       <div className="pt-2 border-t border-border/50 text-2xs">
                         <span className="text-foreground-muted">AI Recommendation:</span>
                         <p className="text-foreground font-medium italic mt-0.5">{msg.structuredBriefing.recommendation}</p>
+                      </div>
+                      <div className="flex flex-wrap justify-end gap-2 border-t border-border/50 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleCopyBriefing(msg)}
+                          aria-label="Copy financial briefing to clipboard"
+                          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-2xs font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <Copy className="h-3.5 w-3.5" aria-hidden />
+                          Copy briefing
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadBriefing(msg)}
+                          aria-label="Export financial briefing as Markdown"
+                          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-2xs font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <Download className="h-3.5 w-3.5" aria-hidden />
+                          Export Markdown
+                        </button>
                       </div>
                     </div>
                   )}

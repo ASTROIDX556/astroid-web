@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
 import { navSections } from '@/lib/nav';
 import { cn } from '@/lib/cn';
+import { useAssistantStore } from '@/stores/ui-store';
 
 interface MobileNavProps {
   open: boolean;
@@ -21,6 +23,9 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   const pathname = usePathname();
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const reduceMotion = useReducedMotion();
+  const assistantOpen = useAssistantStore((state) => state.open);
+  const setAssistantOpen = useAssistantStore((state) => state.setOpen);
 
   // Dismiss whenever the route changes.
   useEffect(() => {
@@ -30,6 +35,8 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
 
   // Escape dismissal, focus trap, and body scroll lock while the drawer is open.
   useEffect(() => {
+    const panel = panelRef.current;
+    if (panel) panel.inert = !open;
     if (!open) return undefined;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -70,23 +77,25 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
 
   return (
     <div className="lg:hidden" aria-hidden={!open}>
-      <div
-        className={cn(
-          'fixed inset-0 z-40 bg-background/50 backdrop-blur-sm transition-opacity duration-base',
-          open ? 'opacity-100' : 'pointer-events-none opacity-0',
-        )}
+      <motion.div
+        initial={false}
+        animate={{ opacity: open ? 1 : 0 }}
+        transition={{ duration: reduceMotion ? 0 : 0.18 }}
+        style={{ pointerEvents: open ? 'auto' : 'none' }}
+        className="fixed inset-0 z-40 bg-background/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      <aside
+      <motion.aside
         id="mobile-nav-drawer"
         ref={panelRef}
         role="dialog"
         aria-label="Navigation"
         aria-modal="true"
-        className={cn(
-          'fixed left-0 top-0 z-50 flex h-full w-[264px] flex-col border-r border-border bg-surface shadow-soft-3 transition-transform duration-base ease-astroid',
-          open ? 'translate-x-0' : '-translate-x-full',
-        )}
+        aria-hidden={!open}
+        initial={false}
+        animate={{ x: open ? 0 : '-100%' }}
+        transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+        className="fixed left-0 top-0 z-50 flex h-full w-[264px] flex-col border-r border-border bg-surface shadow-soft-3"
       >
         <div className="h-16 flex items-center justify-between px-5">
           <span className="gap-2.5 flex items-center">
@@ -148,7 +157,30 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
             </div>
           ))}
         </nav>
-      </aside>
+        <div className="border-t border-border p-3">
+          <button
+            type="button"
+            onClick={() => {
+              setAssistantOpen(true);
+              onClose();
+            }}
+            aria-label="Open AI assistant"
+            aria-haspopup="dialog"
+            aria-expanded={assistantOpen}
+            aria-pressed={assistantOpen}
+            className={cn(
+              DRAWER_FOCUS,
+              'flex w-full items-center gap-3 rounded-button border-l-2 px-3 py-2 text-sm font-medium transition-colors duration-fast',
+              assistantOpen
+                ? 'border-gold bg-gold-soft text-gold-strong'
+                : 'border-transparent text-foreground-secondary hover:bg-surface-secondary hover:text-foreground',
+            )}
+          >
+            <Sparkles className="h-[18px] w-[18px]" aria-hidden />
+            <span>AI assistant</span>
+          </button>
+        </div>
+      </motion.aside>
     </div>
   );
 }

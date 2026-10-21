@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ResponsiveContainer, Treemap, Tooltip } from 'recharts';
+import { Treemap, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Layers, Receipt, TrendingDown, TrendingUp } from 'lucide-react';
 
@@ -11,6 +11,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getThresholdColor } from '@/features/budgets/BudgetAllocationChart';
+import { BudgetChartWrapper } from '@/components/charts/BudgetChartWrapper';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
 import type { AgentAllocation, DepartmentBudget } from './types';
 
@@ -67,7 +68,7 @@ interface TreemapContentProps {
 function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapContentProps) {
   if (!payload || width <= 0 || height <= 0) return null;
   const pct = payload.allocated > 0 ? (payload.consumed / payload.allocated) * 100 : 0;
-  const { hex } = getThresholdColor(pct);
+  const { color } = getThresholdColor(pct);
   const showLabel = width > 70 && height > 32;
 
   return (
@@ -78,7 +79,7 @@ function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapCo
         width={width}
         height={height}
         style={{
-          fill: hex,
+          fill: color,
           fillOpacity: 0.85,
           stroke: 'rgb(var(--chart-surface))',
           strokeWidth: 2,
@@ -219,7 +220,7 @@ export function BudgetBreakdownChart({
             role="region"
             aria-label={activeDept ? `${activeDept.departmentName} agent breakdown` : 'Department budget breakdown'}
           >
-            <ResponsiveContainer width="100%" height="100%">
+            <BudgetChartWrapper className="h-full">
               <Treemap
                 data={nodes}
                 dataKey="size"
@@ -239,21 +240,21 @@ export function BudgetBreakdownChart({
               >
                 <Tooltip content={<BreakdownTooltip />} />
               </Treemap>
-            </ResponsiveContainer>
+            </BudgetChartWrapper>
           </motion.div>
         </AnimatePresence>
 
         <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-border/60 pt-3 text-2xs text-foreground-secondary">
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#2A78D6]" />
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'rgb(var(--chart-1))' }} />
             <span>Optimal (&lt;80%)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#D98A21]" />
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'rgb(var(--warning))' }} />
             <span>Warning (80%–99%)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#C84747]" />
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'rgb(var(--danger))' }} />
             <span>Over budget (&ge;100%)</span>
           </span>
         </div>
