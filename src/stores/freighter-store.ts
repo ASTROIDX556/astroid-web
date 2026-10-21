@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import type { StateCreator } from 'zustand';
 
-export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'locked';
 
 /**
  * Stellar networks the app can target. Freighter itself owns the extension's
@@ -395,29 +395,69 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   },
 
   hydrate: async () => {
-    const freighter = await getFreighter();
-    const walletAddress = resolveWalletAddress(
-      typeof freighter.getAddress === 'function' ? await withTimeout(freighter.getAddress()).catch(() => null) : null,
-    );
+    try {
+      const freighter = await getFreighter();
+      const connectedResult = typeof freighter.isConnected === 'function'
+        ? await withTimeout(freighter.isConnected())
+        : false;
+      const connected = typeof connectedResult === 'boolean'
+        ? connectedResult
+        : Boolean((connectedResult as { isConnected?: boolean } | null)?.isConnected);
 
-    if (!walletAddress) {
-      set({ status: 'disconnected', publicKey: null, network: null, networkPassphrase: null, isInstalled: false, error: null });
-      return;
-    }
+      if (!connected) {
+        set({ status: 'disconnected', publicKey: null, network: null, networkPassphrase: null, isInstalled: false, error: null });
+        return;
+      }
 
-    const networkResult =
-      typeof freighter.getNetwork === 'function'
-        ? await withTimeout(freighter.getNetwork()).catch(() => null)
+      const addressResult = typeof freighter.getAddress === 'function'
+        ? await withTimeout(freighter.getAddress())
         : null;
+      const walletAddress = resolveWalletAddress(addressResult);
 
-    set({
-      isInstalled: true,
-      status: 'connected',
-      publicKey: walletAddress,
-      network: resolveNetwork(networkResult) ?? 'testnet',
-      networkPassphrase: resolvePassphrase(networkResult),
-      error: null,
-    });
+      if (!walletAddress) {
+        // The extension answered but exposed no address: the wallet is locked
+        // or access was not granted. Surface a dedicated `locked` state so the
+        // top bar can alert and offer a reconnect instead of silently showing
+        // a generic disconnect.
+        set({
+          status: 'locked',
+          publicKey: null,
+          network: null,
+          networkPassphrase: null,
+          isInstalled: true,
+          error: 'Freighter is locked or wallet access is unavailable.',
+        });
+        return;
+      }
+
+      // A network lookup failure must not invalidate an otherwise healthy
+      // connection: keep the last-known values and let the signing gate fail
+      // closed on an unknown passphrase.
+      const networkResult =
+        typeof freighter.getNetwork === 'function'
+          ? await withTimeout(freighter.getNetwork()).catch(() => null)
+          : null;
+
+      set({
+        isInstalled: true,
+        status: 'connected',
+        publicKey: walletAddress,
+        network: resolveNetwork(networkResult) ?? 'testnet',
+        networkPassphrase: resolvePassphrase(networkResult),
+        error: null,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Freighter wallet status is unavailable.';
+      const isLocked = /locked|unlock/i.test(message);
+      set({
+        status: isLocked ? 'locked' : 'disconnected',
+        publicKey: null,
+        network: null,
+        networkPassphrase: null,
+        isInstalled: isLocked,
+        error: message,
+      });
+    }
   },
 });
 

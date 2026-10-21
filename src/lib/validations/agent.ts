@@ -225,10 +225,35 @@ const agentConfigFields = z.object({
   mode: agentModeSchema,
   temperature: temperatureSchema,
   monthlyBudget: monthlyBudgetSchema,
+  singleTransactionCap: z
+    .number({ invalid_type_error: 'Transaction limit must be a number' })
+    .positive('Transaction limit must be greater than 0')
+    .max(1_000_000, 'Transaction limit cannot exceed 1,000,000 USDC')
+    .optional(),
+  timeoutSeconds: z
+    .number({ invalid_type_error: 'Timeout must be a number' })
+    .int('Timeout must be a whole number of seconds')
+    .min(1, 'Timeout must be at least 1 second')
+    .max(600, 'Timeout cannot exceed 600 seconds')
+    .optional(),
 });
 
 /** Validates a full agent configuration before the agent is created. */
-export const createAgentSchema = agentConfigFields.superRefine(requireProviderEndpoint);
+export const createAgentSchema = agentConfigFields.superRefine((values, ctx) => {
+  requireProviderEndpoint(values, ctx);
+  // A single transaction can never be larger than the budget it draws from.
+  if (
+    typeof values.singleTransactionCap === 'number' &&
+    typeof values.monthlyBudget === 'number' &&
+    values.singleTransactionCap > values.monthlyBudget
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['singleTransactionCap'],
+      message: 'Transaction limit cannot exceed the monthly budget',
+    });
+  }
+});
 
 export type CreateAgentInput = z.infer<typeof createAgentSchema>;
 

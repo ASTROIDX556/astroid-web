@@ -40,6 +40,22 @@
   --shadow-color: 0 0 0;
   color-scheme: light;
 
+  --normal-bg: rgb(var(--surface-primary));
+  --normal-border: rgb(var(--border));
+  --normal-text: rgb(var(--text-primary));
+  --success-bg: rgb(var(--success-soft));
+  --success-border: rgb(var(--success));
+  --success-text: rgb(var(--text-primary));
+  --info-bg: rgb(var(--info-soft));
+  --info-border: rgb(var(--info));
+  --info-text: rgb(var(--text-primary));
+  --warning-bg: rgb(var(--warning-soft));
+  --warning-border: rgb(var(--warning));
+  --warning-text: rgb(var(--text-primary));
+  --error-bg: rgb(var(--danger-soft));
+  --error-border: rgb(var(--danger));
+  --error-text: rgb(var(--text-primary));
+
   /* Foundation palette (90% of the interface) */
   --background-primary: 246 242 234; /* #F6F2EA */
   --background-secondary: 239 233 221; /* #EFE9DD */

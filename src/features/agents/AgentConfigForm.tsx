@@ -45,6 +45,8 @@ export function AgentConfigForm() {
       mode: 'assisted',
       temperature: 0.2,
       monthlyBudget: 500,
+      singleTransactionCap: 100,
+      timeoutSeconds: 60,
     },
   });
 
@@ -271,6 +273,37 @@ export function AgentConfigForm() {
               }
               leftIcon={<Gauge className="h-4 w-4" aria-hidden />}
               {...register('monthlyBudget', { valueAsNumber: true })}
+            />
+          </FormField>
+
+          <FormField
+            label="Transaction limit (USDC)"
+            required
+            error={errors.singleTransactionCap?.message}
+          >
+            <Input
+              id="agent-transaction-limit"
+              type="number"
+              min={1}
+              step="1"
+              invalid={Boolean(errors.singleTransactionCap)}
+              {...register('singleTransactionCap', { valueAsNumber: true })}
+            />
+          </FormField>
+
+          <FormField
+            label="Request timeout (seconds)"
+            required
+            error={errors.timeoutSeconds?.message}
+          >
+            <Input
+              id="agent-timeout"
+              type="number"
+              min={1}
+              max={600}
+              step="1"
+              invalid={Boolean(errors.timeoutSeconds)}
+              {...register('timeoutSeconds', { valueAsNumber: true })}
             />
           </FormField>
         </div>
