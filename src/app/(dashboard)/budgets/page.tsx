@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { PiggyBank, Plus } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { StatCard, SectionLabel } from '@/components/dashboard/stat-card';
@@ -115,9 +116,13 @@ export default function BudgetsPage() {
               </div>
 
               {/* Recharts Budget Allocation & Threshold Chart */}
-              <BudgetAllocationChart data={chartData} />
+              <ErrorBoundary section="Budget allocation chart">
+                <BudgetAllocationChart data={chartData} />
+              </ErrorBoundary>
 
-              <DepartmentBudgetBreakdown />
+              <ErrorBoundary section="Department budget breakdown">
+                <DepartmentBudgetBreakdown />
+              </ErrorBoundary>
 
               <SectionLabel>{data.length} budgets</SectionLabel>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -199,30 +204,42 @@ export default function BudgetsPage() {
               <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
                 <div className="space-y-4">
                   <SectionLabel>Live budget consumption</SectionLabel>
-                  <BudgetMeterCard />
+                  <ErrorBoundary section="Budget consumption meters">
+                    <BudgetMeterCard />
+                  </ErrorBoundary>
                 </div>
                 <div className="space-y-4">
                   <SectionLabel>Alert configuration</SectionLabel>
-                  <BudgetAlertSettings />
+                  <ErrorBoundary section="Budget alert settings">
+                    <BudgetAlertSettings />
+                  </ErrorBoundary>
                 </div>
               </div>
 
               <div className="space-y-4 border-t border-border pt-4">
                 <SectionLabel>Real-Time Agent Allocation Control</SectionLabel>
-                <BudgetAllocationDashboard />
+                <ErrorBoundary section="Agent allocation control">
+                  <BudgetAllocationDashboard />
+                </ErrorBoundary>
               </div>
 
               <div className="space-y-4 border-t border-border pt-4">
                 <SectionLabel>Department Allocation & Drill-Down Matrix</SectionLabel>
-                <BudgetMatrix />
+                <ErrorBoundary section="Department allocation matrix">
+                  <BudgetMatrix />
+                </ErrorBoundary>
               </div>
               <div className="space-y-4 border-t border-border pt-4">
                 <SectionLabel>Department Budget Breakdown</SectionLabel>
-                <DepartmentBudgetBreakdown />
+                <ErrorBoundary section="Department budget breakdown">
+                  <DepartmentBudgetBreakdown />
+                </ErrorBoundary>
               </div>
               <div className="space-y-4 border-t border-border pt-4">
                 <SectionLabel>Department Spend Breakdown</SectionLabel>
-                <BudgetBreakdownChart />
+                <ErrorBoundary section="Department spend breakdown">
+                  <BudgetBreakdownChart />
+                </ErrorBoundary>
               </div>
             </div>
           );
