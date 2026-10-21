@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -16,39 +17,83 @@ import { transactionStatus } from '@/lib/status';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { TransactionDetailDrawer } from './TransactionDetailDrawer';
+import { TransactionFilters } from './TransactionFilters';
+import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
 
-type StatusFilter = 'all' | Transaction['status'];
+interface TransactionHistoryProps {
+  transactions: Transaction[];
+  onExportCSV?: (transactions: Transaction[]) => void;
+}
 
-export function TransactionHistory({ transactions }: { transactions: Transaction[] }) {
+const transactionStatuses: Transaction['status'][] = [
+  'draft',
+  'pending',
+  'approved',
+  'submitting',
+  'confirmed',
+  'completed',
+  'rejected',
+  'expired',
+  'cancelled',
+  'failed',
+];
+
+function initialFilters(searchParams: URLSearchParams): TransactionFilterValues {
+  const status = searchParams.get('status');
+  return {
+    query: searchParams.get('q') ?? '',
+    status:
+      status && transactionStatuses.includes(status as Transaction['status'])
+        ? (status as Transaction['status'])
+        : 'all',
+    asset: searchParams.get('asset') ?? 'all',
+    agentId: searchParams.get('agent') ?? 'all',
+    dateFrom: searchParams.get('from') ?? '',
+    dateTo: searchParams.get('to') ?? '',
+  };
+}
+
+export function TransactionHistory({
+  transactions,
+  onExportCSV,
+}: TransactionHistoryProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [agentFilter, setAgentFilter] = useState<string>('all');
-
-  const agentOptions = useMemo(() => {
-    const unique = Array.from(
-      new Map(
-        transactions
-          .filter((tx) => tx.agentId)
-          .map((tx) => [tx.agentId as string, tx.agentName ?? tx.agentId] as const),
-      ).entries(),
-    );
-    return unique;
-  }, [transactions]);
-
-  const statusOptions = useMemo(
-    () => Array.from(new Set(transactions.map((tx) => tx.status))),
-    [transactions],
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [filters, setFilters] = useState<TransactionFilterValues>(() =>
+    initialFilters(searchParams),
   );
 
   const filteredTransactions = useMemo(
-    () =>
-      transactions.filter((tx) => {
-        if (statusFilter !== 'all' && tx.status !== statusFilter) return false;
-        if (agentFilter !== 'all' && tx.agentId !== agentFilter) return false;
-        return true;
-      }),
-    [transactions, statusFilter, agentFilter],
+    () => filterTransactions(transactions, filters),
+    [transactions, filters],
   );
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      const values: Array<[string, string, string]> = [
+        ['q', filters.query.trim(), ''],
+        ['status', filters.status, 'all'],
+        ['asset', filters.asset, 'all'],
+        ['agent', filters.agentId, 'all'],
+        ['from', filters.dateFrom, ''],
+        ['to', filters.dateTo, ''],
+      ];
+      for (const [key, value, emptyValue] of values) {
+        if (value && value !== emptyValue) params.set(key, value);
+        else params.delete(key);
+      }
+      const queryString = params.toString();
+      if (queryString !== searchParams.toString()) {
+        router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+          scroll: false,
+        });
+      }
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [filters, pathname, router, searchParams]);
 
   const selectedTransaction = useMemo(
     () => transactions.find((transaction) => transaction.id === selectedId) ?? null,
@@ -104,50 +149,31 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
         </Card>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2">
-          <span className="text-2xs text-foreground-secondary">Status</span>
-          <select
-            aria-label="Filter transactions by status"
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-            className="h-9 rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="all">All statuses</option>
-            {statusOptions.map((status) => (
-              <option key={status} value={status} className="capitalize">
-                {status}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex items-center gap-2">
-          <span className="text-2xs text-foreground-secondary">Agent</span>
-          <select
-            aria-label="Filter transactions by agent"
-            value={agentFilter}
-            onChange={(event) => setAgentFilter(event.target.value)}
-            className="h-9 rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="all">All agents</option>
-            {agentOptions.map(([agentId, agentName]) => (
-              <option key={agentId} value={agentId}>
-                {agentName}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <TransactionFilters
+        transactions={transactions}
+        visibleTransactions={filteredTransactions}
+        value={filters}
+        filteredCount={filteredTransactions.length}
+        onChange={setFilters}
+        onExportCSV={onExportCSV}
+      />
 
       <DataTable
         data={filteredTransactions}
-        searchable
-        searchPlaceholder="Search with counterparty, asset, or status"
         pageSize={8}
         caption="Transaction activity"
         onRowClick={(transaction) => setSelectedId(transaction.id)}
         getRowId={(row) => row.id}
+        emptyState={
+          <div className="py-5 text-center">
+            <p className="text-sm font-medium text-foreground">
+              No matching transactions
+            </p>
+            <p className="mt-1 text-xs text-foreground-secondary">
+              Try adjusting or clearing the active filters.
+            </p>
+          </div>
+        }
         columns={[
           {
             accessorKey: 'counterparty',
