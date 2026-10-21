@@ -29,11 +29,16 @@ const DRAWER_FOCUS =
 export function AssistantDrawer() {
   const open = useAssistantStore((s) => s.open);
   const setOpen = useAssistantStore((s) => s.setOpen);
+  const pendingPrompt = useAssistantStore((s) => s.pendingPrompt);
   const seedQuery = useAssistantSeed();
   const briefingQuery = useBriefing();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
+
+  useEffect(() => {
+    if (open && pendingPrompt) setDraft(pendingPrompt);
+  }, [open, pendingPrompt]);
   const [seeded, setSeeded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
