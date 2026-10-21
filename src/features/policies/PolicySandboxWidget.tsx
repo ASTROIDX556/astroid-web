@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -70,7 +70,7 @@ interface SandboxEvaluationResult {
 // ---------------------------------------------------------------------------
 
 const defaultFormValues: SandboxFormValues = {
-  recipient: 'GAOPENAI7VENDORQK9M2WL4PC8RD3YHF6JN1STELLARWALLETXZ',
+  recipient: 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ',
   amount: 5000,
   asset: 'USDC',
   agentId: 'agt_atlas',
@@ -169,6 +169,17 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
           break;
         }
 
+        case 'min_amount': {
+          if (rule.threshold !== undefined) {
+            passed = validated.amount >= rule.threshold;
+            message = passed
+              ? `Amount $${validated.amount.toLocaleString()} meets the $${rule.threshold.toLocaleString()} minimum.`
+              : `Amount $${validated.amount.toLocaleString()} is below the $${rule.threshold.toLocaleString()} minimum.`;
+            reasonCode = passed ? 'AMOUNT_MEETS_MINIMUM' : 'AMOUNT_BELOW_MINIMUM';
+          }
+          break;
+        }
+
         case 'allowed_assets': {
           const allowed = rule.allowedAssets ?? [];
           passed = allowed.includes(validated.asset);
@@ -192,7 +203,13 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
 
         case 'allowed_recipients': {
           const allowed = rule.allowedRecipients ?? [];
-          passed = allowed.length === 0 || allowed.some((r) => validated.recipient.includes(r));
+          passed =
+            allowed.length === 0 ||
+            allowed.some(
+              (recipient) =>
+                recipient.trim().toLocaleLowerCase() ===
+                validated.recipient.trim().toLocaleLowerCase(),
+            );
           message = passed
             ? `Recipient is on the approved vendor list.`
             : `Recipient is not on the approved vendor list (${allowed.join(', ')}).`;
@@ -202,7 +219,11 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
 
         case 'blocked_recipients': {
           const blocked = rule.blockedRecipients ?? [];
-          passed = !blocked.some((r) => validated.recipient.includes(r));
+          passed = !blocked.some(
+            (recipient) =>
+              recipient.trim().toLocaleLowerCase() ===
+              validated.recipient.trim().toLocaleLowerCase(),
+          );
           message = passed
             ? `Recipient is not on the blocklist.`
             : `Recipient matches a blocked address on the deny list.`;
@@ -273,6 +294,7 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
       const hasBlocking = failedSteps.some(
         (s) =>
           s.reasonCode === 'AMOUNT_EXCEEDS_THRESHOLD' ||
+          s.reasonCode === 'AMOUNT_BELOW_MINIMUM' ||
           s.reasonCode === 'ASSET_BLOCKED' ||
           s.reasonCode === 'RECIPIENT_BLOCKED' ||
           s.reasonCode === 'EMERGENCY_ACTIVE' ||
@@ -283,8 +305,13 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
 
     const riskScore = computeRiskScore(validated, steps);
 
+    setErrors({});
     setResult({ outcome, steps, riskScore });
   }, [values, activeRules]);
+
+  useEffect(() => {
+    runEvaluation();
+  }, [runEvaluation]);
 
   // -- Derived -----------------------------------------------------------
 

@@ -17,8 +17,9 @@ export interface UseProposalApprovalResult {
   requiredApprovals: number;
   isQuorumMet: boolean;
   remaining: number;
-  approve: () => Promise<void>;
-  reject: () => Promise<void>;
+  approve: () => Promise<boolean>;
+  reject: () => Promise<boolean>;
+  requestChanges: () => Promise<boolean>;
 }
 
 /**
@@ -36,11 +37,11 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
   const quorum = computeQuorumStatus(proposal, entry.decision);
 
   const decide = useCallback(
-    async (decision: LocalApprovalDecision) => {
-      if (entry.isProcessing) return;
+    async (decision: LocalApprovalDecision): Promise<boolean> => {
+      if (entry.isProcessing) return false;
       if (proposal.status !== 'pending') {
         toast.error('This proposal is no longer pending.');
-        return;
+        return false;
       }
 
       beginDecision(proposal.id);
@@ -62,14 +63,20 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
                 : `${next.remaining} more approval${next.remaining === 1 ? '' : 's'} needed.`,
             },
           );
-        } else {
+        } else if (decision === 'rejected') {
           toast.success('Proposal rejected');
+        } else {
+          toast.success('Changes requested', {
+            description: 'The proposal was returned for revision.',
+          });
         }
+        return true;
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Failed to record decision.';
         failDecision(proposal.id, message);
         toast.error(message);
+        return false;
       }
     },
     [entry.isProcessing, proposal, beginDecision, resolveDecision, failDecision],
@@ -77,6 +84,7 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
 
   const approve = useCallback(() => decide('approved'), [decide]);
   const reject = useCallback(() => decide('rejected'), [decide]);
+  const requestChanges = useCallback(() => decide('changes_requested'), [decide]);
 
   return {
     decision: entry.decision,
@@ -88,6 +96,7 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
     remaining: quorum.remaining,
     approve,
     reject,
+    requestChanges,
   };
 }
 

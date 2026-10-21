@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import { Search, Sparkles, Moon, Sun, X } from 'lucide-react';
@@ -20,6 +20,9 @@ export function CommandPalette() {
   const openAssistant = useAssistantStore((s) => s.setOpen);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -35,14 +38,48 @@ export function CommandPalette() {
   useEffect(() => {
     if (!open) return;
 
-    const onEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
+    triggerRef.current = document.activeElement as HTMLElement | null;
+    searchRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => element.offsetWidth > 0 || element.offsetHeight > 0);
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (!dialog.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
-    document.addEventListener('keydown', onEscape);
-    return () => document.removeEventListener('keydown', onEscape);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      const trigger = triggerRef.current;
+      triggerRef.current = null;
+      if (trigger && trigger !== document.body && document.contains(trigger)) {
+        trigger.focus();
+      }
+    };
   }, [open, setOpen]);
 
   const run = (fn: () => void) => {
@@ -58,21 +95,33 @@ export function CommandPalette() {
       onClick={() => setOpen(false)}
       role="presentation"
     >
-      <Command
-        label="Command palette"
-        className="glass w-full max-w-xl overflow-hidden rounded-dialog shadow-soft-3"
-        onClick={(e) => e.stopPropagation()}
-        loop
+      <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
         aria-describedby="command-palette-description"
+        tabIndex={-1}
+        onKeyDownCapture={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+          }
+        }}
+        onClick={(event) => event.stopPropagation()}
+        className="w-full max-w-xl overflow-hidden rounded-dialog shadow-soft-3 focus:outline-none"
+      >
+      <Command
+        label="Command palette"
+        className="glass w-full overflow-hidden rounded-dialog"
+        loop
       >
         <div className="flex items-center justify-between gap-3 border-b border-border px-4">
           <div className="flex items-center gap-3 flex-1">
             <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden />
             <Command.Input
-              autoFocus
+              ref={searchRef}
               aria-label="Search pages and actions"
               placeholder="Search pages and actions…"
               className="h-14 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted"
@@ -141,6 +190,7 @@ export function CommandPalette() {
           ))}
         </Command.List>
       </Command>
+      </div>
     </div>
   );
 }

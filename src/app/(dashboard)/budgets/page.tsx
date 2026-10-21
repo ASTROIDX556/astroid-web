@@ -19,6 +19,7 @@ import { PageTransition } from '@/components/ui/motion';
 import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
 import { DepartmentBudgetBreakdown } from '@/features/budgets/DepartmentBudgetBreakdown';
+import { DepartmentBudgetChart } from '@/features/budgets/DepartmentBudgetChart';
 import { BudgetBreakdownChart } from '@/features/budgets/BudgetBreakdownChart';
 import { BudgetAllocationDashboard } from '@/features/budgets/components/BudgetAllocationDashboard';
 import { BudgetAllocationModal } from '@/features/budgets/BudgetAllocationModal';
@@ -116,6 +117,8 @@ export default function BudgetsPage() {
 
               {/* Recharts Budget Allocation & Threshold Chart */}
               <BudgetAllocationChart data={chartData} />
+
+              <DepartmentBudgetChart data={MOCK_DEPARTMENT_BUDGETS} />
 
               <DepartmentBudgetBreakdown />
 

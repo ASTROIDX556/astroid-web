@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Proposal } from '@/types/domain';
 
-export type LocalApprovalDecision = 'approved' | 'rejected';
+export type LocalApprovalDecision = 'approved' | 'rejected' | 'changes_requested';
 
 interface ProposalApprovalEntry {
   /** This session's decision, layered on top of the server-recorded approvals. */

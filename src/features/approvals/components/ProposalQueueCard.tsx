@@ -1,21 +1,18 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, Check, Clock, X } from 'lucide-react';
+import { ArrowUpRight, Clock } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { proposalStatus } from '@/lib/status';
-import type { LocalApprovalDecision } from '@/stores/proposal-approval-store';
 import type { Proposal } from '@/types/domain';
 
-import { ProposalApprovalConfirmDialog } from './ProposalApprovalConfirmDialog';
+import { ProposalActionBar } from './ProposalActionBar';
 
 /**
  * A single proposal in the approvals queue. Moved verbatim from
@@ -30,20 +27,6 @@ export function ProposalCard({ proposal }: { proposal: Proposal }) {
     isQuorumMet,
     decision,
   } = useProposalApproval(proposal);
-
-  // Confirmation gate — approve/reject buttons open the dialog first.
-  const [confirmAction, setConfirmAction] = useState<LocalApprovalDecision | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-
-  const openConfirmation = (action: LocalApprovalDecision) => {
-    setConfirmAction(action);
-    setConfirmOpen(true);
-  };
-
-  const closeConfirmation = () => {
-    setConfirmOpen(false);
-    setConfirmAction(null);
-  };
 
   return (
     <Card>
@@ -61,10 +44,18 @@ export function ProposalCard({ proposal }: { proposal: Proposal }) {
               <RiskBadge score={proposal.riskScore} showScore />
               {decision && (
                 <Badge
-                  variant={decision === 'approved' ? 'success' : 'danger'}
+                  variant={
+                    decision === 'approved'
+                      ? 'success'
+                      : decision === 'changes_requested'
+                        ? 'warning'
+                        : 'danger'
+                  }
                   size="sm"
                 >
-                  You {decision}
+                  {decision === 'changes_requested'
+                    ? 'Changes requested'
+                    : `You ${decision}`}
                 </Badge>
               )}
             </div>
@@ -114,32 +105,10 @@ export function ProposalCard({ proposal }: { proposal: Proposal }) {
         </div>
       </CardContent>
       {isPending && !decision && (
-        <CardFooter>
-          <Button
-            variant="gold"
-            size="sm"
-            leftIcon={<Check className="h-4 w-4" />}
-            onClick={() => openConfirmation('approved')}
-          >
-            Approve
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<X className="h-4 w-4" />}
-            onClick={() => openConfirmation('rejected')}
-          >
-            Reject
-          </Button>
-        </CardFooter>
+        <div className="border-t border-border px-5 py-4">
+          <ProposalActionBar proposal={proposal} />
+        </div>
       )}
-
-      <ProposalApprovalConfirmDialog
-        proposal={proposal}
-        action={confirmAction}
-        open={confirmOpen}
-        onClose={closeConfirmation}
-      />
     </Card>
   );
 }
