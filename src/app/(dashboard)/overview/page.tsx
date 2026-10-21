@@ -25,17 +25,6 @@ import { PageTransition } from '@/components/ui/motion';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 
 
-const severityBadge: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
-  info: 'info',
-  success: 'success',
-  warning: 'warning',
-  danger: 'danger',
-  low: 'info',
-  medium: 'warning',
-  high: 'danger',
-  critical: 'danger',
-};
-
 export default function OverviewPage() {
   const overview = useOverview();
   const briefing = useBriefing();
