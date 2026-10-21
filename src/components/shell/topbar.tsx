@@ -10,6 +10,7 @@ import { useAgentTelemetrySubscription } from '@/hooks/useAgentTelemetrySubscrip
 import { usePreferencesStore } from '@/stores/preferences-store';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
 import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
+import { WalletNetworkSwitcher } from '@/features/network/WalletNetworkSwitcher';
 import { CircuitBreakerControl } from '@/features/security';
 import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
 import { cn } from '@/lib/cn';
@@ -139,6 +140,9 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
 
         {/* Live agent telemetry connection status */}
         <TelemetryStatusIndicator status={telemetry.status} />
+
+        {/* Freighter wallet status + Stellar network switcher */}
+        <WalletNetworkSwitcher />
 
         {/* Stellar Network Health & RPC Latency Widget */}
         <NetworkHealthWidget />
