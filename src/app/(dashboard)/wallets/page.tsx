@@ -15,6 +15,7 @@ import { useWallets } from '@/hooks/use-queries';
 import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatNumber, truncateHash } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function WalletsPage() {
   const wallets = useWallets();
