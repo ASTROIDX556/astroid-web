@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Bot, Gauge, Link2, Sparkles } from 'lucide-react';
+import { Activity, Bot, CalendarDays, Coins, Cpu, Gauge, Link2, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -45,6 +45,10 @@ export function AgentConfigForm() {
       mode: 'assisted',
       temperature: 0.2,
       monthlyBudget: 500,
+      dailyBudget: 100,
+      maxSpendPerTransaction: 25,
+      rateLimitPerMinute: 60,
+      tokenThreshold: 4_096,
     },
   });
 
@@ -240,6 +244,82 @@ export function AgentConfigForm() {
             />
           </FormField>
         </div>
+
+        <fieldset className="space-y-4 rounded-card border border-border bg-surface-secondary p-4">
+          <legend className="px-1 text-2xs font-semibold uppercase tracking-wide text-foreground-secondary">
+            Spend controls
+          </legend>
+
+          <div className="grid gap-5 sm:grid-cols-3">
+            <FormField
+              label="Daily budget (USDC)"
+              required
+              error={errors.dailyBudget?.message}
+              hint="Resets at 00:00 UTC"
+            >
+              <Input
+                id="agent-daily-budget"
+                type="number"
+                min={1}
+                step="1"
+                invalid={Boolean(errors.dailyBudget)}
+                leftIcon={<CalendarDays className="h-4 w-4" aria-hidden />}
+                {...register('dailyBudget', { valueAsNumber: true })}
+              />
+            </FormField>
+
+            <FormField
+              label="Max spend per transaction (USDC)"
+              required
+              error={errors.maxSpendPerTransaction?.message}
+              hint="Hard cap on any single payment"
+            >
+              <Input
+                id="agent-max-spend"
+                type="number"
+                min={1}
+                step="1"
+                invalid={Boolean(errors.maxSpendPerTransaction)}
+                leftIcon={<Coins className="h-4 w-4" aria-hidden />}
+                {...register('maxSpendPerTransaction', { valueAsNumber: true })}
+              />
+            </FormField>
+
+            <FormField
+              label="Requests per minute"
+              required
+              error={errors.rateLimitPerMinute?.message}
+              hint="Inference rate limit"
+            >
+              <Input
+                id="agent-rate-limit"
+                type="number"
+                min={1}
+                step="1"
+                invalid={Boolean(errors.rateLimitPerMinute)}
+                leftIcon={<Activity className="h-4 w-4" aria-hidden />}
+                {...register('rateLimitPerMinute', { valueAsNumber: true })}
+              />
+            </FormField>
+          </div>
+
+          <FormField
+            label="Token threshold"
+            required
+            error={errors.tokenThreshold?.message}
+            hint="Pause the agent for review once a run exceeds this many tokens."
+          >
+            <Input
+              id="agent-token-threshold"
+              type="number"
+              min={1000}
+              step="256"
+              invalid={Boolean(errors.tokenThreshold)}
+              leftIcon={<Cpu className="h-4 w-4" aria-hidden />}
+              {...register('tokenThreshold', { valueAsNumber: true })}
+            />
+          </FormField>
+        </fieldset>
 
         <FormField
           label="Description"

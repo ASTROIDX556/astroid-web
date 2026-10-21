@@ -90,6 +90,9 @@ export type AgentWizardValues = z.infer<typeof agentWizardSchema>;
 // Agent configuration form (provider/model selector flow)
 // ---------------------------------------------------------------------------
 
+/** Per-transaction cap, daily budget, and monthly budget share one ceiling. */
+const MAX_BUDGET_USDC = 1_000_000;
+
 /**
  * `zodResolver` narrows literals through the schema's generic, so the provider
  * field is typed as `AgentProviderId` explicitly to keep provider switch logic
@@ -114,6 +117,10 @@ export const agentConfigSchema = z
       .string()
       .trim()
       .url('Enter a valid URL, e.g. http://localhost:11434')
+      .refine(
+        (value) => /^https?:\/\//i.test(value),
+        'Endpoint URL must use http:// or https://',
+      )
       .optional()
       .or(z.literal('')),
     mode: z.enum(['assisted', 'autonomous']),
@@ -124,7 +131,25 @@ export const agentConfigSchema = z
     monthlyBudget: z
       .number({ invalid_type_error: 'Monthly budget must be a number' })
       .positive('Monthly budget must be greater than 0')
-      .max(1_000_000, 'Monthly budget cannot exceed 1,000,000 USDC'),
+      .max(MAX_BUDGET_USDC, 'Monthly budget cannot exceed 1,000,000 USDC'),
+    dailyBudget: z
+      .number({ invalid_type_error: 'Daily budget must be a number' })
+      .positive('Daily budget must be greater than 0')
+      .max(MAX_BUDGET_USDC, 'Daily budget cannot exceed 1,000,000 USDC'),
+    maxSpendPerTransaction: z
+      .number({ invalid_type_error: 'Max spend per transaction must be a number' })
+      .positive('Max spend per transaction must be greater than 0')
+      .max(MAX_BUDGET_USDC, 'Max spend per transaction cannot exceed 1,000,000 USDC'),
+    rateLimitPerMinute: z
+      .number({ invalid_type_error: 'Rate limit must be a number' })
+      .int('Rate limit must be a whole number of requests')
+      .min(1, 'Rate limit must allow at least 1 request per minute')
+      .max(10_000, 'Rate limit cannot exceed 10,000 requests per minute'),
+    tokenThreshold: z
+      .number({ invalid_type_error: 'Token threshold must be a number' })
+      .int('Token threshold must be a whole number of tokens')
+      .min(1_000, 'Token threshold must be at least 1,000 tokens')
+      .max(10_000_000, 'Token threshold cannot exceed 10,000,000 tokens'),
   })
   .superRefine((values, ctx) => {
     // Provider-specific parameters: self-hosted / custom providers must point
@@ -134,6 +159,23 @@ export const agentConfigSchema = z
         code: z.ZodIssueCode.custom,
         path: ['endpointUrl'],
         message: 'A valid API endpoint URL is required for this provider',
+      });
+    }
+
+    // Spend ceilings are nested: a single payment cannot exceed the daily
+    // allowance, and the daily allowance cannot exceed the monthly budget.
+    if (values.maxSpendPerTransaction > values.dailyBudget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maxSpendPerTransaction'],
+        message: 'Max spend per transaction cannot exceed the daily budget',
+      });
+    }
+    if (values.dailyBudget > values.monthlyBudget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['dailyBudget'],
+        message: 'Daily budget cannot exceed the monthly budget',
       });
     }
   });
