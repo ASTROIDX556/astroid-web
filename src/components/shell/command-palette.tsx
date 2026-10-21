@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import { Search, Sparkles, Moon, Sun, X } from 'lucide-react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { navSections } from '@/lib/nav';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
 import { useThemeStore } from '@/stores/theme-store';
@@ -20,6 +21,15 @@ export function CommandPalette() {
   const openAssistant = useAssistantStore((s) => s.setOpen);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useFocusTrap({
+    active: open,
+    containerRef: panelRef,
+    onEscape: () => setOpen(false),
+    initialFocusRef: inputRef,
+  });
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -31,19 +41,6 @@ export function CommandPalette() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [toggleCommand]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', onEscape);
-    return () => document.removeEventListener('keydown', onEscape);
-  }, [open, setOpen]);
 
   const run = (fn: () => void) => {
     setOpen(false);
@@ -59,6 +56,7 @@ export function CommandPalette() {
       role="presentation"
     >
       <Command
+        ref={panelRef}
         label="Command palette"
         className="glass w-full max-w-xl overflow-hidden rounded-dialog shadow-soft-3"
         onClick={(e) => e.stopPropagation()}
@@ -72,7 +70,7 @@ export function CommandPalette() {
           <div className="flex items-center gap-3 flex-1">
             <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden />
             <Command.Input
-              autoFocus
+              ref={inputRef}
               aria-label="Search pages and actions"
               placeholder="Search pages and actions…"
               className="h-14 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted"
