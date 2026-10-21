@@ -39,6 +39,17 @@ export const agentProviderConfigSchema = z
     apiKey: z.string().max(200).optional().or(z.literal('')),
   })
   .superRefine((values, ctx) => {
+    if (
+      values.provider !== 'custom' &&
+      !providerModelOptions[values.provider].includes(values.model)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['model'],
+        message: 'Select a model supported by the chosen provider.',
+      });
+    }
+
     const needsApiKey = values.provider !== 'ollama' && values.provider !== 'custom';
     if (needsApiKey && !values.apiKey) {
       ctx.addIssue({

@@ -20,9 +20,18 @@ export type AgentProviderId = (typeof AGENT_PROVIDER_IDS)[number];
 
 /** Curated models per provider; the form's model dropdown switches on these. */
 export const PROVIDER_MODELS: Record<AgentProviderId, string[]> = {
-  Nvidia: ['meta/llama-3.1-405b-instruct', 'meta/llama-3.1-70b-instruct', 'nvidia/nemotron-4-340b-instruct', 'mistralai/mistral-large-2'],
+  Nvidia: [
+    'meta/llama-3.1-405b-instruct',
+    'meta/llama-3.1-70b-instruct',
+    'nvidia/nemotron-4-340b-instruct',
+    'mistralai/mistral-large-2',
+  ],
   OpenAI: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o1-preview'],
-  Anthropic: ['claude-3-5-sonnet-latest', 'claude-3-opus-latest', 'claude-3-haiku-latest'],
+  Anthropic: [
+    'claude-3-5-sonnet-latest',
+    'claude-3-opus-latest',
+    'claude-3-haiku-latest',
+  ],
   Gemini: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-exp'],
   Ollama: ['llama3.1:70b', 'mistral:latest', 'qwen2.5:32b', 'gemma2:27b'],
   Custom: [],
@@ -75,7 +84,10 @@ export const agentWizardSchema = z
   .superRefine((values, ctx) => {
     // A custom provider has no sensible default to fall back on: the wizard
     // only proceeds once the operator supplies a properly formatted endpoint.
-    if (values.provider === 'Custom' && (!values.endpointUrl || values.endpointUrl.length === 0)) {
+    if (
+      values.provider === 'Custom' &&
+      (!values.endpointUrl || values.endpointUrl.length === 0)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['endpointUrl'],
@@ -127,9 +139,23 @@ export const agentConfigSchema = z
       .max(1_000_000, 'Monthly budget cannot exceed 1,000,000 USDC'),
   })
   .superRefine((values, ctx) => {
+    if (
+      values.provider !== 'Custom' &&
+      !PROVIDER_MODELS[values.provider].includes(values.model)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['model'],
+        message: 'Select a model supported by the chosen provider.',
+      });
+    }
+
     // Provider-specific parameters: self-hosted / custom providers must point
     // at a reachable API endpoint before the agent can be deployed.
-    if (requiresEndpoint(values.provider) && (!values.endpointUrl || values.endpointUrl.length === 0)) {
+    if (
+      requiresEndpoint(values.provider) &&
+      (!values.endpointUrl || values.endpointUrl.length === 0)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['endpointUrl'],
