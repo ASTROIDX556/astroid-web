@@ -15,6 +15,8 @@ export const useCommandStore = create<CommandPaletteState>((set) => ({
 
 interface AssistantState {
   open: boolean;
+  pendingPrompt: string | null;
+  openWithPrompt: (prompt: string) => void;
   setOpen: (value: boolean) => void;
   toggle: () => void;
 }
@@ -22,6 +24,8 @@ interface AssistantState {
 /** Floating AI assistant drawer state (also embedded on the dashboard). */
 export const useAssistantStore = create<AssistantState>((set) => ({
   open: false,
+  pendingPrompt: null,
+  openWithPrompt: (prompt) => set({ open: true, pendingPrompt: prompt }),
   setOpen: (value) => set({ open: value }),
   toggle: () => set((s) => ({ open: !s.open })),
 }));
