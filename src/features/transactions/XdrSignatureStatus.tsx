@@ -140,14 +140,15 @@ export function XdrSignatureStatus({
     if (!key) return;
 
     const signedXdrResult = await signXdr(currentXdr);
-    const newXdr = signedXdrResult || `${currentXdr}_SIGNED_BY_${key.slice(0, 8)}`;
+    // Never fabricate signatures when Freighter rejects, times out, or is unavailable.
+    if (!signedXdrResult) return;
+    const newXdr = signedXdrResult;
 
     setSignerList((prev) =>
       prev.map((s) => {
         if (
           s.publicKey.toLowerCase() === key.toLowerCase() ||
-          truncateKey(s.publicKey).toLowerCase() === truncateKey(key).toLowerCase() ||
-          s.status === 'pending'
+          truncateKey(s.publicKey).toLowerCase() === truncateKey(key).toLowerCase()
         ) {
           return {
             ...s,
