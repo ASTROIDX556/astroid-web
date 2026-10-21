@@ -14,13 +14,13 @@ import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { StatCard, SectionLabel } from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { SkeletonCard } from '@/components/ui/skeleton';
 import { CashflowChart, CategoryBarChart, DonutChart, type DonutDatum } from '@/components/charts';
 import { CATEGORICAL } from '@/components/charts';
 import { useOverview, useBriefing, useBudgets } from '@/hooks/use-queries';
 import { useAssistantStore } from '@/stores/ui-store';
-import { formatCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
+import { FinancialBriefingCard } from '@/features/dashboard/FinancialBriefingCard';
+import { formatCurrency, formatNumber } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 
@@ -41,6 +41,7 @@ export default function OverviewPage() {
   const briefing = useBriefing();
   const budgets = useBudgets();
   const openAssistant = useAssistantStore((s) => s.setOpen);
+  const openWithPrompt = useAssistantStore((s) => s.openWithPrompt);
 
   return (
     <PageTransition className="space-y-8">
@@ -125,77 +126,12 @@ export default function OverviewPage() {
           </CardContent>
         </Card>
 
-        {/* AI briefing */}
-        <Card elevation="soft" className="relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 bg-gold-sheen" aria-hidden />
-          <CardHeader className="relative">
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-gold" aria-hidden />
-              Briefing
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative">
-            <QueryBoundary
-              query={briefing}
-              loading={
-                <div className="space-y-3">
-                  <div className="skeleton h-4 w-3/4 rounded-sm" />
-                  <div className="skeleton h-16 w-full rounded-sm" />
-                  <div className="skeleton h-16 w-full rounded-sm" />
-                </div>
-              }
-            >
-              {(data) => (
-                <div className="space-y-4">
-                  <div>
-                    <p className="font-display text-base font-semibold">{data?.greeting ?? 'Financial Executive Briefing'}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-foreground-secondary">
-                      {data?.summary ?? 'Treasury systems operating normally.'}
-                    </p>
-                  </div>
-                  <ul className="space-y-2.5">
-                    {(data?.insights ?? []).slice(0, 3).map((insight) => (
-                      <li
-                        key={insight.id}
-                        className="rounded-sm border border-border bg-surface/60 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-xs font-medium text-foreground">{insight.title}</p>
-                          <Badge variant={severityBadge[insight.severity] ?? 'info'} size="sm">
-                            {insight.severity}
-                          </Badge>
-                        </div>
-                        <p className="mt-1 text-2xs leading-relaxed text-foreground-secondary">
-                          {insight.detail}
-                        </p>
-                        {insight.action && (
-                          <Link
-                            href={insight.action.href}
-                            className="mt-1.5 inline-flex items-center gap-1 text-2xs font-medium text-gold-strong hover:underline"
-                          >
-                            {insight.action.label}
-                            <ArrowUpRight className="h-3 w-3" aria-hidden />
-                          </Link>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => openAssistant(true)}
-                  >
-                    Open assistant
-                  </Button>
-                  <p className="text-center text-2xs text-foreground-muted">
-                    Generated {data?.generatedAt ? formatRelativeTime(data.generatedAt) : 'just now'}
-                  </p>
-                </div>
-              )}
-            </QueryBoundary>
-          </CardContent>
-        </Card>
+        <FinancialBriefingCard
+          briefing={briefing.data}
+          loading={briefing.isLoading}
+          error={briefing.error instanceof Error ? briefing.error.message : null}
+          onOpenAssistant={(prompt) => prompt ? openWithPrompt(prompt) : openAssistant(true)}
+        />
       </div>
 
       {/* Spend breakdown */}
