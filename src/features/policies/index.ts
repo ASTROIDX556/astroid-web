@@ -5,6 +5,7 @@ export { PolicySandboxWidget } from './PolicySandboxWidget';
 export { SpendingPolicyBuilder } from './SpendingPolicyBuilder';
 export { PolicyTemplateModal } from './PolicyTemplateModal';
 export * from './policyTemplates';
+export * from './spendingPolicySimulation';
 export {
   spendingPolicySchema,
   validAddressList,
