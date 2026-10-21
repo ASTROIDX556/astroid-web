@@ -27,7 +27,7 @@ import {
   type ApprovalQueueSortId,
 } from './approvalQueueFilters';
 import { ApprovalQueueToolbar } from './components/ApprovalQueueToolbar';
-import { ProposalCard } from './components/ProposalQueueCard';
+import { ProposalReviewCard } from './ProposalReviewCard';
 
 /**
  * Sort columns are declared as a TanStack Table instance and applied through
@@ -139,7 +139,7 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
         <ul className="space-y-4" aria-label="Approval queue">
           {sortedProposals.map((proposal) => (
             <li key={proposal.id}>
-              <ProposalCard proposal={proposal} />
+              <ProposalReviewCard proposal={proposal} />
             </li>
           ))}
         </ul>
