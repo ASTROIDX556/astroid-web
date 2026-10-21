@@ -66,7 +66,10 @@ export function DataTable<TData>({
       const search = (filterValue ?? '').toString().trim().toLowerCase();
       if (!search) return true;
 
-      const candidates = [row.original, row.getVisibleCells().map((cell) => cell.getValue())]
+      const candidates = [
+        row.original,
+        row.getVisibleCells().map((cell) => cell.getValue()),
+      ]
         .flat()
         .filter(Boolean)
         .map((value) => String(value).toLowerCase());
@@ -79,23 +82,36 @@ export function DataTable<TData>({
   const canPaginate = pageCount > 1;
 
   const summary = useMemo(() => {
-    const start = data.length === 0 ? 0 : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1;
-    const end = Math.min(
-      start + table.getState().pagination.pageSize - 1,
-      data.length,
-    );
+    const start =
+      data.length === 0
+        ? 0
+        : table.getState().pagination.pageIndex * table.getState().pagination.pageSize +
+          1;
+    const end = Math.min(start + table.getState().pagination.pageSize - 1, data.length);
 
     return data.length === 0 ? '0 rows' : `${start}-${end} of ${data.length}`;
   }, [data.length, table]);
 
   return (
-    <div className={cn('overflow-hidden rounded-card border border-border bg-surface', className)}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-card border border-border bg-surface',
+        className,
+      )}
+    >
       {(searchable || caption) && (
         <div className="flex flex-col gap-3 border-b border-border bg-surface-secondary/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-          {caption && <p className="text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary">{caption}</p>}
+          {caption && (
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary">
+              {caption}
+            </p>
+          )}
           {searchable && (
             <label className="relative block w-full sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground-muted" aria-hidden />
+              <Search
+                className="h-3.5 w-3.5 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted"
+                aria-hidden
+              />
               <input
                 aria-label="Search table rows"
                 value={globalFilter}
@@ -115,15 +131,29 @@ export function DataTable<TData>({
         <table className="w-full min-w-full border-collapse text-left text-sm">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="border-b border-border bg-surface-secondary/40">
+              <tr
+                key={headerGroup.id}
+                className="border-b border-border bg-surface-secondary/40"
+              >
                 {headerGroup.headers.map((header) => {
-                  const meta = header.column.columnDef.meta as { className?: string; sticky?: boolean } | undefined;
+                  const meta = header.column.columnDef.meta as
+                    | { className?: string; sticky?: boolean }
+                    | undefined;
                   const canSort = header.column.getCanSort();
+                  const sorted = header.column.getIsSorted();
+                  const ariaSort = canSort
+                    ? sorted === 'asc'
+                      ? 'ascending'
+                      : sorted === 'desc'
+                        ? 'descending'
+                        : 'none'
+                    : undefined;
 
                   return (
                     <th
                       key={header.id}
                       scope="col"
+                      aria-sort={ariaSort}
                       className={cn(
                         'px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary',
                         meta?.className,
@@ -133,14 +163,27 @@ export function DataTable<TData>({
                       {header.isPlaceholder ? null : (
                         <button
                           type="button"
-                          onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                          onClick={
+                            canSort
+                              ? header.column.getToggleSortingHandler()
+                              : undefined
+                          }
                           className={cn(
-                            'inline-flex items-center gap-1.5 text-left font-medium transition-colors hover:text-foreground',
+                            'gap-1.5 inline-flex items-center text-left font-medium transition-colors hover:text-foreground',
                             !canSort && 'cursor-default',
                           )}
-                          aria-label={canSort ? `Sort by ${header.column.columnDef.header?.toString()}` : undefined}
+                          aria-label={
+                            canSort
+                              ? `Sort by ${header.column.columnDef.header?.toString()}`
+                              : undefined
+                          }
                         >
-                          <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                          <span>
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </span>
                           {canSort && (
                             <span aria-hidden className="text-foreground-muted">
                               {header.column.getIsSorted() === 'asc' ? (
@@ -166,7 +209,7 @@ export function DataTable<TData>({
               <tr>
                 <td colSpan={columns.length} className="p-8">
                   {emptyState ?? (
-                    <div className="flex min-h-24 items-center justify-center text-sm text-foreground-secondary">
+                    <div className="min-h-24 flex items-center justify-center text-sm text-foreground-secondary">
                       No records found.
                     </div>
                   )}
@@ -194,7 +237,8 @@ export function DataTable<TData>({
                     }
                     className={cn(
                       'transition-colors duration-fast hover:bg-surface-secondary/30',
-                      interactive && 'cursor-pointer focus-visible:bg-surface-secondary focus-visible:outline-none',
+                      interactive &&
+                        'cursor-pointer focus-visible:bg-surface-secondary focus-visible:outline-none',
                     )}
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -202,7 +246,11 @@ export function DataTable<TData>({
                         key={cell.id}
                         className={cn(
                           'px-4 py-3 align-middle text-foreground',
-                          (cell.column.columnDef.meta as { className?: string } | undefined)?.className,
+                          (
+                            cell.column.columnDef.meta as
+                              | { className?: string }
+                              | undefined
+                          )?.className,
                         )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

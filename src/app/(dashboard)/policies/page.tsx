@@ -16,7 +16,9 @@ import { PageTransition } from '@/components/ui/motion';
 import { PolicyRulesBuilder } from '@/features/policies/PolicyRulesBuilder';
 import { BudgetSimulator } from '@/features/policies/BudgetSimulator';
 import { PolicySandboxWidget } from '@/features/policies/PolicySandboxWidget';
+import { PolicySimulationPanel } from '@/features/policies/PolicySimulationPanel';
 import { SpendingPolicyBuilder } from '@/features/policies/SpendingPolicyBuilder';
+import { TransactionSimulator } from '@/features/policies/TransactionSimulator';
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -33,6 +35,11 @@ export default function PoliciesPage() {
       />
 
       <BudgetSimulator />
+
+      <div className="space-y-4">
+        <SectionLabel>Policy rule simulation modal</SectionLabel>
+        <TransactionSimulator />
+      </div>
 
       <QueryBoundary
         query={policies}
@@ -54,6 +61,7 @@ export default function PoliciesPage() {
       >
         {(data) => (
           <div className="space-y-6">
+            <PolicySimulationPanel policies={data} />
             <PolicySandboxWidget policies={data} />
 
             <SectionLabel>Spending policy studio</SectionLabel>

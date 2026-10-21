@@ -1,6 +1,5 @@
 import { z } from 'zod';
-
-const providerOptions = ['OpenAI', 'Anthropic', 'Gemini', 'Nvidia', 'Ollama', 'Custom'] as const;
+import { agentProviderSchema } from './schema';
 
 /**
  * Schema for the agent template wizard form.
@@ -21,7 +20,7 @@ export const templateWizardSchema = z.object({
     .min(10, 'Description must be at least 10 characters.')
     .max(300, 'Description must be 300 characters or fewer.'),
   ownerDepartment: z.string().min(2, 'Department is required.').max(60),
-  provider: z.enum(providerOptions, { required_error: 'Select a model provider.' }),
+  provider: agentProviderSchema,
   model: z.string().min(2, 'Model name is required.').max(80),
   apiKey: z.string().max(200).optional().or(z.literal('')),
 
