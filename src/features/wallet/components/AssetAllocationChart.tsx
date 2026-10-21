@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import { Cell, Pie, PieChart, Tooltip as RechartsTooltip } from 'recharts';
+import { ChartFrame } from '@/components/charts/chart-frame';
 import { Card } from '@/components/ui/card';
 import {
   CATEGORICAL,
@@ -132,7 +133,7 @@ export function AssetAllocationChart({
       </div>
 
       <div className="relative mt-4" role="img" aria-label={chartAriaLabel}>
-        <ResponsiveContainer width="100%" height={height}>
+        <ChartFrame label={chartAriaLabel} height={height}>
           <PieChart>
             <Pie
               data={slices}
@@ -173,7 +174,7 @@ export function AssetAllocationChart({
               }}
             />
           </PieChart>
-        </ResponsiveContainer>
+        </ChartFrame>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           {useFiatWeights ? (

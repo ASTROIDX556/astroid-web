@@ -68,7 +68,8 @@ export default function WalletsPage() {
               </div>
 
               <SectionLabel>{data.length} wallets</SectionLabel>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <ErrorBoundary section="Wallet list">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {data.map((wallet) => {
                   const status = walletStatus(wallet.status);
                   const assetNames = wallet.balances.map((balance) => balance.asset).join(', ');
@@ -123,7 +124,8 @@ export default function WalletsPage() {
                     </Link>
                   );
                 })}
-              </div>
+                </div>
+              </ErrorBoundary>
             </div>
           );
         }}
