@@ -8,7 +8,7 @@ import { KeyValue, SectionLabel } from '@/components/dashboard/stat-card';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useTransactions, useWallet } from '@/hooks/use-queries';
+import { useWallet } from '@/hooks/use-queries';
 import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatDateTime, truncateHash } from '@/lib/format';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
@@ -19,7 +19,6 @@ import { WalletTransactionHistory } from '@/features/wallet/components/WalletTra
 
 export default function WalletDetailPage({ params }: { params: { id: string } }) {
   const wallet = useWallet(params.id);
-  const transactions = useTransactions();
 
   return (
     <PageTransition className="space-y-8">
@@ -110,30 +109,6 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
       <div className="space-y-4">
         <SectionLabel>Transaction history</SectionLabel>
         <WalletTransactionHistory walletId={params.id} />
-      </div>
-
-      <div className="space-y-4">
-        <SectionLabel>Transaction history</SectionLabel>
-        <QueryBoundary
-          query={transactions}
-          loading={<div className="skeleton h-72 w-full rounded-card" />}
-          isEmpty={(data) => data.every((transaction) => transaction.walletId !== params.id)}
-          empty={
-            <EmptyState
-              illustration={<ChartIllustration />}
-              title="No transactions for this wallet"
-              description="Once this wallet starts settling Stellar payments, its activity will appear here."
-            />
-          }
-        >
-          {(data) => (
-            <TransactionHistoryTable
-              transactions={data.filter(
-                (transaction) => transaction.walletId === params.id,
-              )}
-            />
-          )}
-        </QueryBoundary>
       </div>
 
       <div className="space-y-4">
