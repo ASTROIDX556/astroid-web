@@ -7,12 +7,27 @@ export interface AssetRate {
   decimals: number;
 }
 
+export const ASSET_RATES: Record<AssetSymbol, AssetRate> = {
+  XLM: { symbol: 'XLM', name: 'Stellar Lumens', usdRate: 0.12, decimals: 7 },
+  USDC: { symbol: 'USDC', name: 'USD Coin (Stellar)', usdRate: 1.0, decimals: 2 },
+  BTC: { symbol: 'BTC', name: 'Bitcoin (Wrapped)', usdRate: 65000.0, decimals: 8 },
+  ETH: { symbol: 'ETH', name: 'Ethereum (Wrapped)', usdRate: 3200.0, decimals: 8 },
+  EURC: { symbol: 'EURC', name: 'Euro Coin', usdRate: 1.08, decimals: 2 },
+};
+
 export interface BudgetLimitConfig {
   dailyLimitUsd: number;
   dailySpentUsd: number;
   singleTxCeilingUsd: number;
   networkBaseFeeXlm: number;
 }
+
+export const DEFAULT_CONFIG: BudgetLimitConfig = {
+  dailyLimitUsd: 10000,
+  dailySpentUsd: 6800,
+  singleTxCeilingUsd: 2500,
+  networkBaseFeeXlm: 0.00001,
+};
 
 export interface SimulationResult {
   assetAmount: number;
