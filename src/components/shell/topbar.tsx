@@ -10,6 +10,7 @@ import { useAgentTelemetrySubscription } from '@/hooks/useAgentTelemetrySubscrip
 import { usePreferencesStore } from '@/stores/preferences-store';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
 import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
+import { WalletNetworkSwitcher } from '@/features/network/WalletNetworkSwitcher';
 import { CircuitBreakerControl } from '@/features/security';
 import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
 import { cn } from '@/lib/cn';
@@ -61,9 +62,9 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-30 flex flex-col border-b border-border bg-background/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 flex flex-col border-b border-border bg-background-primary/95 backdrop-blur-xl">
       {/* Top Tier: Brand & Global Actions */}
-      <div className="min-h-16 flex flex-wrap items-center gap-3 px-4 py-2 sm:px-6 lg:py-0 lg:min-h-0">
+      <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
         <Link
           href="/overview"
           className={cn(
@@ -71,7 +72,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
             TOPBAR_FOCUS,
           )}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button bg-accent-gradient text-white shadow-gold">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button bg-accent-gradient text-accent-foreground shadow-gold">
             <Sparkles className="h-4 w-4" aria-hidden />
           </span>
           <span className="sr-only">Astroid home</span>
@@ -102,7 +103,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
           aria-label="Switch organization"
           trigger={
             <span className="px-2.5 py-1.5 flex items-center gap-2 rounded-button text-sm font-medium transition-colors duration-fast hover:bg-surface-secondary">
-              <span className="grid h-6 w-6 place-items-center rounded-xs bg-accent-gradient text-2xs font-bold text-white">
+              <span className="grid h-6 w-6 place-items-center rounded-xs bg-accent-gradient text-2xs font-bold text-accent-foreground">
                 {(activeOrg?.name ?? 'A').charAt(0)}
               </span>
               <span className="hidden max-w-[140px] truncate sm:inline-block">
@@ -139,6 +140,9 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
 
         {/* Live agent telemetry connection status */}
         <TelemetryStatusIndicator status={telemetry.status} />
+
+        {/* Freighter wallet status + Stellar network switcher */}
+        <WalletNetworkSwitcher />
 
         {/* Stellar Network Health & RPC Latency Widget */}
         <NetworkHealthWidget />

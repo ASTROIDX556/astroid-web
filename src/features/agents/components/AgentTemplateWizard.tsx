@@ -20,12 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Select, Textarea } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/cn';
-import {
-  templateWizardSchema,
-  WIZARD_STEPS,
-  STEP_FIELDS,
-  type TemplateWizardValues,
-} from '../templateWizardSchema';
+import { templateWizardSchema, type TemplateWizardValues } from '@/lib/validations/agent';
+import { WIZARD_STEPS, STEP_FIELDS } from '../templateWizardSchema';
 import { AGENT_TEMPLATES, getTemplateById, type AgentTemplate } from '../templates';
 
 /* ------------------------------------------------------------------ */
