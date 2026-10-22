@@ -15,6 +15,7 @@ import { useWallets } from '@/hooks/use-queries';
 import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatNumber, truncateHash } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function WalletsPage() {
   const wallets = useWallets();
@@ -68,11 +69,20 @@ export default function WalletsPage() {
               </div>
 
               <SectionLabel>{data.length} wallets</SectionLabel>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <ErrorBoundary section="Wallet list">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {data.map((wallet) => {
                   const status = walletStatus(wallet.status);
+                  const assetNames = wallet.balances.map((balance) => balance.asset).join(', ');
+                  const assetSummary = assetNames.length > 0 ? `Assets: ${assetNames}.` : 'No assets.';
+                  const cardLabel = `${wallet.name} wallet, ${status.label}. ${wallet.network} network. Total value ${formatCurrency(wallet.totalUsdValue, 'USDC', { compact: true })}. ${assetSummary} ${formatNumber(wallet.balances.length)} ${wallet.balances.length === 1 ? 'asset' : 'assets'}. Open wallet details.`;
                   return (
-                    <Link key={wallet.id} href={`/wallets/${wallet.id}`} className="block">
+                    <Link
+                      key={wallet.id}
+                      href={`/wallets/${wallet.id}`}
+                      aria-label={cardLabel}
+                      className="block rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
                       <Card interactive className="h-full p-5">
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-1">
@@ -115,7 +125,8 @@ export default function WalletsPage() {
                     </Link>
                   );
                 })}
-              </div>
+                </div>
+              </ErrorBoundary>
             </div>
           );
         }}

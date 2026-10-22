@@ -132,13 +132,17 @@ export function FormField({
   const generatedId = useId();
   const child = isValidElement<FieldControlProps>(children) && isFieldControl(children) ? children : null;
   const id = htmlFor ?? child?.props.id ?? generatedId;
-  // Message ids come from this field's own generated id, not from the control's:
-  // two forms on one page can reuse a control id, and a message id must still be unique.
-  const messageId = error ? `${generatedId}-error` : hint ? `${generatedId}-hint` : undefined;
+  // The message id follows the control's id (`<id>-error` / `<id>-hint`), the
+  // convention the forms already rely on when they point aria-describedby at it.
+  const messageId = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
 
   let control = children;
   if (child) {
-    const describedBy = [child.props['aria-describedby'], messageId].filter(Boolean).join(' ');
+    const describedBy = [
+      ...new Set([...(child.props['aria-describedby']?.split(/\s+/) ?? []), messageId]),
+    ]
+      .filter(Boolean)
+      .join(' ');
     control = cloneElement(child, {
       id,
       ...(describedBy ? { 'aria-describedby': describedBy } : {}),

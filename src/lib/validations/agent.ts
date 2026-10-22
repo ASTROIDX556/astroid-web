@@ -101,7 +101,7 @@ export const agentModelSchema = z
   .max(AGENT_MODEL_MAX_LENGTH, `Model name cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters`);
 
 export const agentProviderSchema = z.enum(AGENT_PROVIDERS, {
-  errorMap: () => ({ message: 'Select a model provider' }),
+  errorMap: () => ({ message: 'Select a supported provider.' }),
 }) as z.ZodType<AgentProviderId>;
 
 /** Optional endpoint: empty is allowed here; providers that need one are checked in `requireProviderEndpoint`. */
@@ -109,9 +109,12 @@ export const agentEndpointUrlSchema = z
   .string()
   .trim()
   .refine((value) => value === '' || isHttpUrl(value), {
-    message: 'Enter a valid http:// or https:// URL, e.g. https://api.example.com/v1',
+    message: 'Enter a valid http(s) URL, e.g. https://api.example.com/v1',
   })
   .optional();
+
+/** Name this schema had when the agent forms first got Zod validation. */
+export const optionalEndpointUrlSchema = agentEndpointUrlSchema;
 
 /** Optional provider secret: no spaces, bounded length. */
 export const agentApiKeySchema = z
@@ -133,22 +136,51 @@ export const spendingLimit = (label: string, max: number, unit: string) =>
     .positive(`${label} must be greater than 0`)
     .max(max, `${label} cannot exceed ${max.toLocaleString('en-US')} ${unit}`);
 
+/** Operating mode, mirrors `AgentMode` on the domain model. */
+export const agentModeSchema = z.enum(['assisted', 'autonomous'], {
+  errorMap: () => ({ message: 'Select an operating mode.' }),
+});
+
+export const temperatureSchema = z
+  .number({
+    required_error: 'Temperature is required',
+    invalid_type_error: 'Temperature must be a number',
+  })
+  .min(0, 'Temperature cannot be below 0')
+  .max(2, 'Temperature cannot exceed 2');
+
+export const monthlyBudgetSchema = z
+  .number({
+    required_error: 'Monthly budget is required',
+    invalid_type_error: 'Monthly budget must be a number',
+  })
+  .positive('Monthly budget must be greater than 0')
+  .max(1_000_000, 'Monthly budget cannot exceed 1,000,000 USDC');
+
 // ---------------------------------------------------------------------------
 // Cross-field rules shared by the schemas below
 // ---------------------------------------------------------------------------
 
 type EndpointFields = { provider?: AgentProviderId; endpointUrl?: string };
 
-/** Self-hosted and custom providers have no default endpoint, so one must be supplied. */
-export function requireProviderEndpoint(
-  values: EndpointFields,
-  ctx: z.RefinementCtx,
-  message = 'A valid API endpoint URL is required for this provider',
-): void {
-  if (values.provider && requiresEndpoint(values.provider) && !values.endpointUrl) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endpointUrl'], message });
-  }
+/**
+ * Self-hosted and custom providers have no default endpoint, so one must be
+ * supplied before the agent can be deployed.
+ */
+export function requireProviderEndpoint(values: EndpointFields, ctx: z.RefinementCtx): void {
+  if (!values.provider || !requiresEndpoint(values.provider) || values.endpointUrl) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ['endpointUrl'],
+    message:
+      values.provider === 'Custom'
+        ? 'A custom provider requires an API endpoint URL.'
+        : 'A valid API endpoint URL is required for this provider.',
+  });
 }
+
+/** Name this rule had when the agent forms first got Zod validation. */
+export const refineProviderEndpoint = requireProviderEndpoint;
 
 /** A single transaction can never be larger than the budget it draws from. */
 export function requireCapWithinBudget(
@@ -170,44 +202,54 @@ export function requireCapWithinBudget(
 }
 
 // ---------------------------------------------------------------------------
-// Create: the quick agent configuration form (AgentConfigForm)
+// Create and update: the quick agent configuration form (AgentConfigForm)
 // ---------------------------------------------------------------------------
 
-export const agentCreateSchema = z
-  .object({
-    name: agentNameSchema,
-    description: z
-      .string()
-      .trim()
-      .max(
-        AGENT_DESCRIPTION_MAX_LENGTH,
-        `Description cannot exceed ${AGENT_DESCRIPTION_MAX_LENGTH} characters`,
-      )
-      .optional(),
-    provider: agentProviderSchema,
-    model: z
-      .string({ required_error: 'Select a model for the chosen provider' })
-      .trim()
-      .min(1, 'Select a model for the chosen provider')
-      .max(AGENT_MODEL_MAX_LENGTH, `Model name cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters`),
-    endpointUrl: agentEndpointUrlSchema,
-    mode: z.enum(['assisted', 'autonomous']),
-    temperature: z
-      .number({ invalid_type_error: 'Temperature must be a number' })
-      .min(0, 'Temperature cannot be below 0')
-      .max(2, 'Temperature cannot exceed 2'),
-    monthlyBudget: z
-      .number({ invalid_type_error: 'Monthly budget must be a number' })
-      .positive('Monthly budget must be greater than 0')
-      .max(1_000_000, 'Monthly budget cannot exceed 1,000,000 USDC'),
-  })
-  .superRefine((values, ctx) => requireProviderEndpoint(values, ctx));
+const agentConfigFields = z.object({
+  name: agentNameSchema,
+  description: z
+    .string()
+    .trim()
+    .max(
+      AGENT_DESCRIPTION_MAX_LENGTH,
+      `Description cannot exceed ${AGENT_DESCRIPTION_MAX_LENGTH} characters`,
+    )
+    .optional(),
+  provider: agentProviderSchema,
+  model: z
+    .string({ required_error: 'Select a model for the chosen provider' })
+    .trim()
+    .min(1, 'Select a model for the chosen provider')
+    .max(AGENT_MODEL_MAX_LENGTH, `Model name cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters`),
+  endpointUrl: agentEndpointUrlSchema,
+  mode: agentModeSchema,
+  temperature: temperatureSchema,
+  monthlyBudget: monthlyBudgetSchema,
+});
 
-export type AgentCreateValues = z.infer<typeof agentCreateSchema>;
+/** Validates a full agent configuration before the agent is created. */
+export const createAgentSchema = agentConfigFields.superRefine(requireProviderEndpoint);
 
-/** Name the quick configuration form used before the schemas moved here. */
-export const agentConfigSchema = agentCreateSchema;
-export type AgentConfigFormValues = AgentCreateValues;
+export type CreateAgentInput = z.infer<typeof createAgentSchema>;
+
+/**
+ * Validates a partial settings update. Every field is optional, but each
+ * field that is present must satisfy the same rules as on creation. Switching
+ * to a provider that needs an endpoint must also supply that endpoint, since
+ * the previous provider's endpoint does not carry over.
+ */
+export const updateAgentSchema = agentConfigFields.partial().superRefine((values, ctx) => {
+  if (Object.values(values).every((value) => value === undefined)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Provide at least one field to update.',
+    });
+    return;
+  }
+  requireProviderEndpoint(values, ctx);
+});
+
+export type UpdateAgentInput = z.infer<typeof updateAgentSchema>;
 
 // ---------------------------------------------------------------------------
 // Create: the registration wizard (AgentWizard)
@@ -242,7 +284,7 @@ export const agentWizardSchema = z
   .superRefine((values, ctx) => {
     // A custom provider has no sensible default to fall back on: the wizard
     // only proceeds once the operator supplies a properly formatted endpoint.
-    requireProviderEndpoint(values, ctx, 'A custom provider requires an API endpoint URL');
+    requireProviderEndpoint(values, ctx);
     requireCapWithinBudget(values, ctx);
   });
 
@@ -274,7 +316,7 @@ export const templateWizardSchema = z
       .min(10, 'Description must be at least 10 characters.')
       .max(300, 'Description must be 300 characters or fewer.'),
     ownerDepartment: z.string().trim().min(2, 'Department is required.').max(60),
-    provider: z.enum(AGENT_PROVIDERS, { required_error: 'Select a model provider.' }),
+    provider: agentProviderSchema,
     model: agentModelSchema,
     apiKey: agentApiKeySchema,
 
@@ -321,48 +363,59 @@ export const providerModelOptions: Record<AgentProviderType, string[]> = {
 };
 
 /**
- * Providers that call a hosted API require an API key; `ollama` runs locally
- * and `custom` may or may not need one, so both leave it optional but still
- * require an endpoint URL to know where to send requests.
+ * Hosted providers authenticate with an API key; self-hosted and custom ones
+ * are reached through an endpoint URL instead.
  */
+export const isHostedProvider = (provider: AgentProviderType): boolean =>
+  provider !== 'ollama' && provider !== 'custom';
+
+/** Validates the provider settings form on an agent's page. */
 export const agentUpdateSchema = z
   .object({
     name: z
       .string({ required_error: 'Configuration name is required' })
       .trim()
       .min(1, 'Configuration name is required')
-      .min(2, 'Configuration name must be at least 2 characters')
-      .max(80, 'Configuration name cannot exceed 80 characters'),
-    provider: z.enum(AGENT_PROVIDER_TYPES),
+      .min(2, 'Enter a configuration name of at least 2 characters.')
+      .max(80, 'Configuration name cannot exceed 80 characters.'),
+    provider: z.enum(AGENT_PROVIDER_TYPES, {
+      errorMap: () => ({ message: 'Select a supported provider.' }),
+    }),
     model: z
       .string({ required_error: 'Select or enter a model' })
       .trim()
-      .min(1, 'Select or enter a model')
-      .max(AGENT_MODEL_MAX_LENGTH, `Model name cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters`),
-    temperature: z.coerce
-      .number({ invalid_type_error: 'Temperature must be a number' })
-      .min(0, 'Temperature cannot be below 0')
-      .max(2, 'Temperature cannot exceed 2')
-      .default(0.7),
+      .min(1, 'Select or enter a model.')
+      .max(AGENT_MODEL_MAX_LENGTH, 'Model identifier cannot exceed 120 characters.'),
+    temperature: temperatureSchema,
     endpointUrl: agentEndpointUrlSchema,
     apiKey: agentApiKeySchema,
   })
   .superRefine((values, ctx) => {
-    const needsApiKey = values.provider !== 'ollama' && values.provider !== 'custom';
-    if (needsApiKey && !values.apiKey) {
+    const hosted = isHostedProvider(values.provider);
+    if (hosted && !values.apiKey) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['apiKey'],
-        message: 'An API key is required for this provider',
+        message: 'An API key is required for this provider.',
       });
     }
 
-    const needsEndpoint = values.provider === 'ollama' || values.provider === 'custom';
-    if (needsEndpoint && !values.endpointUrl) {
+    if (!hosted && !values.endpointUrl) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['endpointUrl'],
-        message: 'An endpoint URL is required for this provider',
+        message: 'An endpoint URL is required for this provider.',
+      });
+    }
+
+    // Hosted providers pick from a curated catalog; a model from another
+    // provider (e.g. left over from a provider switch) is not deployable.
+    const catalog = providerModelOptions[values.provider];
+    if (catalog.length > 0 && values.model && !catalog.includes(values.model)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['model'],
+        message: 'Select a model offered by the chosen provider.',
       });
     }
   });
@@ -373,3 +426,28 @@ export type AgentUpdateValues = z.infer<typeof agentUpdateSchema>;
 export const agentProviderConfigSchema = agentUpdateSchema;
 export type AgentProviderConfigValues = AgentUpdateValues;
 export const agentProviderTypes = AGENT_PROVIDER_TYPES;
+
+// ---------------------------------------------------------------------------
+// Schema for components/agents/AgentCreationForm
+// ---------------------------------------------------------------------------
+
+export const agentCreationSchema = z.object({
+  name: z.string().min(2, "Agent name must be at least 2 characters").max(50, "Agent name must not exceed 50 characters"),
+  provider: z.enum(["openai", "anthropic", "custom"], {
+    required_error: "Please select a valid provider",
+  }),
+  model: z.string().min(1, "Model is required"),
+  apiKey: z.string().optional(),
+  endpointUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  tokenLimit: z.coerce.number().int().positive("Token limit must be a positive integer"),
+  spendingThreshold: z.coerce.number().nonnegative("Spending threshold must be a non-negative number"),
+});
+
+export type AgentCreationFormValues = z.infer<typeof agentCreationSchema>;
+
+export const agentConfigSchema = agentCreationSchema.extend({
+  id: z.string().uuid("Invalid agent ID"),
+  isActive: z.boolean(),
+});
+
+export type AgentConfigFormValues = z.infer<typeof agentConfigSchema>;

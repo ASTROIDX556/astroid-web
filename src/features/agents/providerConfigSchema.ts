@@ -5,6 +5,7 @@
 export {
   agentProviderConfigSchema,
   agentProviderTypes,
+  isHostedProvider,
   providerModelOptions,
   type AgentProviderConfigValues,
   type AgentProviderType,

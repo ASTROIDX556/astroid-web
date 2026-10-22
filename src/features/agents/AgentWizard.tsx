@@ -7,7 +7,11 @@ import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Textarea } from '@/components/ui/input';
-import { agentWizardSchema, type AgentWizardValues } from '@/lib/validations/agent';
+import {
+  agentWizardSchema,
+  requiresEndpoint,
+  type AgentWizardValues,
+} from '@/features/agents/schema';
 import { ProviderPresetSelector } from '@/features/agents/components/ProviderPresetSelector';
 import { getProviderPreset, type AgentProviderPreset } from '@/features/agents/providerPresets';
 
@@ -182,7 +186,7 @@ export function AgentWizard() {
                   label="API endpoint URL"
                   htmlFor="endpoint-url"
                   error={form.formState.errors.endpointUrl?.message}
-                  required={provider === 'Custom'}
+                  required={requiresEndpoint(provider)}
                   hint={
                     provider === 'Custom'
                       ? 'Base URL of your OpenAI-compatible server.'

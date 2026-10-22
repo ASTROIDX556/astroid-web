@@ -11,13 +11,13 @@ import { Badge } from '@/components/ui/badge';
 import { FormField, Input, Select } from '@/components/ui/input';
 import { toast } from 'sonner';
 import {
-  AGENT_PROVIDERS,
+  AGENT_PROVIDER_IDS,
   PROVIDER_LABELS,
   PROVIDER_MODELS,
-  agentCreateSchema,
+  createAgentSchema,
   requiresEndpoint,
-  type AgentCreateValues,
-} from '@/lib/validations/agent';
+  type CreateAgentInput,
+} from './schema';
 
 /**
  * Controlled agent configuration form. Model options are derived from the
@@ -33,8 +33,8 @@ export function AgentConfigForm() {
     trigger,
     watch,
     formState: { errors, isSubmitting, isSubmitSuccessful },
-  } = useForm<AgentCreateValues>({
-    resolver: zodResolver(agentCreateSchema),
+  } = useForm<CreateAgentInput>({
+    resolver: zodResolver(createAgentSchema),
     mode: 'onBlur',
     defaultValues: {
       name: '',
@@ -77,7 +77,7 @@ export function AgentConfigForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
-  const onSubmit = (values: AgentCreateValues) => {
+  const onSubmit = (values: CreateAgentInput) => {
     // Mock-mode deployment: the API contract is defined in astroid-api
     // (POST /agents); wire the payload there once the backend ships.
     toast.success(`${values.name} configured`, {
@@ -114,17 +114,24 @@ export function AgentConfigForm() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <FormField label="Agent name" required error={errors.name?.message}>
+          <FormField
+            label="Agent name"
+            htmlFor="agent-config-name"
+            required
+            error={errors.name?.message}
+          >
             <Input
               id="agent-config-name"
               placeholder="e.g. Treasury Rebalancer"
               invalid={Boolean(errors.name)}
+              aria-describedby={errors.name ? 'agent-config-name-error' : undefined}
               {...register('name')}
             />
           </FormField>
 
           <FormField
             label="Provider"
+            htmlFor="agent-config-provider"
             required
             error={errors.provider?.message}
             hint="Model options update to match the selected provider."
@@ -132,9 +139,12 @@ export function AgentConfigForm() {
             <Select
               id="agent-config-provider"
               invalid={Boolean(errors.provider)}
+              aria-describedby={
+                errors.provider ? 'agent-config-provider-error' : undefined
+              }
               {...register('provider')}
             >
-              {AGENT_PROVIDERS.map((id) => (
+              {AGENT_PROVIDER_IDS.map((id) => (
                 <option key={id} value={id}>
                   {PROVIDER_LABELS[id]}
                 </option>
@@ -145,6 +155,7 @@ export function AgentConfigForm() {
 
         <FormField
           label={isCustomModel ? 'Custom model identifier' : 'Model'}
+          htmlFor="agent-config-model"
           required
           error={errors.model?.message}
           hint={
@@ -158,12 +169,14 @@ export function AgentConfigForm() {
               id="agent-config-model"
               placeholder="e.g. my-org/finance-agent-v1"
               invalid={Boolean(errors.model)}
+              aria-describedby={errors.model ? 'agent-config-model-error' : undefined}
               {...register('model')}
             />
           ) : (
             <Select
               id="agent-config-model"
               invalid={Boolean(errors.model)}
+              aria-describedby={errors.model ? 'agent-config-model-error' : undefined}
               {...register('model')}
             >
               {modelOptions.map((m) => (
@@ -178,6 +191,7 @@ export function AgentConfigForm() {
         {needsEndpoint && (
           <FormField
             label="API endpoint URL"
+            htmlFor="agent-config-endpoint"
             required
             error={errors.endpointUrl?.message}
             hint={
@@ -193,14 +207,27 @@ export function AgentConfigForm() {
               placeholder="https://inference.example.com/v1"
               leftIcon={<Link2 className="h-4 w-4" aria-hidden />}
               invalid={Boolean(errors.endpointUrl)}
+              aria-describedby={
+                errors.endpointUrl ? 'agent-config-endpoint-error' : undefined
+              }
               {...register('endpointUrl')}
             />
           </FormField>
         )}
 
         <div className="grid gap-5 sm:grid-cols-3">
-          <FormField label="Operating mode" required error={errors.mode?.message}>
-            <Select id="agent-config-mode" invalid={Boolean(errors.mode)} {...register('mode')}>
+          <FormField
+            label="Operating mode"
+            htmlFor="agent-config-mode"
+            required
+            error={errors.mode?.message}
+          >
+            <Select
+              id="agent-config-mode"
+              invalid={Boolean(errors.mode)}
+              aria-describedby={errors.mode ? 'agent-config-mode-error' : undefined}
+              {...register('mode')}
+            >
               <option value="assisted">Assisted</option>
               <option value="autonomous">Autonomous</option>
             </Select>
@@ -208,6 +235,7 @@ export function AgentConfigForm() {
 
           <FormField
             label="Temperature"
+            htmlFor="agent-config-temperature"
             required
             error={errors.temperature?.message}
             hint="0 – 2 · sampling creativity"
@@ -219,12 +247,16 @@ export function AgentConfigForm() {
               min={0}
               max={2}
               invalid={Boolean(errors.temperature)}
+              aria-describedby={
+                errors.temperature ? 'agent-config-temperature-error' : undefined
+              }
               {...register('temperature', { valueAsNumber: true })}
             />
           </FormField>
 
           <FormField
             label="Monthly budget (USDC)"
+            htmlFor="agent-config-budget"
             required
             error={errors.monthlyBudget?.message}
           >
@@ -234,6 +266,9 @@ export function AgentConfigForm() {
               min={1}
               step="1"
               invalid={Boolean(errors.monthlyBudget)}
+              aria-describedby={
+                errors.monthlyBudget ? 'agent-config-budget-error' : undefined
+              }
               leftIcon={<Gauge className="h-4 w-4" aria-hidden />}
               {...register('monthlyBudget', { valueAsNumber: true })}
             />
@@ -242,6 +277,7 @@ export function AgentConfigForm() {
 
         <FormField
           label="Description"
+          htmlFor="agent-config-description"
           error={errors.description?.message}
           hint="Optional · shown on the agent detail page."
         >
@@ -249,6 +285,9 @@ export function AgentConfigForm() {
             id="agent-config-description"
             placeholder="What does this agent do?"
             invalid={Boolean(errors.description)}
+            aria-describedby={
+              errors.description ? 'agent-config-description-error' : undefined
+            }
             {...register('description')}
           />
         </FormField>

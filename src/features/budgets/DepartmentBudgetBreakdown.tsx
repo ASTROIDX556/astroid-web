@@ -6,9 +6,9 @@ import {
   Cell,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip as RechartsTooltip,
 } from 'recharts';
+import { ChartFrame } from '@/components/charts/chart-frame';
 import { PieChart as PieChartIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/DataTable';
@@ -209,7 +209,7 @@ export function DepartmentBudgetBreakdown({
             ) : (
               <div className="flex h-full w-full flex-col">
                 <div className="relative min-h-0 flex-1">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ChartFrame label="Department budget allocation" height="100%">
                     <PieChart>
                       <Pie
                         data={chartData}
@@ -226,7 +226,7 @@ export function DepartmentBudgetBreakdown({
                       </Pie>
                       <RechartsTooltip content={<AllocationTooltip />} />
                     </PieChart>
-                  </ResponsiveContainer>
+                  </ChartFrame>
                   <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                     <span className="font-display text-xl font-semibold tracking-tight tabular text-foreground">
                       {formatCurrency(totalAllocated, currency, { compact: true })}
