@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency } from '../../lib/format';
 import { type PolicyRule } from './usePolicySimulation';
 import {
   ASSET_RATES,

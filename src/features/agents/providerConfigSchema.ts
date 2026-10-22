@@ -9,4 +9,4 @@ export {
   providerModelOptions,
   type AgentProviderConfigValues,
   type AgentProviderType,
-} from '@/lib/validations/agent';
+} from '../../lib/validations/agent';
