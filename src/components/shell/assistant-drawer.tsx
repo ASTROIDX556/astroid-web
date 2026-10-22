@@ -6,6 +6,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useAssistantStore } from '@/stores/ui-store';
 import { useAssistantSeed, useBriefing } from '@/hooks/use-queries';
 import { Avatar } from '@/components/ui/avatar';
+import { PromptChips } from '@/features/ai/components/PromptChips';
 import { cn } from '@/lib/cn';
 import { env, isMockMode } from '@/lib/env';
 import type { ChatMessage } from '@/types/domain';
@@ -43,11 +44,12 @@ export function AssistantDrawer() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
   const [seeded, setSeeded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const composerRef = useRef<HTMLTextAreaElement>(null);
-  const titleId = useId();
+  // Synchronous guard: state updates are async, so a double-click could
+  // otherwise enqueue two turns before the disabled UI re-renders.
+  const sendingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -96,7 +98,10 @@ export function AssistantDrawer() {
 
   const send = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || sendingRef.current) return;
+    sendingRef.current = true;
+    setSending(true);
+
     const stamp = new Date().toISOString();
     const userMsg: ChatMessage = {
       id: `u-${Date.now()}`,
@@ -107,19 +112,19 @@ export function AssistantDrawer() {
     setMessages((prev) => [...prev, userMsg]);
     setDraft('');
 
-    if (isMockMode) {
-      const mockReply: ChatMessage = {
-        id: `a-${Date.now()}`,
-        role: 'assistant',
-        content:
-          'I can help with that. In this preview the assistant is running in mock mode — set NEXT_PUBLIC_API_URL to connect to the live API.',
-        createdAt: stamp,
-      };
-      setMessages((prev) => [...prev, mockReply]);
-      return;
-    }
-
     try {
+      if (isMockMode) {
+        const mockReply: ChatMessage = {
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          content:
+            'I can help with that. In this preview the assistant is running in mock mode — set NEXT_PUBLIC_API_URL to connect to the live API.',
+          createdAt: stamp,
+        };
+        setMessages((prev) => [...prev, mockReply]);
+        return;
+      }
+
       const res = await fetch(`${env.apiUrl}${env.apiVersion}/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,7 +151,16 @@ export function AssistantDrawer() {
           createdAt: new Date().toISOString(),
         },
       ]);
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
     }
+  };
+
+  /** Populate the composer with a chip's full prompt, then submit it. */
+  const handlePromptSelect = (prompt: string) => {
+    setDraft(prompt);
+    void send(prompt);
   };
 
   const suggestions = useMemo(
@@ -165,16 +179,15 @@ export function AssistantDrawer() {
           'fixed bottom-6 right-6 z-50 flex flex-col items-end justify-end transition-all duration-base ease-astroid sm:bottom-8 sm:right-8',
           open
             ? 'pointer-events-auto origin-bottom-right scale-100 opacity-100'
-            : 'pointer-events-none invisible origin-bottom-right scale-95 opacity-0',
+            : 'pointer-events-none origin-bottom-right scale-95 opacity-0',
         )}
       >
         <div
           ref={panelRef}
           role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleId}
-          tabIndex={-1}
-          className="shadow-raised relative flex h-[580px] max-h-[calc(100vh-120px)] w-[400px] max-w-[calc(100vw-48px)] flex-col overflow-hidden rounded-card border border-border-strong bg-surface/95 backdrop-blur-xl focus:outline-none"
+          aria-label="AI Executive Command Terminal"
+          aria-modal="false"
+          className="shadow-raised relative flex h-[580px] max-h-[calc(100vh-120px)] w-[400px] max-w-[calc(100vw-48px)] flex-col overflow-hidden rounded-card border border-border-strong bg-surface/95 backdrop-blur-xl"
         >
           <header className="h-16 flex shrink-0 items-center justify-between border-b border-border bg-surface-secondary/40 px-5">
             <span className="flex items-center gap-3">
@@ -182,10 +195,7 @@ export function AssistantDrawer() {
                 <Sparkles className="h-4 w-4" aria-hidden />
               </span>
               <div>
-                <h3
-                  id={titleId}
-                  className="font-display text-sm font-semibold leading-tight"
-                >
+                <h3 className="font-display text-sm font-semibold leading-tight">
                   Command Terminal
                 </h3>
                 <p className="text-2xs text-foreground-secondary">
@@ -271,9 +281,15 @@ export function AssistantDrawer() {
             className="shrink-0 border-t border-border bg-surface-secondary/30 p-4"
             onSubmit={(e) => {
               e.preventDefault();
-              send(draft);
+              void send(draft);
             }}
           >
+            <PromptChips
+              className="mb-3"
+              onSelect={handlePromptSelect}
+              disabled={sending}
+              busy={sending}
+            />
             <div className="flex items-end gap-2 rounded-button border border-border bg-surface px-3 py-2 transition-colors focus-within:border-gold focus-within:ring-1 focus-within:ring-gold">
               <textarea
                 ref={composerRef}
@@ -283,16 +299,19 @@ export function AssistantDrawer() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    send(draft);
+                    void send(draft);
                   }
                 }}
                 rows={1}
-                placeholder="Ask about spend, policies..."
-                className="max-h-32 py-1.5 flex-1 resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted"
+                disabled={sending}
+                placeholder={
+                  sending ? 'Assistant is responding…' : 'Ask about spend, policies...'
+                }
+                className="max-h-32 py-1.5 flex-1 resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
                 type="submit"
-                disabled={!draft.trim()}
+                disabled={!draft.trim() || sending}
                 className={cn(
                   'grid h-8 w-8 shrink-0 place-items-center rounded-button bg-accent-gradient font-semibold text-background-secondary transition-opacity duration-fast disabled:opacity-40',
                   DRAWER_FOCUS,

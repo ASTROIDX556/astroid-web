@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
@@ -26,8 +25,15 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ChartFrame } from '@/components/charts/chart-frame';
+import {
+  AXIS_TICK,
+  BUDGET_STATUS_COLOR,
+  CHART_COLORS,
+  budgetStatus,
+  utilizationPercent,
+  type BudgetStatus,
+} from '@/components/charts/theme';
 import { formatCurrency } from '@/lib/format';
 
 export interface BudgetDepartmentData {
@@ -85,53 +91,38 @@ const DEFAULT_BUDGET_DATA: BudgetDepartmentData[] = [
   },
 ];
 
-export type BudgetUtilizationStatus = 'normal' | 'warning' | 'danger';
-
 /**
- * Maps a utilization percentage to the design-token color for its threshold
- * band. Returns CSS custom-property references (never raw hex) so the chart
- * follows the light/dark theme defined in `src/styles/tokens.css`.
+ * Status and token color for a utilization percentage: normal below 80%,
+ * warning from 80%, danger from 100%. `color` is a theme-aware CSS color.
  */
-export function getThresholdColor(utilizationPercent: number): {
+export function getThresholdColor(percent: number): {
   color: string;
-  status: BudgetUtilizationStatus;
+  status: BudgetStatus;
 } {
-  if (!Number.isFinite(utilizationPercent) || utilizationPercent >= 100) {
-    return { color: 'rgb(var(--danger))', status: 'danger' };
-  }
-  if (utilizationPercent >= 80) {
-    return { color: 'rgb(var(--warning))', status: 'warning' };
-  }
-  return { color: 'rgb(var(--chart-1))', status: 'normal' };
+  const status = budgetStatus(percent);
+  return { color: BUDGET_STATUS_COLOR[status], status };
 }
 
-/** Utilization as a percentage; guards zero/absent allocation. */
-export function budgetUtilizationPercent(consumed: number, allocated: number): number {
-  if (!Number.isFinite(consumed) || !Number.isFinite(allocated) || allocated <= 0) {
-    return consumed > 0 ? Number.POSITIVE_INFINITY : 0;
-  }
-  return (consumed / allocated) * 100;
-}
+/** Longest department name drawn on the axis before it is shortened (the tooltip keeps the full name). */
+const AXIS_LABEL_MAX = 20;
 
-interface BudgetChartTooltipProps {
-  active?: boolean;
-  payload?: Array<{ payload?: BudgetDepartmentData }>;
-}
+const shortenLabel = (value: string) =>
+  value.length > AXIS_LABEL_MAX ? `${value.slice(0, AXIS_LABEL_MAX - 1)}…` : value;
 
-const CustomTooltip = ({ active, payload }: BudgetChartTooltipProps) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0]?.payload;
   if (!data) return null;
 
-  const utilization = budgetUtilizationPercent(data.consumed, data.allocated);
+  const utilization = utilizationPercent(data.consumed, data.allocated);
   const remaining = Math.max(0, data.allocated - data.consumed);
   const currency = data.currency || 'USDC';
   const { status, color } = getThresholdColor(utilization);
 
   return (
     <div
-      className="space-y-1.5 z-50 min-w-[200px] rounded-lg border border-border bg-surface-primary p-3 text-xs shadow-md"
+      className="z-50 rounded-lg border border-border bg-surface-primary p-3 shadow-md text-xs space-y-1.5 min-w-[200px]"
       style={{ borderColor: status !== 'normal' ? color : undefined }}
     >
       <p className="border-b border-border/60 pb-1 font-semibold text-foreground">
@@ -159,10 +150,10 @@ const CustomTooltip = ({ active, payload }: BudgetChartTooltipProps) => {
             {formatCurrency(remaining, currency)}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-4 border-t border-border/40 pt-1">
-          <span className="font-medium text-foreground-secondary">Utilization:</span>
+        <div className="flex justify-between items-center gap-4 pt-1 border-t border-border/40">
+          <span className="text-foreground-secondary font-medium">Utilization:</span>
           <span className="tabular font-bold" style={{ color }}>
-            {Number.isFinite(utilization) ? `${Math.round(utilization)}%` : '∞'}
+            {Math.round(utilization)}%
           </span>
         </div>
       </div>
@@ -183,6 +174,16 @@ const CustomTooltip = ({ active, payload }: BudgetChartTooltipProps) => {
   );
 };
 
+function LegendDot({ status }: { status: BudgetStatus }) {
+  return (
+    <span
+      className="h-2.5 w-2.5 rounded-full"
+      style={{ backgroundColor: BUDGET_STATUS_COLOR[status] }}
+      aria-hidden="true"
+    />
+  );
+}
+
 export function BudgetAllocationChart({
   data = DEFAULT_BUDGET_DATA,
   title = 'Department Budget Allocation & Consumption',
@@ -193,13 +194,9 @@ export function BudgetAllocationChart({
   const [showTableView, setShowTableView] = useState<boolean>(false);
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
 
-  const warnings = useMemo(
-    () => data.filter((d) => budgetUtilizationPercent(d.consumed, d.allocated) >= 80),
-    [data],
-  );
-
-  const currency = data[0]?.currency ?? 'USDC';
-  const isEmpty = !isLoading && data.length === 0;
+  const warnings = useMemo(() => {
+    return data.filter((d) => utilizationPercent(d.consumed, d.allocated) >= 80);
+  }, [data]);
 
   return (
     <Card className={`overflow-hidden ${className}`}>
@@ -271,114 +268,95 @@ export function BudgetAllocationChart({
           />
         ) : !showTableView ? (
           <div className="space-y-4">
-            <div
-              className="h-80 w-full"
-              role="region"
-              aria-label="Budget Allocation Chart Graph"
+            <ChartFrame
+              label="Budget Allocation Chart Graph"
+              height={320}
+              empty={data.length === 0}
+              emptyTitle="No department budgets yet"
+              emptyDescription="Allocated and consumed budget per department appears here once budgets are set."
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data}
-                  layout="vertical"
-                  margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
+              <BarChart
+                data={data}
+                layout="vertical"
+                margin={{ top: 10, right: 30, left: 20, bottom: 10 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  horizontal={true}
+                  vertical={false}
+                  stroke={CHART_COLORS.border}
+                  opacity={0.5}
+                />
+                <XAxis
+                  type="number"
+                  tickFormatter={(val: number) => formatCurrency(val, 'USDC', { compact: true })}
+                  stroke={CHART_COLORS.axis}
+                  tick={AXIS_TICK}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="department"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ ...AXIS_TICK, fill: CHART_COLORS.textSecondary }}
+                  tickFormatter={shortenLabel}
+                  width={130}
+                  tickLine={false}
+                />
+                <Tooltip
+                  content={<CustomTooltip />}
+                  allowEscapeViewBox={{ x: false, y: false }}
+                  cursor={{ fill: CHART_COLORS.track, opacity: 0.4 }}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+                  formatter={(value) => <span className="text-foreground-secondary font-medium">{value}</span>}
+                />
+                <Bar
+                  dataKey="allocated"
+                  name="Allocated Limit"
+                  fill={CHART_COLORS.track}
+                  radius={[0, 4, 4, 0]}
+                  barSize={14}
+                />
+                <Bar
+                  dataKey="consumed"
+                  name="Consumed Balance"
+                  radius={[0, 4, 4, 0]}
+                  barSize={14}
+                  onMouseEnter={(_, index) => setActiveBarIndex(index)}
+                  onMouseLeave={() => setActiveBarIndex(null)}
                 >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    horizontal={true}
-                    vertical={false}
-                    stroke="rgb(var(--chart-grid))"
-                    opacity={0.5}
-                  />
-                  <XAxis
-                    type="number"
-                    tickFormatter={(val: number) =>
-                      formatCurrency(val, currency, { compact: true })
-                    }
-                    tick={{ fill: 'rgb(var(--text-muted))', fontSize: 11 }}
-                    axisLine={{ stroke: 'rgb(var(--chart-axis))' }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="department"
-                    tick={{ fill: 'rgb(var(--text-secondary))', fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={140}
-                  />
-                  <Tooltip
-                    content={<CustomTooltip />}
-                    allowEscapeViewBox={{ x: false, y: false }}
-                    cursor={{ fill: 'rgb(var(--surface-secondary))', opacity: 0.4 }}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
-                    formatter={(value) => (
-                      <span className="font-medium text-foreground-secondary">
-                        {value}
-                      </span>
-                    )}
-                  />
-                  <Bar
-                    dataKey="allocated"
-                    name="Allocated Limit"
-                    fill="rgb(var(--surface-secondary))"
-                    radius={[0, 4, 4, 0]}
-                    barSize={14}
-                  />
-                  <Bar
-                    dataKey="consumed"
-                    name="Consumed Balance"
-                    radius={[0, 4, 4, 0]}
-                    barSize={14}
-                    onMouseEnter={(_, index) => setActiveBarIndex(index)}
-                    onMouseLeave={() => setActiveBarIndex(null)}
-                  >
-                    {data.map((entry, index) => {
-                      const pct = budgetUtilizationPercent(
-                        entry.consumed,
-                        entry.allocated,
-                      );
-                      const { color } = getThresholdColor(pct);
-                      const isHovered = activeBarIndex === index;
-                      return (
-                        <Cell
-                          key={`cell-${index}`}
-                          style={{
-                            fill: color,
-                            transition: 'all 0.2s ease-in-out',
-                            filter: isHovered ? 'brightness(1.1)' : 'none',
-                          }}
-                          opacity={activeBarIndex === null || isHovered ? 1 : 0.6}
-                        />
-                      );
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                  {data.map((entry, index) => {
+                    const { color } = getThresholdColor(utilizationPercent(entry.consumed, entry.allocated));
+                    const isHovered = activeBarIndex === index;
+                    return (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={color}
+                        opacity={activeBarIndex === null || isHovered ? 1 : 0.6}
+                        style={{
+                          transition: 'all 0.2s ease-in-out',
+                          filter: isHovered ? 'brightness(1.1)' : 'none',
+                        }}
+                      />
+                    );
+                  })}
+                </Bar>
+              </BarChart>
+            </ChartFrame>
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3 text-2xs text-foreground-secondary">
-              <div className="flex items-center gap-4">
-                <span className="gap-1.5 flex items-center">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: 'rgb(var(--chart-1))' }}
-                  />
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="flex items-center gap-1.5">
+                  <LegendDot status="normal" />
                   <span>Optimal (&lt;80%)</span>
                 </span>
-                <span className="gap-1.5 flex items-center">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: 'rgb(var(--warning))' }}
-                  />
+                <span className="flex items-center gap-1.5">
+                  <LegendDot status="warning" />
                   <span>Warning (80%–99%)</span>
                 </span>
-                <span className="gap-1.5 flex items-center">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: 'rgb(var(--danger))' }}
-                  />
+                <span className="flex items-center gap-1.5">
+                  <LegendDot status="danger" />
                   <span>Critical Exceeded (&ge;100%)</span>
                 </span>
               </div>
@@ -402,8 +380,15 @@ export function BudgetAllocationChart({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
+                {data.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-8 px-3 text-center text-foreground-secondary">
+                      No department budgets yet.
+                    </td>
+                  </tr>
+                )}
                 {data.map((dept) => {
-                  const pct = budgetUtilizationPercent(dept.consumed, dept.allocated);
+                  const pct = utilizationPercent(dept.consumed, dept.allocated);
                   const remaining = Math.max(0, dept.allocated - dept.consumed);
                   const { status } = getThresholdColor(pct);
                   return (

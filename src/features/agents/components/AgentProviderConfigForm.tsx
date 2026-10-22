@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -11,10 +11,11 @@ import { Input, Select } from '@/components/ui/input';
 import {
   agentProviderConfigSchema,
   agentProviderTypes,
+  isHostedProvider,
   providerModelOptions,
   type AgentProviderConfigValues,
   type AgentProviderType,
-} from '@/features/agents/providerConfigSchema';
+} from '@/lib/validations/agent';
 
 const PROVIDER_LABELS: Record<AgentProviderType, string> = {
   nvidia: 'Nvidia',
@@ -42,30 +43,56 @@ export function AgentProviderConfigForm({
   onSubmit,
   className,
 }: AgentProviderConfigFormProps) {
+  const initialProvider = defaultValues?.provider ?? 'openai';
+  const initialModel =
+    defaultValues?.model ?? providerModelOptions[initialProvider][0] ?? '';
   const form = useForm<AgentProviderConfigValues>({
     resolver: zodResolver(agentProviderConfigSchema),
     defaultValues: {
       name: '',
-      provider: 'openai',
-      model: providerModelOptions.openai[0] ?? '',
       temperature: 0.7,
       endpointUrl: '',
       apiKey: '',
       ...defaultValues,
+      provider: initialProvider,
+      model: initialModel,
     },
     mode: 'onChange',
   });
 
   const provider = form.watch('provider');
-  const isHosted = provider !== 'ollama' && provider !== 'custom';
+  const isCustom = provider === 'custom';
+  const isHosted = isHostedProvider(provider);
   const modelOptions = providerModelOptions[provider];
+  const previousProvider = useRef<AgentProviderType>(provider);
 
   // Reset the model field to a sane default whenever the provider changes,
-  // since model options (and whether it's a dropdown or free text) differ per provider.
+  // since model options (and whether it's a dropdown or free text) differ per
+  // provider. Do not reset on mount, so a saved model from `defaultValues` is
+  // preserved. Hidden fields are cleared so stale validation never blocks submit.
   useEffect(() => {
+    if (previousProvider.current === provider) return;
+    previousProvider.current = provider;
+
     form.setValue('model', modelOptions[0] ?? '', { shouldValidate: true });
+    if (isHosted) {
+      form.setValue('endpointUrl', '', { shouldValidate: false });
+    } else {
+      form.setValue('apiKey', '', { shouldValidate: false });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
+
+  // Point each control at its inline error, or at its hint while valid, so
+  // screen readers announce the message tied to that specific field.
+  const describedBy = (
+    id: string,
+    field: keyof AgentProviderConfigValues,
+    hasHint = false,
+  ): string | undefined => {
+    if (form.formState.errors[field]) return `${id}-error`;
+    return hasHint ? `${id}-hint` : undefined;
+  };
 
   const handleSubmit = async (values: AgentProviderConfigValues) => {
     try {
@@ -103,9 +130,7 @@ export function AgentProviderConfigForm({
               {...form.register('name')}
               placeholder="Treasury agent — production"
               invalid={Boolean(form.formState.errors.name)}
-              aria-describedby={
-                form.formState.errors.name ? 'provider-config-name-error' : undefined
-              }
+              aria-describedby={describedBy('provider-config-name', 'name')}
             />
           </FormRow>
 
@@ -119,11 +144,7 @@ export function AgentProviderConfigForm({
               id="provider-config-provider"
               {...form.register('provider')}
               invalid={Boolean(form.formState.errors.provider)}
-              aria-describedby={
-                form.formState.errors.provider
-                  ? 'provider-config-provider-error'
-                  : undefined
-              }
+              aria-describedby={describedBy('provider-config-provider', 'provider')}
             >
               {agentProviderTypes.map((value) => (
                 <option key={value} value={value}>
@@ -144,11 +165,7 @@ export function AgentProviderConfigForm({
                 id="provider-config-model"
                 {...form.register('model')}
                 invalid={Boolean(form.formState.errors.model)}
-                aria-describedby={
-                  form.formState.errors.model
-                    ? 'provider-config-model-error'
-                    : undefined
-                }
+                aria-describedby={describedBy('provider-config-model', 'model')}
               >
                 {modelOptions.map((value) => (
                   <option key={value} value={value}>
@@ -162,36 +179,39 @@ export function AgentProviderConfigForm({
                 {...form.register('model')}
                 placeholder="e.g. llama3.1:70b"
                 invalid={Boolean(form.formState.errors.model)}
-                aria-describedby={
-                  form.formState.errors.model
-                    ? 'provider-config-model-error'
-                    : undefined
-                }
+                aria-describedby={describedBy('provider-config-model', 'model')}
               />
             )}
           </FormRow>
 
-          {isHosted ? (
+          {isHosted || isCustom ? (
             <FormRow
               id="provider-config-api-key"
               label="API key"
-              required
+              required={isHosted}
               error={form.formState.errors.apiKey?.message}
+              hint={
+                isCustom
+                  ? 'Optional — only if your custom endpoint requires bearer auth.'
+                  : undefined
+              }
             >
               <Input
                 id="provider-config-api-key"
                 type="password"
+                autoComplete="off"
+                spellCheck={false}
                 {...form.register('apiKey')}
-                placeholder="Paste provider API key"
-                invalid={Boolean(form.formState.errors.apiKey)}
-                aria-describedby={
-                  form.formState.errors.apiKey
-                    ? 'provider-config-api-key-error'
-                    : undefined
+                placeholder={
+                  isCustom ? 'Optional bearer token' : 'Paste provider API key'
                 }
+                invalid={Boolean(form.formState.errors.apiKey)}
+                aria-describedby={describedBy('provider-config-api-key', 'apiKey')}
               />
             </FormRow>
-          ) : (
+          ) : null}
+
+          {!isHosted ? (
             <FormRow
               id="provider-config-endpoint"
               label="Endpoint URL"
@@ -200,11 +220,13 @@ export function AgentProviderConfigForm({
               hint={
                 provider === 'ollama'
                   ? 'Local Ollama server address, e.g. http://localhost:11434'
-                  : undefined
+                  : 'Base URL of the OpenAI-compatible inference server.'
               }
             >
               <Input
                 id="provider-config-endpoint"
+                type="url"
+                inputMode="url"
                 {...form.register('endpointUrl')}
                 placeholder={
                   provider === 'ollama'
@@ -212,14 +234,14 @@ export function AgentProviderConfigForm({
                     : 'https://api.example.com/v1'
                 }
                 invalid={Boolean(form.formState.errors.endpointUrl)}
-                aria-describedby={
-                  form.formState.errors.endpointUrl
-                    ? 'provider-config-endpoint-error'
-                    : undefined
-                }
+                aria-describedby={describedBy(
+                  'provider-config-endpoint',
+                  'endpointUrl',
+                  provider === 'ollama',
+                )}
               />
             </FormRow>
-          )}
+          ) : null}
 
           <FormRow
             id="provider-config-temperature"
@@ -233,13 +255,13 @@ export function AgentProviderConfigForm({
               step="0.1"
               min={0}
               max={2}
-              {...form.register('temperature')}
+              {...form.register('temperature', { valueAsNumber: true })}
               invalid={Boolean(form.formState.errors.temperature)}
-              aria-describedby={
-                form.formState.errors.temperature
-                  ? 'provider-config-temperature-error'
-                  : undefined
-              }
+              aria-describedby={describedBy(
+                'provider-config-temperature',
+                'temperature',
+                true,
+              )}
             />
           </FormRow>
 
@@ -281,7 +303,9 @@ function FormRow({ id, label, required, error, hint, children }: FormRowProps) {
           {error}
         </p>
       ) : hint ? (
-        <p className="text-2xs text-foreground-secondary">{hint}</p>
+        <p id={`${id}-hint`} className="text-2xs text-foreground-secondary">
+          {hint}
+        </p>
       ) : null}
     </div>
   );

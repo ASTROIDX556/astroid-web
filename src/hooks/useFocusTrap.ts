@@ -3,86 +3,95 @@
 import { useEffect, useRef, type RefObject } from 'react';
 
 /**
- * Keyboard-accessible focus management for modals, drawers and overlays.
- *
- * Implements the WAI-ARIA dialog pattern (WCAG 2.1 AA):
- * - Tab / Shift+Tab cycle through the focusable elements inside the container.
- *   If focus has drifted outside (e.g. after a mouse click on static copy) the
- *   next Tab pulls it back before the browser tab order can run over the page.
- * - Escape dismisses the surface.
- * - Focus moves into the container when it opens (to `initialFocus` when given,
- *   otherwise to the container itself) and is restored to the previously
- *   focused trigger on close if that node is still mounted.
- * - Optional body scroll lock while the trap is active.
+ * Elements that can receive focus through sequential keyboard navigation.
+ * Disabled controls, hidden inputs and `tabindex="-1"` elements are filtered
+ * out again at runtime because they are either not focusable or intentionally
+ * removed from the tab order.
  */
 export const FOCUSABLE_SELECTOR = [
   'a[href]',
   'area[href]',
-  'button:not([disabled])',
-  'input:not([disabled]):not([type="hidden"])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
+  'button',
+  'input',
+  'select',
+  'textarea',
   'iframe',
-  'audio[controls]',
-  'video[controls]',
-  '[contenteditable]:not([contenteditable="false"])',
+  'object',
+  'embed',
+  '[contenteditable="true"]',
   '[tabindex]:not([tabindex="-1"])',
-].join(',');
+].join(', ');
 
-/** True for elements that can actually receive keyboard focus right now. */
-export function isKeyboardFocusable(el: HTMLElement): boolean {
-  if (el.hasAttribute('disabled') || el.getAttribute('aria-hidden') === 'true') {
-    return false;
-  }
-  if (el instanceof HTMLInputElement && el.type === 'hidden') return false;
-  return el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0;
+/** True when an element can actually receive keyboard focus right now. */
+export function isKeyboardFocusable(element: HTMLElement): boolean {
+  if (element.hasAttribute('disabled')) return false;
+  if (element.getAttribute('aria-hidden') === 'true') return false;
+  if (element.closest('[aria-hidden="true"]')) return false;
+  if (element instanceof HTMLInputElement && element.type === 'hidden') return false;
+
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  return (
+    element.offsetWidth > 0 ||
+    element.offsetHeight > 0 ||
+    element.getClientRects().length > 0
+  );
 }
-
-export type FocusTarget = RefObject<HTMLElement | null> | (() => HTMLElement | null);
 
 export interface UseFocusTrapOptions {
-  /** Whether the trap is currently engaged. */
+  /** Whether the modal/drawer is currently open. */
   active: boolean;
-  /** Container that owns the trapped tab cycle. */
+  /** The dialog or drawer panel that should contain keyboard focus. */
   containerRef: RefObject<HTMLElement | null>;
-  /** Called when Escape is pressed (and `closeOnEscape` is true). */
+  /** Called when Escape is pressed while the trap is active. */
   onEscape?: () => void;
-  /** Element to focus when the trap engages; defaults to the container. */
-  initialFocus?: FocusTarget;
-  /** Lock `document.body` scrolling while active. Defaults to `true`. */
-  lockScroll?: boolean;
-  /** Restore focus to the pre-open trigger on close. Defaults to `true`. */
+  /** Optional element to focus when the trap activates (defaults to the container). */
+  initialFocusRef?: RefObject<HTMLElement | null>;
+  /** Restore focus to the previously focused element on close. Defaults to true. */
   restoreFocus?: boolean;
-  /** Dismiss on Escape. Defaults to `true`. */
-  closeOnEscape?: boolean;
-  /** Pull stray focus back into the container. Defaults to `true`. */
-  trapFocus?: boolean;
+  /** Prevent the background page from scrolling while open. Defaults to true. */
+  lockScroll?: boolean;
 }
 
-function resolveFocusTarget(target: FocusTarget | undefined): HTMLElement | null {
-  if (!target) return null;
-  if (typeof target === 'function') return target();
-  return target.current;
-}
-
+/**
+ * Reusable focus management for modal dialogs and drawers.
+ *
+ * While active it:
+ * - Moves focus into the panel (or a provided initial-focus element).
+ * - Cycles Tab / Shift+Tab only through visible, enabled focusables inside it.
+ * - Pulls focus back inside if it has drifted to the background.
+ * - Calls `onEscape` when Escape is pressed.
+ * - Locks body scrolling.
+ * - Restores focus to the trigger when closed.
+ *
+ * The effect depends only on `active` and the container ref. Callbacks are
+ * stored in refs so unstable inline handlers do not re-capture the trigger and
+ * steal focus on every parent render.
+ */
 export function useFocusTrap({
   active,
   containerRef,
   onEscape,
-  initialFocus,
-  lockScroll = true,
+  initialFocusRef,
   restoreFocus = true,
-  closeOnEscape = true,
-  trapFocus = true,
+  lockScroll = true,
 }: UseFocusTrapOptions): void {
-  // Keep the latest callbacks/targets without re-running the effect (and
-  // re-capturing the trigger) on every parent re-render.
   const onEscapeRef = useRef(onEscape);
-  const initialFocusRef = useRef(initialFocus);
+  const initialFocusRefRef = useRef(initialFocusRef);
+  const optionsRef = useRef({ restoreFocus, lockScroll });
+
   useEffect(() => {
     onEscapeRef.current = onEscape;
-    initialFocusRef.current = initialFocus;
-  }, [onEscape, initialFocus]);
+  }, [onEscape]);
+
+  useEffect(() => {
+    initialFocusRefRef.current = initialFocusRef;
+  }, [initialFocusRef]);
+
+  useEffect(() => {
+    optionsRef.current = { restoreFocus, lockScroll };
+  }, [restoreFocus, lockScroll]);
 
   useEffect(() => {
     if (!active) return undefined;
@@ -90,83 +99,76 @@ export function useFocusTrap({
     const container = containerRef.current;
     if (!container) return undefined;
 
-    const trigger = document.activeElement as HTMLElement | null;
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const getFocusables = () =>
-      Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        isKeyboardFocusable,
-      );
+      Array.from(
+        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter(isKeyboardFocusable);
 
-    const onKeyDown = (event: KeyboardEvent) => {
+    const focusInitial = () => {
+      const target = initialFocusRefRef.current?.current ?? container;
+      target.focus({ preventScroll: true });
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        if (!closeOnEscape) return;
-        event.stopPropagation();
         onEscapeRef.current?.();
         return;
       }
 
-      if (!trapFocus || event.key !== 'Tab') return;
+      if (event.key !== 'Tab') return;
 
       const focusables = getFocusables();
       if (focusables.length === 0) {
-        // Nothing focusable inside: keep focus pinned to the container itself.
+        // Nothing focusable inside: pin focus to the panel itself so Tab
+        // cannot escape to the page behind the overlay.
         event.preventDefault();
-        container.focus();
+        container.focus({ preventScroll: true });
         return;
       }
 
       const first = focusables[0]!;
       const last = focusables[focusables.length - 1]!;
-      const activeEl = document.activeElement;
+      const activeElement = document.activeElement;
 
-      if (!container.contains(activeEl)) {
-        // Focus drifted outside the surface — pull it back in before the
-        // browser tab order can walk over the background page.
+      if (!container.contains(activeElement)) {
         event.preventDefault();
         (event.shiftKey ? last : first).focus();
-      } else if (event.shiftKey && (activeEl === first || activeEl === container)) {
+      } else if (event.shiftKey && (activeElement === first || activeElement === container)) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && activeEl === last) {
+      } else if (!event.shiftKey && activeElement === last) {
         event.preventDefault();
         first.focus();
       }
     };
 
-    const onFocusIn = (event: FocusEvent) => {
-      if (!trapFocus) return;
-      const target = event.target as Node | null;
-      if (target && container.contains(target)) return;
-      const focusables = getFocusables();
-      (focusables[0] ?? container).focus();
-    };
-
-    document.addEventListener('keydown', onKeyDown, true);
-    if (trapFocus) document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('keydown', handleKeyDown);
 
     const previousOverflow = document.body.style.overflow;
-    if (lockScroll) document.body.style.overflow = 'hidden';
+    if (optionsRef.current.lockScroll) {
+      document.body.style.overflow = 'hidden';
+    }
 
-    const focusTarget = resolveFocusTarget(initialFocusRef.current);
-    (focusTarget ?? container).focus();
+    focusInitial();
 
     return () => {
-      document.removeEventListener('keydown', onKeyDown, true);
-      document.removeEventListener('focusin', onFocusIn);
-      if (lockScroll) document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
 
-      // Restore focus to the trigger only when it is still in the document
-      // (it may have unmounted with the panel that housed it).
+      if (optionsRef.current.lockScroll) {
+        document.body.style.overflow = previousOverflow;
+      }
+
       if (
-        restoreFocus &&
-        trigger &&
-        trigger !== document.body &&
-        document.contains(trigger)
+        optionsRef.current.restoreFocus &&
+        previouslyFocused &&
+        previouslyFocused !== document.body &&
+        document.contains(previouslyFocused)
       ) {
-        trigger.focus();
+        previouslyFocused.focus({ preventScroll: true });
       }
     };
-  }, [active, containerRef, lockScroll, restoreFocus, closeOnEscape, trapFocus]);
+  }, [active, containerRef]);
 }
-
-export default useFocusTrap;

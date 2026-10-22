@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { cn } from '@/lib/cn';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { Button } from './button';
@@ -53,37 +54,27 @@ export function Dialog({
   className,
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const mounted = useRef(false);
   const titleId = useId();
   const descriptionId = useId();
 
   // Track mount separately from `open` so the portal target exists before the
   // first render that needs it (React portals require an existing DOM node).
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  // Re-render once mounted so an open dialog actually portals on the client.
-  const [, setMounted] = useState(false);
+  // Making this state (rather than a ref) also re-runs the focus trap once the
+  // panel is in the DOM, which matters when a dialog mounts already open.
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Focus trap, Escape dismissal, scroll lock and focus restoration are
-  // shared with the other dialog primitives (drawers, command palette).
   useFocusTrap({
-    active: open,
+    active: open && mounted,
     containerRef: panelRef,
     onEscape: onClose,
-    lockScroll: true,
   });
 
   // `isClient` guards the SSR pass; `mounted` must already be true when `open`
   // is first set because the component is rendered inside a client tree.
-  if (!open || !mounted.current) return null;
+  if (!open || !mounted) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

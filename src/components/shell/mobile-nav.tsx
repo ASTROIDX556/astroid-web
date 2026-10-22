@@ -29,14 +29,12 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // Escape dismissal, focus trap, body scroll lock and trigger focus
-  // restoration while the drawer is open.
+  // Escape dismissal, focus trap, scroll lock, and trigger focus restoration.
   useFocusTrap({
     active: open,
     containerRef: panelRef,
     onEscape: onClose,
-    initialFocus: closeButtonRef,
-    lockScroll: true,
+    initialFocusRef: closeButtonRef,
   });
 
   return (
