@@ -16,6 +16,7 @@ import type { LocalApprovalDecision } from '@/stores/proposal-approval-store';
 import type { Proposal } from '@/types/domain';
 
 import { ProposalApprovalConfirmDialog } from './ProposalApprovalConfirmDialog';
+import { SignatureStatusBadge } from './SignatureStatusBadge';
 
 /**
  * A single proposal in the approvals queue. Moved verbatim from
@@ -27,7 +28,6 @@ export function ProposalCard({ proposal }: { proposal: Proposal }) {
   const {
     approvedWeight,
     requiredApprovals,
-    isQuorumMet,
     decision,
   } = useProposalApproval(proposal);
 
@@ -99,10 +99,7 @@ export function ProposalCard({ proposal }: { proposal: Proposal }) {
                 />
               ))}
             </div>
-            <span className="text-2xs text-foreground-secondary">
-              {approvedWeight} of {requiredApprovals} approvals
-              {isQuorumMet && ' · quorum met'}
-            </span>
+            <SignatureStatusBadge approved={approvedWeight} required={requiredApprovals} />
           </div>
           <Link
             href={`/transactions/${proposal.transactionId}`}

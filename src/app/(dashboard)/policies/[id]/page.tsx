@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Check, Gauge, Play, ShieldAlert, X } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { KeyValue, SectionLabel } from '@/components/dashboard/stat-card';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
@@ -73,87 +74,95 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                 }
               />
 
-              <Card className="p-5">
-                <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-                  <KeyValue label="Type">{titleCase(data.type)}</KeyValue>
-                  <KeyValue label="Priority">{formatNumber(data.priority)}</KeyValue>
-                  <KeyValue label="Status">
-                    {data.enabled ? 'Enabled' : 'Disabled'}
-                  </KeyValue>
-                  <KeyValue label="Applies to">
-                    {formatNumber(data.appliesTo)}{' '}
-                    {data.appliesTo === 1 ? 'agent' : 'agents'}
-                  </KeyValue>
-                  <KeyValue label="Violations (30d)">
-                    {data.violations30d > 0 ? (
-                      <span className="inline-flex items-center gap-1 text-warning">
-                        <ShieldAlert className="h-3.5 w-3.5" aria-hidden />
-                        {formatNumber(data.violations30d)}
-                      </span>
-                    ) : (
-                      formatNumber(data.violations30d)
-                    )}
-                  </KeyValue>
-                  <KeyValue label="Created">{formatDateTime(data.createdAt)}</KeyValue>
-                </dl>
-              </Card>
+              <ErrorBoundary section="Policy details">
+                <Card className="p-5">
+                  <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <KeyValue label="Type">{titleCase(data.type)}</KeyValue>
+                    <KeyValue label="Priority">{formatNumber(data.priority)}</KeyValue>
+                    <KeyValue label="Status">
+                      {data.enabled ? 'Enabled' : 'Disabled'}
+                    </KeyValue>
+                    <KeyValue label="Applies to">
+                      {formatNumber(data.appliesTo)}{' '}
+                      {data.appliesTo === 1 ? 'agent' : 'agents'}
+                    </KeyValue>
+                    <KeyValue label="Violations (30d)">
+                      {data.violations30d > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-warning">
+                          <ShieldAlert className="h-3.5 w-3.5" aria-hidden />
+                          {formatNumber(data.violations30d)}
+                        </span>
+                      ) : (
+                        formatNumber(data.violations30d)
+                      )}
+                    </KeyValue>
+                    <KeyValue label="Created">{formatDateTime(data.createdAt)}</KeyValue>
+                  </dl>
+                </Card>
+              </ErrorBoundary>
 
               {config.length > 0 && (
-                <div className="space-y-4">
-                  <SectionLabel>Configuration</SectionLabel>
-                  <Card className="p-5">
-                    <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-                      {config.map(([key, value]) => (
-                        <KeyValue key={key} label={titleCase(key)}>
-                          {renderConfigValue(value)}
-                        </KeyValue>
-                      ))}
-                    </dl>
-                  </Card>
-                </div>
+                <ErrorBoundary section="Policy configuration" resetKey={data.id}>
+                  <div className="space-y-4">
+                    <SectionLabel>Configuration</SectionLabel>
+                    <Card className="p-5">
+                      <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+                        {config.map(([key, value]) => (
+                          <KeyValue key={key} label={titleCase(key)}>
+                            {renderConfigValue(value)}
+                          </KeyValue>
+                        ))}
+                      </dl>
+                    </Card>
+                  </div>
+                </ErrorBoundary>
               )}
 
               <div className="space-y-4">
                 <SectionLabel>Policy simulator</SectionLabel>
-                <Card elevation="soft" className="relative overflow-hidden">
-                  <div className="pointer-events-none absolute inset-0 bg-gold-sheen" aria-hidden />
-                  <CardHeader className="relative">
-                    <CardTitle className="flex items-center gap-2 text-sm">
-                      <Gauge className="h-4 w-4 text-gold" aria-hidden />
-                      Dry-run a spend against every active policy
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="relative space-y-5">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                      <label className="flex-1">
-                        <span className="mb-1.5 block text-2xs font-medium uppercase tracking-wide text-foreground-secondary">
-                          Amount (USDC)
-                        </span>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={amount}
-                          onChange={(e) => setAmount(Number(e.target.value))}
-                          leftIcon={<span className="text-sm">$</span>}
-                        />
-                      </label>
-                      <Button
-                        variant="gold"
-                        leftIcon={<Play className="h-4 w-4" />}
-                        loading={sim.isPending}
-                        onClick={() => sim.mutate(amount)}
-                      >
-                        Run simulation
-                      </Button>
-                    </div>
+                <ErrorBoundary section="Policy simulator">
+                  <Card elevation="soft" className="relative overflow-hidden">
+                    <div className="pointer-events-none absolute inset-0 bg-gold-sheen" aria-hidden />
+                    <CardHeader className="relative">
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <Gauge className="h-4 w-4 text-gold" aria-hidden />
+                        Dry-run a spend against every active policy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="relative space-y-5">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                        <label className="flex-1">
+                          <span className="mb-1.5 block text-2xs font-medium uppercase tracking-wide text-foreground-secondary">
+                            Amount (USDC)
+                          </span>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={amount}
+                            onChange={(e) => setAmount(Number(e.target.value))}
+                            leftIcon={<span className="text-sm">$</span>}
+                          />
+                        </label>
+                        <Button
+                          variant="gold"
+                          leftIcon={<Play className="h-4 w-4" />}
+                          loading={sim.isPending}
+                          onClick={() => sim.mutate(amount)}
+                        >
+                          Run simulation
+                        </Button>
+                      </div>
 
-                    {sim.data && (
-                      <SimulationResult result={sim.data} />
-                    )}
-                  </CardContent>
-                </Card>
+                      {sim.data && (
+                        <SimulationResult result={sim.data} />
+                      )}
+                    </CardContent>
+                  </Card>
+                </ErrorBoundary>
 
-                <TransactionSimulator />
+                <ErrorBoundary section="Transaction simulator">
+                  <TransactionSimulator />
+                </ErrorBoundary>
               </div>
             </div>
           );

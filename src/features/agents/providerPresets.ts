@@ -2,9 +2,12 @@ import type { AgentProviderId } from './schema';
 
 /**
  * A provider preset is pure configuration data: the recommended default
- * model, API endpoint, and context window for one supported inference
- * provider. Preset definitions are kept separate from form state mutations —
- * consumers (the agent creation wizard) decide how to apply them.
+ * model, API endpoint, context window, and suggested spend guardrails for
+ * one supported inference provider. Preset definitions are kept separate
+ * from form state mutations — consumers (the agent creation wizard) decide
+ * how to apply them. The two guide fields are never applied automatically;
+ * they are surfaced on the preset card as recommendations to type into the
+ * wizard's validated budget fields.
  */
 export interface AgentProviderPreset {
   id: AgentProviderId;
@@ -25,6 +28,18 @@ export interface AgentProviderPreset {
   endpointUrl: string;
   /** Recommended context window in tokens for the default model. */
   contextWindowTokens: number;
+  /**
+   * Suggested monthly spend budget (USDC) for this provider, shown as
+   * guidance on the preset card. `0` means no metered per-call API spend
+   * (self-hosted runtimes). Not applied to the form — the wizard's Zod
+   * budget validation stays authoritative over the entered value.
+   */
+  monthlyBudgetGuideUsdc: number;
+  /**
+   * Suggested per-transaction spend cap (USDC), shown as guidance on the
+   * preset card. `0` means the preset suggests no automatic cap.
+   */
+  singleTxnCapGuideUsdc: number;
 }
 
 /**
@@ -39,6 +54,8 @@ export const AGENT_PROVIDER_PRESETS: readonly AgentProviderPreset[] = [
     defaultModel: 'meta/llama-3.1-405b-instruct',
     endpointUrl: 'https://integrate.api.nvidia.com/v1',
     contextWindowTokens: 131_072,
+    monthlyBudgetGuideUsdc: 200,
+    singleTxnCapGuideUsdc: 25,
   },
   {
     id: 'OpenAI',
@@ -47,6 +64,8 @@ export const AGENT_PROVIDER_PRESETS: readonly AgentProviderPreset[] = [
     defaultModel: 'gpt-4o-mini',
     endpointUrl: 'https://api.openai.com/v1',
     contextWindowTokens: 128_000,
+    monthlyBudgetGuideUsdc: 100,
+    singleTxnCapGuideUsdc: 15,
   },
   {
     id: 'Anthropic',
@@ -55,6 +74,8 @@ export const AGENT_PROVIDER_PRESETS: readonly AgentProviderPreset[] = [
     defaultModel: 'claude-3-5-sonnet-latest',
     endpointUrl: 'https://api.anthropic.com/v1',
     contextWindowTokens: 200_000,
+    monthlyBudgetGuideUsdc: 200,
+    singleTxnCapGuideUsdc: 30,
   },
   {
     id: 'Gemini',
@@ -63,6 +84,8 @@ export const AGENT_PROVIDER_PRESETS: readonly AgentProviderPreset[] = [
     defaultModel: 'gemini-1.5-pro',
     endpointUrl: 'https://generativelanguage.googleapis.com/v1',
     contextWindowTokens: 1_000_000,
+    monthlyBudgetGuideUsdc: 150,
+    singleTxnCapGuideUsdc: 20,
   },
   {
     id: 'Ollama',
@@ -71,6 +94,8 @@ export const AGENT_PROVIDER_PRESETS: readonly AgentProviderPreset[] = [
     defaultModel: 'llama3.1:70b',
     endpointUrl: 'http://localhost:11434',
     contextWindowTokens: 128_000,
+    monthlyBudgetGuideUsdc: 0,
+    singleTxnCapGuideUsdc: 0,
   },
   {
     id: 'Custom',
@@ -79,6 +104,8 @@ export const AGENT_PROVIDER_PRESETS: readonly AgentProviderPreset[] = [
     defaultModel: '',
     endpointUrl: '',
     contextWindowTokens: 32_768,
+    monthlyBudgetGuideUsdc: 100,
+    singleTxnCapGuideUsdc: 10,
   },
 ] as const;
 

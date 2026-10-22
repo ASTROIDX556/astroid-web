@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
-  ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
@@ -19,6 +18,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ChartTooltipShell, type TooltipPayloadItem } from '@/components/charts';
+import { ChartFrame, useMounted } from '@/components/charts/chart-frame';
+import { AXIS_TICK, CHART_COLORS } from '@/components/charts/theme';
 import { cn } from '@/lib/cn';
 import { formatCurrency, formatNumber } from '@/lib/format';
 import type { ActivityPoint } from '@/types/domain';
@@ -27,17 +28,12 @@ import type { ActivityPoint } from '@/types/domain';
 // Tokens — every color below resolves to a CSS variable from tokens.css so the
 // light / dark / high-contrast themes swap the palette automatically.
 // ---------------------------------------------------------------------------
-const AXIS = 'rgb(var(--chart-axis))';
-const GRID = 'rgb(var(--chart-grid))';
-const TEXT = 'rgb(var(--text-muted))';
+const AXIS = CHART_COLORS.axis;
+const GRID = CHART_COLORS.grid;
 const COUNT_COLOR = 'rgb(var(--chart-1))'; // transaction volume
-const SPEND_COLOR = 'rgb(var(--gold))'; // spend — signature accent
+const SPEND_COLOR = CHART_COLORS.accent; // spend — signature accent
 
-const axisTick = {
-  fill: TEXT,
-  fontSize: 11,
-  fontFamily: 'var(--font-mono)',
-};
+const axisTick = AXIS_TICK;
 
 // ---------------------------------------------------------------------------
 // Interval configuration
@@ -171,14 +167,6 @@ function extremes(
   return { max, min };
 }
 
-function useMounted(): boolean {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  return mounted;
-}
-
 // ---------------------------------------------------------------------------
 // Trend indicator — arrow + sign + percent (never color alone).
 // ---------------------------------------------------------------------------
@@ -271,11 +259,13 @@ export function ActivityChart({
     };
   }, [data, interval]);
 
-  if (!mounted || !data || !Array.isArray(data) || data.length === 0) {
+  // Still loading: no data yet. An empty array is a real answer and is shown as one below.
+  if (!mounted || !Array.isArray(data)) {
     return (
       <div className="skeleton w-full rounded-card" style={{ height: height + 72 }} />
     );
   }
+  const isEmpty = data.length === 0;
 
   const ext = extremes(buckets);
   const summary = ext
@@ -314,7 +304,13 @@ export function ActivityChart({
               Spend
             </span>
           </div>
-          <ResponsiveContainer width="100%" height={height}>
+          <ChartFrame
+            label={`Transaction activity, ${meta.windowLabel}`}
+            height={height}
+            empty={isEmpty}
+            emptyTitle="No transaction activity yet"
+            emptyDescription={`Transactions and spend over the ${meta.windowLabel} appear here once agents start moving funds.`}
+          >
             <AreaChart data={buckets} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient
@@ -406,6 +402,7 @@ export function ActivityChart({
                 stroke={COUNT_COLOR}
                 strokeWidth={2}
                 fill={`url(#activity-count-${interval})`}
+                dot={buckets.length === 1}
               />
               <Area
                 yAxisId="spend"
@@ -415,9 +412,10 @@ export function ActivityChart({
                 stroke={SPEND_COLOR}
                 strokeWidth={2}
                 fill={`url(#activity-spend-${interval})`}
+                dot={buckets.length === 1}
               />
             </AreaChart>
-          </ResponsiveContainer>
+          </ChartFrame>
           <figcaption className="sr-only">{summary}</figcaption>
         </figure>
       </CardContent>
