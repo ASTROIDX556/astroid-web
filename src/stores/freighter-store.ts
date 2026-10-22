@@ -95,6 +95,13 @@ interface FreighterWalletState {
   /** Subscribes to Freighter account/network change events (WatchWalletChanges). */
   startWalletWatch: () => void;
   stopWalletWatch: () => void;
+  /**
+   * Records a connection that was established or lost outside this store, so
+   * every wallet-dependent widget reflects it at once. A valid address marks
+   * the wallet connected; `null` (or an invalid address) clears the session
+   * exactly like `disconnect()`.
+   */
+  adoptConnection: (publicKey: string | null) => void;
   requestSignature: (xdr: string, options?: { networkPassphrase?: string }) => Promise<string>;
   hydrate: () => Promise<void>;
 }
@@ -326,6 +333,15 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   stopWalletWatch: () => {
     walletWatcher?.stop();
     walletWatcher = null;
+  },
+
+  adoptConnection: (publicKey) => {
+    if (!isValidStellarAddress(publicKey)) {
+      get().disconnect();
+      return;
+    }
+    if (get().status === 'connected' && get().publicKey === publicKey) return;
+    set({ status: 'connected', isInstalled: true, publicKey, error: null });
   },
 
   requestSignature: async (xdr: string, options?: { networkPassphrase?: string }) => {
