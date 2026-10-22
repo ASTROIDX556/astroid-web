@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ArrowDownLeft, ArrowUpRight, Bot, History } from 'lucide-react';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
