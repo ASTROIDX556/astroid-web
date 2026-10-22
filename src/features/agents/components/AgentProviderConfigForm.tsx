@@ -15,7 +15,7 @@ import {
   providerModelOptions,
   type AgentProviderConfigValues,
   type AgentProviderType,
-} from '@/features/agents/providerConfigSchema';
+} from '@/lib/validations/agent';
 
 const PROVIDER_LABELS: Record<AgentProviderType, string> = {
   nvidia: 'Nvidia',

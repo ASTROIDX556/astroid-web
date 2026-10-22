@@ -1,4 +1,4 @@
-import { forwardRef, useId } from 'react';
+import { cloneElement, forwardRef, isValidElement, useId } from 'react';
 import { cn } from '@/lib/cn';
 
 const fieldBase =
@@ -91,7 +91,35 @@ export interface FormFieldProps {
   className?: string;
 }
 
-/** Labelled form field with hint + accessible error messaging. */
+interface FieldControlProps {
+  id?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+  'aria-required'?: React.AriaAttributes['aria-required'];
+}
+
+/** True for the elements a label can name: our field primitives and the native controls. */
+function isFieldControl(child: React.ReactElement): boolean {
+  return (
+    child.type === Input ||
+    child.type === Select ||
+    child.type === Textarea ||
+    child.type === 'input' ||
+    child.type === 'select' ||
+    child.type === 'textarea'
+  );
+}
+
+/**
+ * Labelled form field with hint + accessible error messaging.
+ *
+ * The label, the hint or error and the control are tied together here, so a
+ * form does not have to: the label names the control (`htmlFor`), the visible
+ * message is its `aria-describedby`, and an error also sets `aria-invalid`.
+ * The control keeps its own `id` if it has one; otherwise it gets a generated
+ * one. A child that is not a form control (a wrapper `div`, say) is rendered
+ * untouched.
+ */
 export function FormField({
   label,
   htmlFor,
@@ -102,20 +130,40 @@ export function FormField({
   className,
 }: FormFieldProps) {
   const generatedId = useId();
-  const id = htmlFor ?? generatedId;
+  const child = isValidElement<FieldControlProps>(children) && isFieldControl(children) ? children : null;
+  const id = htmlFor ?? child?.props.id ?? generatedId;
+  // The message id follows the control's id (`<id>-error` / `<id>-hint`), the
+  // convention the forms already rely on when they point aria-describedby at it.
+  const messageId = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+
+  let control = children;
+  if (child) {
+    const describedBy = [
+      ...new Set([...(child.props['aria-describedby']?.split(/\s+/) ?? []), messageId]),
+    ]
+      .filter(Boolean)
+      .join(' ');
+    control = cloneElement(child, {
+      id,
+      ...(describedBy ? { 'aria-describedby': describedBy } : {}),
+      ...(error ? { 'aria-invalid': true } : {}),
+      ...(required ? { 'aria-required': true } : {}),
+    });
+  }
+
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       <label htmlFor={id} className="text-xs font-medium text-foreground">
         {label}
         {required && <span className="ml-0.5 text-danger">*</span>}
       </label>
-      {children}
+      {control}
       {error ? (
-        <p id={`${id}-error`} className="text-2xs text-danger" role="alert">
+        <p id={messageId} className="text-2xs text-danger" role="alert">
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-2xs text-foreground-secondary">
+        <p id={messageId} className="text-2xs text-foreground-secondary">
           {hint}
         </p>
       ) : null}
