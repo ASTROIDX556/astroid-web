@@ -51,9 +51,23 @@ export interface ProposalAuditTrailProps {
  * `userId` is exposed via `title` for anyone who needs the raw identifier.
  */
 export function ProposalAuditTrail({ events, className }: ProposalAuditTrailProps) {
+  // Newest event first for announcement purposes — the trail is chronological,
+  // so the last entry is the one that just arrived. Announced through a
+  // visually-hidden live region (repo convention: MultisigProgressCard.tsx
+  // :282, ApprovalQueueToolbar.tsx :170) so screen readers hear about a new
+  // decision while it animates into the list.
+  const latest = events.length > 0 ? events[events.length - 1] : undefined;
+  const liveMessage = latest
+    ? `Audit trail update — ${latest.userName}: ${ACTION_META[latest.decision].label}. ` +
+      `${events.length} ${events.length === 1 ? 'review event' : 'review events'} recorded.`
+    : 'No review activity yet for this proposal.';
+
   if (events.length === 0) {
     return (
       <Card className={cn('p-6 text-center', className)}>
+        <p className="sr-only" role="status" aria-live="polite">
+          {liveMessage}
+        </p>
         <p className="text-sm text-foreground-secondary">No review activity yet.</p>
         <p className="mt-1 text-2xs text-foreground-muted">
           Approvals, rejections, and comments will appear here as reviewers act on this
@@ -65,6 +79,9 @@ export function ProposalAuditTrail({ events, className }: ProposalAuditTrailProp
 
   return (
     <Card className={cn('p-5', className)}>
+      <p className="sr-only" role="status" aria-live="polite">
+        {liveMessage}
+      </p>
       <ol className="space-y-4" aria-label="Proposal review audit trail">
         {events.map((event, i) => {
           const meta = ACTION_META[event.decision];

@@ -9,6 +9,8 @@ import type { ProposalStatus, RiskLevel } from '@/types/domain';
 import {
   APPROVAL_QUEUE_SORT_IDS,
   APPROVAL_QUEUE_SORT_LABELS,
+  APPROVAL_SIGNATURE_FILTER_IDS,
+  APPROVAL_SIGNATURE_FILTER_LABELS,
   type ApprovalQueueFilters,
   type ApprovalQueueSort,
   type ApprovalQueueSortId,
@@ -92,6 +94,24 @@ export function ApprovalQueueToolbar({
             {agentOptions.map((agent) => (
               <option key={agent} value={agent}>
                 {agent}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2">
+          <span className={FILTER_LABEL_CLASS}>Signatures</span>
+          <select
+            aria-label="Filter proposals by signature threshold state"
+            value={filters.signature}
+            onChange={(event) =>
+              onFilterChange('signature', event.target.value as ApprovalQueueFilters['signature'])
+            }
+            className={SELECT_CLASS}
+          >
+            {APPROVAL_SIGNATURE_FILTER_IDS.map((id) => (
+              <option key={id} value={id}>
+                {APPROVAL_SIGNATURE_FILTER_LABELS[id]}
               </option>
             ))}
           </select>
