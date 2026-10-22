@@ -1,7 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Wallet as WalletIcon, BrainCircuit, ShieldCheck } from 'lucide-react';
+import {
+  ArrowLeft,
+  Wallet as WalletIcon,
+  BrainCircuit,
+  ShieldCheck,
+} from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { KeyValue, SectionLabel } from '@/components/dashboard/stat-card';
@@ -10,9 +15,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAgent } from '@/hooks/use-queries';
 import { agentStatus } from '@/lib/status';
-import { formatCurrency, formatNumber, formatDateTime, formatRelativeTime } from '@/lib/format';
+import {
+  formatCurrency,
+  formatNumber,
+  formatDateTime,
+  formatRelativeTime,
+} from '@/lib/format';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { AgentProviderConfigForm } from '@/features/agents/components/AgentProviderConfigForm';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 export default function AgentDetailPage({ params }: { params: { id: string } }) {
   const agent = useAgent(params.id);
@@ -78,12 +89,17 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                       <KeyValue label="Remaining">
                         {formatCurrency(remaining, 'USDC')}
                       </KeyValue>
-                      <KeyValue label="Created">{formatDateTime(data.createdAt)}</KeyValue>
+                      <KeyValue label="Created">
+                        {formatDateTime(data.createdAt)}
+                      </KeyValue>
                       <KeyValue label="Last active">
                         {formatRelativeTime(data.lastActiveAt)}
                       </KeyValue>
                       <KeyValue label="Policies">
-                        <Link href="/policies" className="text-gold-strong hover:underline">
+                        <Link
+                          href="/policies"
+                          className="text-gold-strong hover:underline"
+                        >
                           {formatNumber(data.policyIds.length)} attached
                         </Link>
                       </KeyValue>
@@ -96,13 +112,24 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                     <CardTitle className="text-sm">Budget utilization</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular">
-                      <AnimatedNumber value={utilization} formatter={(v) => Math.round(v) + '%'} />
+                    <p className="tabular font-display text-4xl font-semibold leading-none tracking-tight">
+                      <AnimatedNumber
+                        value={utilization}
+                        formatter={(v) => Math.round(v) + '%'}
+                      />
                     </p>
                     <ProgressBar value={utilization} label="Budget utilization" />
                     <p className="text-2xs text-foreground-secondary">
-                      <AnimatedNumber value={data.budgetSpent} formatter={(v) => formatCurrency(v, 'USDC')} /> of{' '}
-                      <AnimatedNumber value={data.monthlyBudget} formatter={(v) => formatCurrency(v, 'USDC')} /> spent this month
+                      <AnimatedNumber
+                        value={data.budgetSpent}
+                        formatter={(v) => formatCurrency(v, 'USDC')}
+                      />{' '}
+                      of{' '}
+                      <AnimatedNumber
+                        value={data.monthlyBudget}
+                        formatter={(v) => formatCurrency(v, 'USDC')}
+                      />{' '}
+                      spent this month
                     </p>
                   </CardContent>
                 </Card>
@@ -128,7 +155,9 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                         <WalletIcon className="h-4 w-4" aria-hidden />
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-foreground">Linked wallet</p>
+                        <p className="text-sm font-medium text-foreground">
+                          Linked wallet
+                        </p>
                         <p className="text-2xs text-foreground-secondary">
                           View balances & activity
                         </p>
@@ -143,7 +172,9 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                         <BrainCircuit className="h-4 w-4" aria-hidden />
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-foreground">Financial memory</p>
+                        <p className="text-sm font-medium text-foreground">
+                          Financial memory
+                        </p>
                         <p className="text-2xs text-foreground-secondary">
                           Reconstructed decision trail
                         </p>
@@ -155,12 +186,14 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
               <div className="space-y-4">
                 <SectionLabel>Provider configuration</SectionLabel>
-                <AgentProviderConfigForm
-                  defaultValues={{
-                    name: `${data.name} — provider`,
-                    model: data.model,
-                  }}
-                />
+                <ErrorBoundary section="Agent provider configuration">
+                  <AgentProviderConfigForm
+                    defaultValues={{
+                      name: `${data.name} — provider`,
+                      model: data.model,
+                    }}
+                  />
+                </ErrorBoundary>
               </div>
             </div>
           );

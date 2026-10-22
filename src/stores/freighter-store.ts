@@ -5,16 +5,104 @@ import type { StateCreator } from 'zustand';
 
 export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
+/**
+ * Stellar networks the app can target. Freighter itself owns the extension's
+ * active network, so this app-side target acts as the *expected* network:
+ * signing fails closed whenever the wallet's live passphrase disagrees with
+ * it (see `requestSignature` and `isNetworkMismatch`).
+ */
+export type StellarNetworkId = 'public' | 'testnet' | 'futurenet';
+
+export interface StellarNetworkDescriptor {
+  id: StellarNetworkId;
+  label: string;
+  passphrase: string;
+  horizonUrl: string;
+}
+
+export const STELLAR_NETWORKS: Record<StellarNetworkId, StellarNetworkDescriptor> = {
+  public: {
+    id: 'public',
+    label: 'Mainnet',
+    passphrase: 'Public Global Stellar Network ; September 2015',
+    horizonUrl: 'https://horizon.stellar.org',
+  },
+  testnet: {
+    id: 'testnet',
+    label: 'Testnet',
+    passphrase: 'Test SDF Network ; September 2015',
+    horizonUrl: 'https://horizon-testnet.stellar.org',
+  },
+  futurenet: {
+    id: 'futurenet',
+    label: 'Futurenet',
+    passphrase: 'Test SDF Future Network ; October 2022',
+    horizonUrl: 'https://horizon-futurenet.stellar.org',
+  },
+};
+
+/** Passphrase for an app-side target network id (never null for known ids). */
+export function resolveExpectedPassphrase(target: StellarNetworkId | null): string | null {
+  return target ? STELLAR_NETWORKS[target]?.passphrase ?? null : null;
+}
+
+/** Reverse map a wallet passphrase back to a known network id, if recognized. */
+export function networkIdForPassphrase(passphrase: string | null): StellarNetworkId | null {
+  if (!passphrase) return null;
+  const entry = (Object.values(STELLAR_NETWORKS) as StellarNetworkDescriptor[]).find(
+    (network) => network.passphrase === passphrase,
+  );
+  return entry?.id ?? null;
+}
+
+/**
+ * Fail-closed mismatch predicate: once an expected passphrase is set, a
+ * missing or different wallet passphrase counts as a mismatch. Unknown wallet
+ * state must never be treated as "safe to sign".
+ */
+export function isNetworkMismatch(
+  walletPassphrase: string | null,
+  expectedPassphrase: string | null,
+): boolean {
+  if (!expectedPassphrase) return false;
+  return walletPassphrase !== expectedPassphrase;
+}
+
+/** Display label for a target id, falling back to "Unknown" for bad input. */
+export function networkLabelForId(target: StellarNetworkId | null): string {
+  return (target && STELLAR_NETWORKS[target]?.label) || 'Unknown';
+}
+
 interface FreighterWalletState {
   status: FreighterConnectionStatus;
   isInstalled: boolean;
   publicKey: string | null;
   network: string | null;
+  /** Live passphrase reported by the Freighter extension, null when unknown. */
+  networkPassphrase: string | null;
+  /** Network this app session targets; signing gates against this value. */
+  targetNetwork: StellarNetworkId;
+  /** True while a network switch request is in flight. */
+  isSwitching: boolean;
   error: string | null;
   checkExtension: () => Promise<boolean>;
   connect: () => Promise<string | null>;
   disconnect: () => void;
-  requestSignature: (xdr: string) => Promise<string>;
+  /** Re-reads the extension's active network + passphrase into state. */
+  refreshNetwork: () => Promise<void>;
+  /** Sets the expected network and re-syncs against the wallet. */
+  switchNetwork: (target: StellarNetworkId) => Promise<{ matched: boolean }>;
+  /** Subscribes to Freighter account/network change events (WatchWalletChanges). */
+  startWalletWatch: () => void;
+  stopWalletWatch: () => void;
+  /**
+   * Records a connection that was established or lost outside this store, so
+   * every wallet-dependent widget reflects it at once. A valid address marks
+   * the wallet connected; `null` (or an invalid address) clears the session
+   * exactly like `disconnect()`.
+   */
+  adoptConnection: (publicKey: string | null) => void;
+  requestSignature: (xdr: string, options?: { networkPassphrase?: string }) => Promise<string>;
   hydrate: () => Promise<void>;
 }
 
@@ -41,13 +129,24 @@ const withTimeout = async <T>(promise: Promise<T>, ms = 15000): Promise<T> => {
   });
 };
 
+interface FreighterNetworkResult {
+  network?: string;
+  networkPassphrase?: string;
+}
+
 const getFreighter = async () =>
   (await import('@stellar/freighter-api')) as unknown as {
     isConnected?: () => Promise<boolean | { isConnected?: boolean }>;
     setAllowed?: () => Promise<boolean | { isAllowed?: boolean }>;
     getAddress?: () => Promise<string | { address?: string; publicKey?: string }>;
-    getNetwork?: () => Promise<string | { network?: string }>;
+    getNetwork?: () => Promise<string | FreighterNetworkResult>;
     signTransaction?: (xdr: string, options?: Record<string, unknown>) => Promise<string | { signedTxXdr?: string; signedXDR?: string; xdr?: string }>;
+    WatchWalletChanges?: new (timeout?: number) => {
+      watch: (
+        cb: (params: { address: string; network: string; networkPassphrase: string; error?: unknown }) => void,
+      ) => { error?: unknown };
+      stop: () => void;
+    };
   };
 
 const isValidStellarAddress = (value: string | null | undefined): value is string =>
@@ -70,11 +169,28 @@ const resolveNetwork = (value: unknown): string | null => {
   return null;
 };
 
-const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
+const resolvePassphrase = (value: unknown): string | null => {
+  if (value && typeof value === 'object') {
+    const passphrase = (value as { networkPassphrase?: string }).networkPassphrase;
+    return passphrase && passphrase.trim() ? passphrase : null;
+  }
+  return null;
+};
+
+/**
+ * Module-level singleton for the WatchWalletChanges subscription so multiple
+ * consumers mounting/unmounting never leak duplicate polling watchers.
+ */
+let walletWatcher: { stop: () => void } | null = null;
+
+const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   status: 'disconnected',
   isInstalled: false,
   publicKey: null,
   network: null,
+  networkPassphrase: null,
+  targetNetwork: 'testnet',
+  isSwitching: false,
   error: null,
 
   checkExtension: async () => {
@@ -117,12 +233,15 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
 
       const networkResult = typeof freighter.getNetwork === 'function' ? await withTimeout(freighter.getNetwork()) : null;
       const network = resolveNetwork(networkResult) ?? 'testnet';
+      // Unknown passphrase stays null on purpose: signing gates fail closed.
+      const networkPassphrase = resolvePassphrase(networkResult);
 
       set({
         status: 'connected',
         isInstalled: true,
         publicKey,
         network,
+        networkPassphrase,
         error: null,
       });
 
@@ -134,6 +253,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
         isInstalled: false,
         publicKey: null,
         network: null,
+        networkPassphrase: null,
         error: message,
       });
       return null;
@@ -141,12 +261,109 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
   },
 
   disconnect: () => {
-    set({ status: 'disconnected', publicKey: null, network: null, error: null });
+    set({ status: 'disconnected', publicKey: null, network: null, networkPassphrase: null, error: null });
   },
 
-  requestSignature: async (xdr: string) => {
+  refreshNetwork: async () => {
+    try {
+      const freighter = await getFreighter();
+      if (typeof freighter.getNetwork !== 'function') return;
+      const result = await withTimeout(freighter.getNetwork());
+      const network = resolveNetwork(result);
+      const networkPassphrase = resolvePassphrase(result);
+      set({
+        network: network ?? get().network,
+        networkPassphrase,
+      });
+    } catch {
+      // Leave the last known values untouched; the signing gate treats an
+      // unknown/unverifiable wallet network as a mismatch (fail closed).
+    }
+  },
+
+  switchNetwork: async (target) => {
+    set({ targetNetwork: target, isSwitching: true, error: null });
+    await get().refreshNetwork();
+    const expected = resolveExpectedPassphrase(target);
+    const matched = get().networkPassphrase === expected;
+    set({ isSwitching: false });
+    return { matched };
+  },
+
+  startWalletWatch: () => {
+    if (typeof window === 'undefined') return;
+    walletWatcher?.stop();
+    walletWatcher = null;
+
+    void (async () => {
+      try {
+        const freighter = await getFreighter();
+        const Watcher = freighter.WatchWalletChanges;
+        if (typeof Watcher !== 'function') return;
+
+        const watcher = new Watcher(4000);
+        walletWatcher = watcher;
+        watcher.watch(({ address, network, networkPassphrase, error }) => {
+          if (error || !isValidStellarAddress(address)) {
+            // Wallet locked, switched to an unsupported account, or lost the
+            // connection: reflect a clean disconnected state rather than
+            // keeping stale signing context around.
+            set({ status: 'disconnected', publicKey: null, networkPassphrase: null });
+            return;
+          }
+
+          const state = get();
+          const patch: Partial<Pick<FreighterWalletState, 'status' | 'isInstalled' | 'publicKey' | 'network' | 'networkPassphrase'>> = {};
+          if (state.publicKey !== address) {
+            patch.publicKey = address;
+            patch.status = 'connected';
+            patch.isInstalled = true;
+          }
+          if (network && state.network !== network) patch.network = network;
+          const nextPassphrase = networkPassphrase && networkPassphrase.trim() ? networkPassphrase : null;
+          if (state.networkPassphrase !== nextPassphrase) patch.networkPassphrase = nextPassphrase;
+          if (Object.keys(patch).length > 0) set(patch);
+        });
+      } catch {
+        // Extension unavailable — watching is simply a no-op until connect().
+      }
+    })();
+  },
+
+  stopWalletWatch: () => {
+    walletWatcher?.stop();
+    walletWatcher = null;
+  },
+
+  adoptConnection: (publicKey) => {
+    if (!isValidStellarAddress(publicKey)) {
+      get().disconnect();
+      return;
+    }
+    if (get().status === 'connected' && get().publicKey === publicKey) return;
+    set({ status: 'connected', isInstalled: true, publicKey, error: null });
+  },
+
+  requestSignature: async (xdr: string, options?: { networkPassphrase?: string }) => {
     if (!xdr || !xdr.trim()) {
       throw new Error('Transaction XDR is required to request a signature.');
+    }
+
+    // Fail-closed network gate: never sign against a wallet network that
+    // differs from the expected one, and never sign when the wallet's
+    // network cannot be verified at all.
+    const expectedPassphrase = options?.networkPassphrase ?? resolveExpectedPassphrase(get().targetNetwork);
+    let walletPassphrase = get().networkPassphrase;
+    if (!walletPassphrase) {
+      await get().refreshNetwork();
+      walletPassphrase = get().networkPassphrase;
+    }
+    if (isNetworkMismatch(walletPassphrase, expectedPassphrase)) {
+      const walletLabel = networkLabelForId(networkIdForPassphrase(walletPassphrase));
+      const expectedLabel = networkLabelForId(networkIdForPassphrase(expectedPassphrase));
+      const message = `Network mismatch: Freighter is on ${walletLabel}, but this action targets ${expectedLabel}. Switch the wallet to ${expectedLabel} before signing.`;
+      set({ error: message });
+      throw new Error(message);
     }
 
     try {
@@ -155,7 +372,9 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
         throw new Error('Freighter does not expose transaction signing support.');
       }
 
-      const response = await withTimeout(freighter.signTransaction(xdr));
+      const response = await withTimeout(
+        freighter.signTransaction(xdr, expectedPassphrase ? { networkPassphrase: expectedPassphrase } : undefined),
+      );
       const signedXdr =
         typeof response === 'string'
           ? response
@@ -182,19 +401,21 @@ const storeCreator: StateCreator<FreighterWalletState> = (set) => ({
     );
 
     if (!walletAddress) {
-      set({ status: 'disconnected', publicKey: null, network: null, isInstalled: false, error: null });
+      set({ status: 'disconnected', publicKey: null, network: null, networkPassphrase: null, isInstalled: false, error: null });
       return;
     }
 
-    const network = resolveNetwork(
-      typeof freighter.getNetwork === 'function' ? await withTimeout(freighter.getNetwork()).catch(() => null) : null,
-    );
+    const networkResult =
+      typeof freighter.getNetwork === 'function'
+        ? await withTimeout(freighter.getNetwork()).catch(() => null)
+        : null;
 
     set({
       isInstalled: true,
       status: 'connected',
       publicKey: walletAddress,
-      network: network ?? 'testnet',
+      network: resolveNetwork(networkResult) ?? 'testnet',
+      networkPassphrase: resolvePassphrase(networkResult),
       error: null,
     });
   },
