@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
-import { formatCurrency, formatPercent } from '@/lib/format';
+import { formatCurrency, formatPercent } from '../../lib/format';
 import {
   calculateBudgetSimulation,
   computeRiskScore,
@@ -17,7 +17,7 @@ import {
   type PolicyRule,
 } from './usePolicySimulation';
 import { ASSET_RATES } from './types';
-import type { Policy } from '@/types/domain';
+import type { Policy } from '../../types/domain';
 
 // Valid 56-character Stellar public keys for testing
 const VALID_STELLAR_KEY_1 = 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ';
