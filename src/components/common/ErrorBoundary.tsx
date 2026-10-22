@@ -3,6 +3,7 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/cn';
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
@@ -16,6 +17,10 @@ export interface ErrorBoundaryProps {
   onError?: (error: Error, info: ErrorInfo) => void;
   /** Optional recovery hook (e.g. refetch the failed query) invoked before the subtree remounts. */
   onReset?: () => void;
+  /** Tighter padding for card-sized dashboard widgets. */
+  compact?: boolean;
+  /** Extra classes for the fallback card. */
+  className?: string;
 }
 
 interface ErrorBoundaryState {
@@ -112,17 +117,33 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     if (this.props.fallback) return this.props.fallback(error, this.retry);
 
+    const { compact, className } = this.props;
+
     return (
       <div
         role="alert"
         aria-live="polite"
-        className="flex flex-col items-center gap-4 rounded-card border border-dashed border-danger/40 bg-danger-soft/30 p-10 text-center"
+        className={cn(
+          'flex flex-col items-center rounded-card border border-dashed border-danger/40 bg-danger-soft/30 text-center',
+          compact ? 'gap-3 p-5' : 'gap-4 p-10',
+          className,
+        )}
       >
-        <span className="h-14 w-14 grid place-items-center rounded-full bg-danger-soft text-danger">
-          <AlertTriangle className="h-7 w-7" aria-hidden />
+        <span
+          className={cn(
+            'grid place-items-center rounded-full bg-danger-soft text-danger',
+            compact ? 'h-10 w-10' : 'h-14 w-14',
+          )}
+        >
+          <AlertTriangle className={compact ? 'h-5 w-5' : 'h-7 w-7'} aria-hidden />
         </span>
         <div className="flex flex-col gap-1">
-          <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
+          <h3
+            className={cn(
+              'font-display font-semibold tracking-tight text-foreground',
+              compact ? 'text-sm' : 'text-lg',
+            )}
+          >
             This section failed to render
           </h3>
           <p className="max-w-sm text-xs text-foreground-secondary">

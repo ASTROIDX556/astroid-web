@@ -6,6 +6,7 @@ import {
   Send,
   Bot,
   User,
+  Zap,
   Maximize2,
   Minimize2,
   Copy,
@@ -21,7 +22,6 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { PromptChips } from '@/features/ai/components/PromptChips';
-import type { ChatMessage } from './types';
 import { cn } from '@/lib/cn';
 import { MessageContent } from './MessageContent';
 import type { ChatMessage, QuickPromptChip } from './types';
@@ -326,47 +326,6 @@ export function NvidiaAssistantWidget() {
     setInputText('');
     setIsStreaming(true);
 
-    // Mock response fallback simulating Nvidia NIM LLM response
-    setTimeout(() => {
-      let replyText = `Nvidia NIM LLM Insights: Analyzed query "${text}". On-chain telemetry indicates normal agent activity across Stellar Testnet.`;
-      let briefing;
-
-      if (
-        text.toLowerCase().includes('daily') ||
-        text.toLowerCase().includes('spend')
-      ) {
-        replyText =
-          'Daily spend summary analysis completed. All 8 active agents are operating within established daily budget envelopes.';
-        briefing = {
-          totalDailySpend: 24500,
-          currency: 'USDC',
-          activeAgentsCount: 8,
-          lowBalanceWalletsCount: 0,
-          topSpenderAgent: 'Auto-Sweep Treasury Bot (15,000 XLM)',
-          recommendation:
-            'All budget envelopes healthy. Velocity is +12% vs 7-day trailing average.',
-        };
-      } else if (
-        text.toLowerCase().includes('balance') ||
-        text.toLowerCase().includes('wallet')
-      ) {
-        replyText =
-          'Wallet balance audit: 7 of 8 agent wallets are fully funded. 1 wallet (agt-ci-bot) is at 15.5% capacity.';
-      } else if (
-        text.toLowerCase().includes('gas') ||
-        text.toLowerCase().includes('fee')
-      ) {
-        replyText =
-          'Soroban RPC network congestion is currently minimal. Recommended base fee: 100 stroops.';
-      }
-
-      const assistantMsg: ChatMessage = {
-        id: `ast-${Date.now()}`,
-        role: 'assistant',
-        content: replyText,
-        timestamp: new Date().toISOString(),
-        structuredBriefing: briefing,
-      };
     // Mock latency before the first streamed token lands.
     replyTimerRef.current = setTimeout(() => {
       replyTimerRef.current = null;
@@ -446,8 +405,6 @@ export function NvidiaAssistantWidget() {
       </div>
 
       {/* Export toolbar + financial briefing quick prompts */}
-      <div className="space-y-3 border-b border-border/60 bg-surface/80 p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
       {/* Export toolbar + Preset Quick Chips */}
       <div className="space-y-2 border-b border-border/60 bg-surface/80 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -517,7 +474,6 @@ export function NvidiaAssistantWidget() {
 
       {/* Chat Messages Stream */}
       <div
-        className="flex-1 space-y-4 overflow-y-auto p-4 font-sans text-xs"
         ref={scrollContainerRef}
         onScroll={handleTranscriptScroll}
         className="flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 font-sans text-xs"
@@ -539,10 +495,6 @@ export function NvidiaAssistantWidget() {
               )}
 
               <div
-                className={`max-w-[85%] space-y-2 ${isAssistant ? 'items-start' : 'items-end'}`}
-              >
-                <div
-                  className={`p-3.5 shadow-xs rounded-card text-xs leading-relaxed ${
                 className={`min-w-0 max-w-[85%] space-y-2 ${isAssistant ? 'items-start' : 'items-end'}`}
               >
                 <div
@@ -594,7 +546,6 @@ export function NvidiaAssistantWidget() {
                           <span className="text-foreground-muted">
                             Low Balance Wallets:
                           </span>
-                          <p className="font-bold text-amber-400">
                           <p
                             className={cn(
                               'font-bold',
@@ -620,8 +571,6 @@ export function NvidiaAssistantWidget() {
                   )}
                 </div>
 
-                <div className="text-3xs px-1 font-mono text-foreground-muted">
-                  {formatRelativeTime(msg.timestamp)}
                 {/* Message status indicator — delivery state + timestamp */}
                 <div className="gap-1.5 flex items-center px-1 font-mono text-2xs text-foreground-muted">
                   <span>{formatRelativeTime(msg.timestamp)}</span>
@@ -662,10 +611,6 @@ export function NvidiaAssistantWidget() {
           );
         })}
 
-        {isStreaming && (
-          <div className="flex animate-pulse items-center gap-2 text-2xs text-foreground-muted">
-            <Bot className="h-4 w-4 animate-spin text-gold" />
-            <span>Nvidia NIM LLM is formulating insight...</span>
         {isAwaitingReply && (
           <div
             role="status"

@@ -61,7 +61,6 @@ export function AgentProviderConfigForm({
   });
 
   const provider = form.watch('provider');
-  const isHosted = provider !== 'ollama' && provider !== 'custom';
   const isCustom = provider === 'custom';
   const isHosted = isHostedProvider(provider);
   const modelOptions = providerModelOptions[provider];

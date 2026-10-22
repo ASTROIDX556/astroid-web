@@ -16,7 +16,6 @@ import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatNumber, truncateHash } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function WalletsPage() {
   const wallets = useWallets();
@@ -74,29 +73,6 @@ export default function WalletsPage() {
                   />
                 </div>
 
-                <SectionLabel>{data.length} wallets</SectionLabel>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {data.map((wallet) => {
-                    const status = walletStatus(wallet.status);
-                    return (
-                      <Link
-                        key={wallet.id}
-                        href={`/wallets/${wallet.id}`}
-                        className="block"
-                      >
-                        <Card interactive className="h-full p-5">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
-                              <p className="text-sm font-medium text-foreground">
-                                {wallet.name}
-                              </p>
-                              <p className="tabular text-2xs text-foreground-muted">
-                                {truncateHash(wallet.stellarAddress)}
-                              </p>
-                            </div>
-                            <Badge variant={status.variant} size="sm" dot>
-                              {status.label}
-                            </Badge>
               <SectionLabel>{data.length} wallets</SectionLabel>
               <ErrorBoundary section="Wallet list">
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -120,6 +96,10 @@ export default function WalletsPage() {
                               {truncateHash(wallet.stellarAddress)}
                             </p>
                           </div>
+                          <Badge variant={status.variant} size="sm" dot>
+                            {status.label}
+                          </Badge>
+                        </div>
 
                           <div className="gap-1.5 mt-4 flex flex-wrap items-center">
                             <Badge variant="outline" size="sm" className="capitalize">
@@ -155,33 +135,12 @@ export default function WalletsPage() {
                     );
                   })}
                 </div>
+              </ErrorBoundary>
               </div>
             );
           }}
         </QueryBoundary>
       </ErrorBoundary>
-                        <div className="mt-5">
-                          <p className="text-2xs uppercase tracking-wide text-foreground-secondary">
-                            Total value
-                          </p>
-                          <p className="font-display text-2xl font-semibold leading-none tracking-tight tabular">
-                            {formatCurrency(wallet.totalUsdValue, 'USDC', { compact: true })}
-                          </p>
-                          <p className="mt-1 text-2xs text-foreground-muted">
-                            {formatNumber(wallet.balances.length)}{' '}
-                            {wallet.balances.length === 1 ? 'asset' : 'assets'}
-                          </p>
-                        </div>
-                      </Card>
-                    </Link>
-                  );
-                })}
-                </div>
-              </ErrorBoundary>
-            </div>
-          );
-        }}
-      </QueryBoundary>
     </PageTransition>
   );
 }

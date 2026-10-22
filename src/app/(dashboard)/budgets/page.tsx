@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { PiggyBank, Plus } from 'lucide-react';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { StatCard, SectionLabel } from '@/components/dashboard/stat-card';
@@ -228,7 +227,6 @@ export default function BudgetsPage() {
 
               <div className="space-y-4 border-t border-border pt-4">
                 <SectionLabel>Real-Time Agent Allocation Control</SectionLabel>
-                <ErrorBoundary section="Agent allocation controls">
                 <ErrorBoundary section="Agent allocation control">
                   <BudgetAllocationDashboard />
                 </ErrorBoundary>
@@ -242,7 +240,6 @@ export default function BudgetsPage() {
               </div>
               <div className="space-y-4 border-t border-border pt-4">
                 <SectionLabel>Department Budget Breakdown</SectionLabel>
-                <ErrorBoundary section="Department budget detail">
                 <ErrorBoundary section="Department budget breakdown">
                   <DepartmentBudgetBreakdown />
                 </ErrorBoundary>
