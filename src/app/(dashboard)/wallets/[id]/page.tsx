@@ -13,6 +13,7 @@ import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatDateTime, truncateHash } from '@/lib/format';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { XdrInspector } from '@/features/wallet/components/XdrInspector';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { WalletBalanceCards } from '@/features/wallet/components/WalletBalanceCards';
 import { WalletTransactionHistory } from '@/features/wallet/components/WalletTransactionHistory';
 
@@ -100,7 +101,9 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
 
       <div className="space-y-4">
         <SectionLabel>Balances</SectionLabel>
-        <WalletBalanceCards walletId={params.id} />
+        <ErrorBoundary section="Wallet balances">
+          <WalletBalanceCards walletId={params.id} />
+        </ErrorBoundary>
       </div>
 
       <div className="space-y-4">
@@ -110,7 +113,9 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
 
       <div className="space-y-4">
         <SectionLabel>Transaction inspector</SectionLabel>
-        <XdrInspector />
+        <ErrorBoundary section="Wallet transaction inspector">
+          <XdrInspector />
+        </ErrorBoundary>
       </div>
     </PageTransition>
   );

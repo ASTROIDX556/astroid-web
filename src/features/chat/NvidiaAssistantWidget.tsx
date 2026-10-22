@@ -21,6 +21,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
+import { PromptChips } from '@/features/ai/components/PromptChips';
 import { cn } from '@/lib/cn';
 import { MessageContent } from './MessageContent';
 import type { ChatMessage, QuickPromptChip } from './types';
@@ -342,6 +343,17 @@ export function NvidiaAssistantWidget() {
     handleSendMessage(template.prompt);
   };
 
+  /**
+   * Chips hydrate the composer with the full briefing prompt, then submit it
+   * immediately. `handleSendMessage` is a no-op while streaming, so rapid chip
+   * clicks cannot enqueue duplicate turns.
+   */
+  const handlePromptSelect = (prompt: string) => {
+    if (isStreaming) return;
+    setInputText(prompt);
+    handleSendMessage(prompt);
+  };
+
   // Keyboard shortcut listener
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -392,6 +404,7 @@ export function NvidiaAssistantWidget() {
         </div>
       </div>
 
+      {/* Export toolbar + financial briefing quick prompts */}
       {/* Export toolbar + Preset Quick Chips */}
       <div className="space-y-2 border-b border-border/60 bg-surface/80 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -423,6 +436,11 @@ export function NvidiaAssistantWidget() {
             </button>
           </div>
         </div>
+        <PromptChips
+          onSelect={handlePromptSelect}
+          disabled={isStreaming}
+          busy={isStreaming}
+        />
         <div className="flex flex-wrap items-center gap-2">
           {PRESET_CHIPS.map((chip) => {
             const Icon = CHIP_ICONS[chip.iconName] ?? Zap;

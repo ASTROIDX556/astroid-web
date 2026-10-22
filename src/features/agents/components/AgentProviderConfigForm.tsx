@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -43,28 +43,43 @@ export function AgentProviderConfigForm({
   onSubmit,
   className,
 }: AgentProviderConfigFormProps) {
+  const initialProvider = defaultValues?.provider ?? 'openai';
+  const initialModel =
+    defaultValues?.model ?? providerModelOptions[initialProvider][0] ?? '';
   const form = useForm<AgentProviderConfigValues>({
     resolver: zodResolver(agentProviderConfigSchema),
     defaultValues: {
       name: '',
-      provider: 'openai',
-      model: providerModelOptions.openai[0] ?? '',
       temperature: 0.7,
       endpointUrl: '',
       apiKey: '',
       ...defaultValues,
+      provider: initialProvider,
+      model: initialModel,
     },
     mode: 'onChange',
   });
 
   const provider = form.watch('provider');
+  const isCustom = provider === 'custom';
   const isHosted = isHostedProvider(provider);
   const modelOptions = providerModelOptions[provider];
+  const previousProvider = useRef<AgentProviderType>(provider);
 
   // Reset the model field to a sane default whenever the provider changes,
-  // since model options (and whether it's a dropdown or free text) differ per provider.
+  // since model options (and whether it's a dropdown or free text) differ per
+  // provider. Do not reset on mount, so a saved model from `defaultValues` is
+  // preserved. Hidden fields are cleared so stale validation never blocks submit.
   useEffect(() => {
+    if (previousProvider.current === provider) return;
+    previousProvider.current = provider;
+
     form.setValue('model', modelOptions[0] ?? '', { shouldValidate: true });
+    if (isHosted) {
+      form.setValue('endpointUrl', '', { shouldValidate: false });
+    } else {
+      form.setValue('apiKey', '', { shouldValidate: false });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
@@ -169,23 +184,34 @@ export function AgentProviderConfigForm({
             )}
           </FormRow>
 
-          {isHosted ? (
+          {isHosted || isCustom ? (
             <FormRow
               id="provider-config-api-key"
               label="API key"
-              required
+              required={isHosted}
               error={form.formState.errors.apiKey?.message}
+              hint={
+                isCustom
+                  ? 'Optional — only if your custom endpoint requires bearer auth.'
+                  : undefined
+              }
             >
               <Input
                 id="provider-config-api-key"
                 type="password"
+                autoComplete="off"
+                spellCheck={false}
                 {...form.register('apiKey')}
-                placeholder="Paste provider API key"
+                placeholder={
+                  isCustom ? 'Optional bearer token' : 'Paste provider API key'
+                }
                 invalid={Boolean(form.formState.errors.apiKey)}
                 aria-describedby={describedBy('provider-config-api-key', 'apiKey')}
               />
             </FormRow>
-          ) : (
+          ) : null}
+
+          {!isHosted ? (
             <FormRow
               id="provider-config-endpoint"
               label="Endpoint URL"
@@ -194,11 +220,13 @@ export function AgentProviderConfigForm({
               hint={
                 provider === 'ollama'
                   ? 'Local Ollama server address, e.g. http://localhost:11434'
-                  : undefined
+                  : 'Base URL of the OpenAI-compatible inference server.'
               }
             >
               <Input
                 id="provider-config-endpoint"
+                type="url"
+                inputMode="url"
                 {...form.register('endpointUrl')}
                 placeholder={
                   provider === 'ollama'
@@ -213,7 +241,7 @@ export function AgentProviderConfigForm({
                 )}
               />
             </FormRow>
-          )}
+          ) : null}
 
           <FormRow
             id="provider-config-temperature"
