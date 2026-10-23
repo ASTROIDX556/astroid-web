@@ -1,11 +1,37 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import { useThemeStore, type ThemeMode } from './theme-store';
 
 export type OrgId = string;
 
 /** Dashboard layout density — controls table/card compactness app-wide. */
 export type DashboardDensity = 'comfortable' | 'compact';
+export type DashboardCurrency = 'USD' | 'USDC';
+export type CashflowDisplay = 'area' | 'line';
+
+const safeLocalStorage: StateStorage = {
+  getItem: (name) => {
+    try {
+      return typeof window === 'undefined' ? null : window.localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (name, value) => {
+    try {
+      if (typeof window !== 'undefined') window.localStorage.setItem(name, value);
+    } catch {
+      return;
+    }
+  },
+  removeItem: (name) => {
+    try {
+      if (typeof window !== 'undefined') window.localStorage.removeItem(name);
+    } catch {
+      return;
+    }
+  },
+};
 
 /** Channel-level notification toggles. */
 export interface NotificationPreferences {
@@ -22,6 +48,9 @@ interface PreferencesState {
   themeMode: ThemeMode;
   /** UI density for tables and card grids. */
   density: DashboardDensity;
+  sidebarCollapsed: boolean;
+  activeCurrency: DashboardCurrency;
+  cashflowDisplay: CashflowDisplay;
   /** Notification channel toggles. */
   notifications: NotificationPreferences;
   /** True once the persisted snapshot has rehydrated from localStorage. */
@@ -30,6 +59,9 @@ interface PreferencesState {
   /** Updates the canonical theme store and mirrors the mode here. */
   setThemeMode: (mode: ThemeMode) => void;
   setDensity: (density: DashboardDensity) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  setActiveCurrency: (currency: DashboardCurrency) => void;
+  setCashflowDisplay: (display: CashflowDisplay) => void;
   toggleNotification: (channel: keyof NotificationPreferences) => void;
   setHasHydrated: (value: boolean) => void;
 }
@@ -41,6 +73,9 @@ export const usePreferencesStore = create<PreferencesState>()(
       activeOrgId: 'org_nova',
       themeMode: 'light',
       density: 'comfortable',
+      sidebarCollapsed: false,
+      activeCurrency: 'USD',
+      cashflowDisplay: 'area',
       notifications: {
         proposals: true,
         budgetAlerts: true,
@@ -56,6 +91,9 @@ export const usePreferencesStore = create<PreferencesState>()(
         set({ themeMode: mode });
       },
       setDensity: (density) => set({ density }),
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
+      setActiveCurrency: (activeCurrency) => set({ activeCurrency }),
+      setCashflowDisplay: (cashflowDisplay) => set({ cashflowDisplay }),
       toggleNotification: (channel) =>
         set((s) => ({
           notifications: { ...s.notifications, [channel]: !s.notifications[channel] },
@@ -65,11 +103,15 @@ export const usePreferencesStore = create<PreferencesState>()(
     {
       name: 'astroid-preferences',
       version: 2,
+      storage: createJSONStorage(() => safeLocalStorage),
       // Only user-facing preferences persist; hydration bookkeeping stays out.
       partialize: (state) => ({
         activeOrgId: state.activeOrgId,
         themeMode: state.themeMode,
         density: state.density,
+        sidebarCollapsed: state.sidebarCollapsed,
+        activeCurrency: state.activeCurrency,
+        cashflowDisplay: state.cashflowDisplay,
         notifications: state.notifications,
       }),
       onRehydrateStorage: () => (state) => {

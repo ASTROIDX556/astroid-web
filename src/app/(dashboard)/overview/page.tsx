@@ -26,7 +26,9 @@ import {
 import { CATEGORICAL } from '@/components/charts';
 import { useOverview, useBriefing, useBudgets } from '@/hooks/use-queries';
 import { useAssistantStore } from '@/stores/ui-store';
-import { formatCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
+import { useHydrated } from '@/hooks/use-hydrated';
+import { usePreferencesStore, type CashflowDisplay, type DashboardCurrency } from '@/stores';
+import { formatCurrency, formatDashboardCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 
@@ -46,6 +48,13 @@ export default function OverviewPage() {
   const briefing = useBriefing();
   const budgets = useBudgets();
   const openAssistant = useAssistantStore((s) => s.setOpen);
+  const hydrated = useHydrated();
+  const activeCurrency = usePreferencesStore((s) => s.activeCurrency);
+  const setActiveCurrency = usePreferencesStore((s) => s.setActiveCurrency);
+  const cashflowDisplay = usePreferencesStore((s) => s.cashflowDisplay);
+  const setCashflowDisplay = usePreferencesStore((s) => s.setCashflowDisplay);
+  const dashboardCurrency = hydrated ? activeCurrency : 'USD';
+  const dashboardCashflowDisplay = hydrated ? cashflowDisplay : 'area';
 
   return (
     <PageTransition className="space-y-8">
@@ -81,7 +90,7 @@ export default function OverviewPage() {
               <StatCard
                 label="Total balance"
                 rawNumber={data?.totalBalance ?? 0}
-                formatter={(val) => formatCurrency(val, 'USD', { compact: true })}
+                formatter={(val) => formatDashboardCurrency(val, dashboardCurrency, { compact: true })}
                 icon={<WalletIcon className="h-4 w-4" />}
                 accent
                 href="/wallets"
@@ -91,7 +100,7 @@ export default function OverviewPage() {
               <StatCard
                 label="Monthly spend"
                 rawNumber={data?.monthlySpend ?? 0}
-                formatter={(val) => formatCurrency(val, 'USD', { compact: true })}
+                formatter={(val) => formatDashboardCurrency(val, dashboardCurrency, { compact: true })}
                 delta={data?.monthlySpendDelta}
                 deltaLabel="vs last month"
                 upIsGood={false}
@@ -127,21 +136,44 @@ export default function OverviewPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <ErrorBoundary section="Cashflow chart" className="lg:col-span-2">
           <Card>
-            <CardHeader className="flex-row items-center justify-between">
+            <CardHeader className="flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
               <CardTitle>Cashflow</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  aria-label="Dashboard currency"
+                  value={dashboardCurrency}
+                  onChange={(event) => setActiveCurrency(event.target.value as DashboardCurrency)}
+                  className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="USD">USD</option>
+                  <option value="USDC">USDC</option>
+                </select>
+                <select
+                  aria-label="Cashflow chart display"
+                  value={dashboardCashflowDisplay}
+                  onChange={(event) => setCashflowDisplay(event.target.value as CashflowDisplay)}
+                  className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="area">Area chart</option>
+                  <option value="line">Line chart</option>
+                </select>
               <Link
                 href="/analytics"
                 className="inline-flex items-center gap-1 text-2xs font-medium text-foreground-secondary transition-colors hover:text-foreground"
               >
                 Full analytics <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
+              </div>
             </CardHeader>
             <CardContent>
-              <QueryBoundary
-                query={overview}
-                loading={<div className="skeleton h-[260px] w-full rounded-md" />}
-              >
-                {(data) => <CashflowChart data={data?.cashflow} />}
+              <QueryBoundary query={overview} loading={<div className="skeleton h-[260px] w-full rounded-md" />}>
+                {(data) => (
+                  <CashflowChart
+                    data={data?.cashflow}
+                    currency={dashboardCurrency}
+                    display={dashboardCashflowDisplay}
+                  />
+                )}
               </QueryBoundary>
             </CardContent>
           </Card>

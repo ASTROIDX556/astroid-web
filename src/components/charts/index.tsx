@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 import { ChartFrame, RESIZE_DEBOUNCE_MS } from '@/components/charts/chart-frame';
 import { AXIS_TICK, CHART_COLORS, CHART_SERIES } from '@/components/charts/theme';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDashboardCurrency } from '@/lib/format';
 import type {
   AgentSpend,
   BudgetWaterfallStep,
@@ -71,9 +71,13 @@ function shortDate(value: string): string {
 export function CashflowChart({
   data,
   height = 260,
+  currency = 'USDC',
+  display = 'area',
 }: {
   data?: TimeseriesPoint[];
   height?: number;
+  currency?: 'USD' | 'USDC';
+  display?: 'area' | 'line';
 }) {
   const rows = Array.isArray(data) ? data : null;
   return (
@@ -110,7 +114,7 @@ export function CashflowChart({
           axisLine={false}
           tickLine={false}
           width={52}
-          tickFormatter={(v: number) => formatCurrency(v, 'USDC', { compact: true })}
+          tickFormatter={(v: number) => formatDashboardCurrency(v, currency, { compact: true })}
         />
         <RechartsTooltip
           cursor={{ stroke: GRID, strokeWidth: 1 }}
@@ -132,7 +136,7 @@ export function CashflowChart({
                       {item.name}
                     </span>
                     <span className="tabular font-medium text-foreground">
-                      {formatCurrency(Number(item.value), 'USDC', { compact: true })}
+                      {formatDashboardCurrency(Number(item.value), currency, { compact: true })}
                     </span>
                   </div>
                 ))}
@@ -146,7 +150,7 @@ export function CashflowChart({
           name="Inflow"
           stroke={SUCCESS}
           strokeWidth={2}
-          fill="url(#inflow)"
+          fill={display === 'area' ? 'url(#inflow)' : 'none'}
           dot={rows?.length === 1}
         />
         <Area
@@ -155,7 +159,7 @@ export function CashflowChart({
           name="Outflow"
           stroke={GOLD}
           strokeWidth={2}
-          fill="url(#outflow)"
+          fill={display === 'area' ? 'url(#outflow)' : 'none'}
           dot={rows?.length === 1}
         />
       </AreaChart>
