@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FlaskConical,
@@ -20,75 +19,25 @@ import { FormField, Input, Select } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
 import type { Policy } from '@/types/domain';
 import { defaultPolicyRules, mapPoliciesToSandboxRules, type PolicyRule } from './usePolicySimulation';
+import {
+  sandboxTransactionSchema,
+  computeRiskScore,
+  evaluatePolicyRules,
+  defaultFormValues,
+  type SandboxFormValues,
+  type EvaluationStep,
+  type SandboxEvaluationResult,
+} from './spendingPolicySimulation';
 
-// ---------------------------------------------------------------------------
-// Zod schema for sandbox transaction input
-// ---------------------------------------------------------------------------
-
-const sandboxTransactionSchema = z.object({
-  recipient: z
-    .string()
-    .trim()
-    .min(1, 'Recipient address is required.')
-    .min(56, 'Stellar address must be at least 56 characters.')
-    .max(64, 'Stellar address must be at most 64 characters.'),
-  amount: z.coerce
-    .number({ message: 'Amount must be a number.' })
-    .positive('Amount must be greater than zero.'),
-  asset: z.enum(['XLM', 'USDC', 'BTC', 'ETH', 'EURC'], {
-    message: 'Asset must be one of XLM, USDC, BTC, ETH, or EURC.',
-  }),
-  agentId: z
-    .string()
-    .trim()
-    .min(1, 'Agent ID is required.'),
-  memo: z.string().max(140, 'Memo must be 140 characters or fewer.').optional(),
-});
-
-type SandboxFormValues = z.infer<typeof sandboxTransactionSchema>;
-
-// ---------------------------------------------------------------------------
-// Evaluation types
-// ---------------------------------------------------------------------------
-
-interface EvaluationStep {
-  ruleId: string;
-  ruleName: string;
-  passed: boolean;
-  message: string;
-  reasonCode: string;
-}
-
-interface SandboxEvaluationResult {
-  outcome: 'approved' | 'flagged' | 'rejected';
-  steps: EvaluationStep[];
-  riskScore: number;
-}
-
-// ---------------------------------------------------------------------------
-// Default form values
-// ---------------------------------------------------------------------------
-
-const defaultFormValues: SandboxFormValues = {
-  recipient: 'GAOPENAI7VENDORQK9M2WL4PC8RD3YHF6JN1STELLARWALLETXZ',
-  amount: 5000,
-  asset: 'USDC',
-  agentId: 'agt_atlas',
-  memo: 'Policy sandbox test — hypothetical transfer',
+export {
+  sandboxTransactionSchema,
+  computeRiskScore,
+  evaluatePolicyRules,
+  defaultFormValues,
+  type SandboxFormValues,
+  type EvaluationStep,
+  type SandboxEvaluationResult,
 };
-
-// ---------------------------------------------------------------------------
-// Risk scoring helper
-// ---------------------------------------------------------------------------
-
-function computeRiskScore(values: SandboxFormValues, steps: EvaluationStep[]): number {
-  let score = 0;
-  const failed = steps.filter((s) => !s.passed);
-  score += failed.length * 25;
-  if (values.amount > 25000) score += 20;
-  if (values.amount > 10000) score += 10;
-  return Math.min(100, score);
-}
 
 // ---------------------------------------------------------------------------
 // PolicySandboxWidget
@@ -147,143 +96,8 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
     }
 
     const validated = parsed.data;
-    const steps: EvaluationStep[] = [];
-
-    // Evaluate against each enabled policy rule
-    for (const rule of activeRules) {
-      if (!rule.enabled) continue;
-
-      let passed = true;
-      let message = '';
-      let reasonCode = '';
-
-      switch (rule.type) {
-        case 'max_amount': {
-          if (rule.threshold !== undefined) {
-            passed = validated.amount <= rule.threshold;
-            message = passed
-              ? `Amount $${validated.amount.toLocaleString()} is within the $${rule.threshold.toLocaleString()} cap.`
-              : `Amount $${validated.amount.toLocaleString()} exceeds the $${rule.threshold.toLocaleString()} maximum threshold.`;
-            reasonCode = passed ? 'AMOUNT_WITHIN_CAP' : 'AMOUNT_EXCEEDS_THRESHOLD';
-          }
-          break;
-        }
-
-        case 'allowed_assets': {
-          const allowed = rule.allowedAssets ?? [];
-          passed = allowed.includes(validated.asset);
-          message = passed
-            ? `Asset ${validated.asset} is on the allow-list.`
-            : `Asset ${validated.asset} is not on the allowed assets list (${allowed.join(', ')}).`;
-          reasonCode = passed ? 'ASSET_ALLOWED' : 'ASSET_BLOCKED';
-          break;
-        }
-
-        case 'multi_sig': {
-          // Sandbox always simulates a single signer
-          const required = rule.requiredCoSigners ?? 2;
-          passed = required <= 1;
-          message = passed
-            ? 'Sufficient signatures present.'
-            : `This transaction requires ${required} co-signers but only 1 is present in sandbox mode.`;
-          reasonCode = passed ? 'MULTISIG_SATISFIED' : 'MULTISIG_INSUFFICIENT';
-          break;
-        }
-
-        case 'allowed_recipients': {
-          const allowed = rule.allowedRecipients ?? [];
-          passed = allowed.length === 0 || allowed.some((r) => validated.recipient.includes(r));
-          message = passed
-            ? `Recipient is on the approved vendor list.`
-            : `Recipient is not on the approved vendor list (${allowed.join(', ')}).`;
-          reasonCode = passed ? 'RECIPIENT_ALLOWED' : 'RECIPIENT_BLOCKED';
-          break;
-        }
-
-        case 'blocked_recipients': {
-          const blocked = rule.blockedRecipients ?? [];
-          passed = !blocked.some((r) => validated.recipient.includes(r));
-          message = passed
-            ? `Recipient is not on the blocklist.`
-            : `Recipient matches a blocked address on the deny list.`;
-          reasonCode = passed ? 'RECIPIENT_CLEAR' : 'RECIPIENT_BLOCKED';
-          break;
-        }
-
-        case 'rate_limit': {
-          // In sandbox mode we flag rate-limited rules as needing runtime context
-          passed = true;
-          message = rule.rateLimitPerHour
-            ? `Rate limit of ${rule.rateLimitPerHour} txns/hr applies — verified at execution time.`
-            : 'Rate limit rule present — evaluated at execution time.';
-          reasonCode = 'RATE_LIMIT_NOTE';
-          break;
-        }
-
-        case 'time_window': {
-          const now = new Date();
-          const currentMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-          if (rule.windowStart && rule.windowEnd) {
-            const [startH, startM] = rule.windowStart.split(':').map(Number);
-            const [endH, endM] = rule.windowEnd.split(':').map(Number);
-            const startMinutes = (startH ?? 0) * 60 + (startM ?? 0);
-            const endMinutes = (endH ?? 0) * 60 + (endM ?? 0);
-            passed = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-          }
-          message = passed
-            ? `Current time is within the allowed execution window (${rule.windowStart ?? '?'}–${rule.windowEnd ?? '?'}).`
-            : `Current time is outside the allowed execution window (${rule.windowStart ?? '?'}–${rule.windowEnd ?? '?'}).`;
-          reasonCode = passed ? 'TIME_WINDOW_OPEN' : 'TIME_WINDOW_CLOSED';
-          break;
-        }
-
-        case 'budget_limit': {
-          if (rule.budgetLimitUsd !== undefined) {
-            passed = validated.amount <= rule.budgetLimitUsd;
-            message = passed
-              ? `Amount $${validated.amount.toLocaleString()} is within the budget cap of $${rule.budgetLimitUsd.toLocaleString()}.`
-              : `Amount $${validated.amount.toLocaleString()} exceeds the budget cap of $${rule.budgetLimitUsd.toLocaleString()}.`;
-            reasonCode = passed ? 'BUDGET_WITHIN_CAP' : 'BUDGET_EXCEEDED';
-          }
-          break;
-        }
-
-        case 'emergency_lock': {
-          passed = !rule.emergencyActive;
-          message = rule.emergencyActive
-            ? 'Emergency stop is active — all transactions are halted.'
-            : 'Emergency stop is inactive — transactions may proceed.';
-          reasonCode = passed ? 'EMERGENCY_INACTIVE' : 'EMERGENCY_ACTIVE';
-          break;
-        }
-      }
-
-      steps.push({
-        ruleId: rule.id,
-        ruleName: rule.name,
-        passed,
-        message,
-        reasonCode,
-      });
-    }
-
-    const failedSteps = steps.filter((s) => !s.passed);
-    let outcome: SandboxEvaluationResult['outcome'] = 'approved';
-    if (failedSteps.length > 0) {
-      const hasBlocking = failedSteps.some(
-        (s) =>
-          s.reasonCode === 'AMOUNT_EXCEEDS_THRESHOLD' ||
-          s.reasonCode === 'ASSET_BLOCKED' ||
-          s.reasonCode === 'RECIPIENT_BLOCKED' ||
-          s.reasonCode === 'EMERGENCY_ACTIVE' ||
-          s.reasonCode === 'BUDGET_EXCEEDED',
-      );
-      outcome = hasBlocking ? 'rejected' : 'flagged';
-    }
-
-    const riskScore = computeRiskScore(validated, steps);
-
-    setResult({ outcome, steps, riskScore });
+    const evaluation = evaluatePolicyRules(validated, activeRules);
+    setResult(evaluation);
   }, [values, activeRules]);
 
   // -- Derived -----------------------------------------------------------
