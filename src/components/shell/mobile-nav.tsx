@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { PanelLeftClose, PanelLeftOpen, X, Sparkles } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { navSections } from '@/lib/nav';
 import { cn } from '@/lib/cn';
@@ -28,6 +29,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   const sidebarCollapsed = usePreferencesStore((state) => state.sidebarCollapsed);
   const setSidebarCollapsed = usePreferencesStore((state) => state.setSidebarCollapsed);
   const compactNavigation = hydrated && sidebarCollapsed;
+  const shouldReduceMotion = useReducedMotion();
 
   // Dismiss whenever the route changes.
   useEffect(() => {
@@ -44,24 +46,31 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   });
 
   return (
-    <div className="lg:hidden" aria-hidden={!open}>
-      <div
-        className={cn(
-          'fixed inset-0 z-40 bg-background/50 backdrop-blur-sm transition-opacity duration-base',
-          open ? 'opacity-100' : 'pointer-events-none opacity-0',
-        )}
-        onClick={onClose}
-      />
-      <aside
+    <AnimatePresence>
+      {open && (
+        <div className="lg:hidden">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+            className="fixed inset-0 z-40 bg-background/50 backdrop-blur-sm"
+            onClick={onClose}
+            aria-hidden="true"
+          />
+          <motion.aside
         id="mobile-nav-drawer"
         ref={panelRef}
         role="dialog"
         aria-label="Navigation"
         aria-modal="true"
+        initial={{ x: shouldReduceMotion ? 0 : '-100%', opacity: shouldReduceMotion ? 0 : 1 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: shouldReduceMotion ? 0 : '-100%', opacity: shouldReduceMotion ? 0 : 1 }}
+        transition={{ type: shouldReduceMotion ? 'tween' : 'spring', damping: 25, stiffness: 250 }}
         className={cn(
-          'fixed left-0 top-0 z-50 flex h-full flex-col border-r border-border bg-surface shadow-soft-3 transition-[width,transform] duration-base ease-astroid',
+          'fixed left-0 top-0 z-50 flex h-full flex-col border-r border-border bg-surface shadow-soft-3',
           compactNavigation ? 'w-[76px]' : 'w-[264px]',
-          open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         <div className={cn('flex h-16 items-center justify-between', compactNavigation ? 'px-3' : 'px-5')}>
@@ -144,7 +153,9 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
             </div>
           ))}
         </nav>
-      </aside>
-    </div>
+          </motion.aside>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }
