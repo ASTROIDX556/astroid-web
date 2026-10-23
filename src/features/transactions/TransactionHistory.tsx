@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
+import { downloadCsv } from '@/lib/csv';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -54,6 +55,29 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
     () => transactions.find((transaction) => transaction.id === selectedId) ?? null,
     [selectedId, transactions],
   );
+
+  const exportTransactions = (rows: Transaction[]) => {
+    downloadCsv(
+      rows,
+      [
+        { header: 'ID', value: (transaction) => transaction.id },
+        { header: 'Recipient', value: (transaction) => transaction.counterparty },
+        { header: 'Recipient address', value: (transaction) => transaction.counterpartyAddress },
+        { header: 'Purpose', value: (transaction) => transaction.purpose },
+        { header: 'Agent', value: (transaction) => transaction.agentName ?? '' },
+        {
+          header: 'Amount',
+          value: (transaction) => transaction.direction === 'outbound'
+            ? -transaction.amount
+            : transaction.amount,
+        },
+        { header: 'Asset', value: (transaction) => transaction.asset },
+        { header: 'Status', value: (transaction) => transaction.status },
+        { header: 'Timestamp', value: (transaction) => transaction.createdAt },
+      ],
+      `transactions-${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+  };
 
   const summary = useMemo(
     () => ({
@@ -145,13 +169,17 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
         searchable
         searchPlaceholder="Search with counterparty, asset, or status"
         pageSize={8}
+        pageSizeOptions={[8, 16, 32, 64]}
         caption="Transaction activity"
+        onExportCSV={exportTransactions}
         onRowClick={(transaction) => setSelectedId(transaction.id)}
         getRowId={(row) => row.id}
         columns={[
           {
-            accessorKey: 'counterparty',
-            header: 'Counterparty',
+            accessorKey: 'counterpartyAddress',
+            header: 'Recipient',
+            sortingFn: (rowA, rowB) =>
+              rowA.original.counterpartyAddress.localeCompare(rowB.original.counterpartyAddress),
             cell: ({ row }) => {
               const tx = row.original;
               return (
@@ -219,6 +247,8 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
           {
             accessorKey: 'createdAt',
             header: 'When',
+            sortingFn: (rowA, rowB) =>
+              new Date(rowA.original.createdAt).getTime() - new Date(rowB.original.createdAt).getTime(),
             cell: ({ row }) => (
               <span className="text-2xs text-foreground-muted">
                 {formatRelativeTime(row.original.createdAt)}

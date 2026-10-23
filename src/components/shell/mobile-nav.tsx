@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
-import { X, Sparkles } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, X, Sparkles } from 'lucide-react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { navSections } from '@/lib/nav';
 import { cn } from '@/lib/cn';
+import { usePreferencesStore } from '@/stores/preferences-store';
+import { useHydrated } from '@/hooks/use-hydrated';
 
 interface MobileNavProps {
   open: boolean;
@@ -22,6 +24,10 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   const pathname = usePathname();
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const hydrated = useHydrated();
+  const sidebarCollapsed = usePreferencesStore((state) => state.sidebarCollapsed);
+  const setSidebarCollapsed = usePreferencesStore((state) => state.setSidebarCollapsed);
+  const compactNavigation = hydrated && sidebarCollapsed;
 
   // Dismiss whenever the route changes.
   useEffect(() => {
@@ -53,39 +59,58 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
         aria-label="Navigation"
         aria-modal="true"
         className={cn(
-          'fixed left-0 top-0 z-50 flex h-full w-[264px] flex-col border-r border-border bg-surface shadow-soft-3 transition-transform duration-base ease-astroid',
+          'fixed left-0 top-0 z-50 flex h-full flex-col border-r border-border bg-surface shadow-soft-3 transition-[width,transform] duration-base ease-astroid',
+          compactNavigation ? 'w-[76px]' : 'w-[264px]',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="h-16 flex items-center justify-between px-5">
+        <div className={cn('flex h-16 items-center justify-between', compactNavigation ? 'px-3' : 'px-5')}>
           <span className="gap-2.5 flex items-center">
             <span className="grid h-8 w-8 place-items-center rounded-button bg-accent-gradient text-white shadow-gold">
               <Sparkles className="h-4 w-4" aria-hidden />
             </span>
-            <span className="font-display text-lg font-semibold tracking-tight">
+            <span className={cn('font-display text-lg font-semibold tracking-tight', compactNavigation && 'sr-only')}>
               Astroid
             </span>
           </span>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={onClose}
-            className={cn(
-              'grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground',
-              DRAWER_FOCUS,
-            )}
-            aria-label="Close navigation"
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className={cn(
+                'grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground',
+                DRAWER_FOCUS,
+              )}
+              aria-label={compactNavigation ? 'Expand navigation' : 'Collapse navigation'}
+              title={compactNavigation ? 'Expand navigation' : 'Collapse navigation'}
+            >
+              {compactNavigation
+                ? <PanelLeftOpen className="h-4 w-4" aria-hidden />
+                : <PanelLeftClose className="h-4 w-4" aria-hidden />}
+            </button>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={onClose}
+              className={cn(
+                'grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground',
+                DRAWER_FOCUS,
+              )}
+              aria-label="Close navigation"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </div>
 
-        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+        <nav className={cn('flex-1 space-y-6 overflow-y-auto py-4', compactNavigation ? 'px-2' : 'px-3')}>
           {navSections.map((section) => (
             <div key={section.heading} className="space-y-1">
-              <p className="px-3 pb-1 text-2xs font-semibold uppercase tracking-[0.16em] text-foreground-muted">
-                {section.heading}
-              </p>
+              {!compactNavigation && (
+                <p className="px-3 pb-1 text-2xs font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+                  {section.heading}
+                </p>
+              )}
               {section.items.map((item) => {
                 const active =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -95,17 +120,19 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                     key={item.href}
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
+                    title={item.label}
                     className={cn(
                       DRAWER_FOCUS,
-                      'flex items-center gap-3 rounded-button px-3 py-2 text-sm font-medium transition-colors duration-fast',
+                      'flex items-center rounded-button py-2 text-sm font-medium transition-colors duration-fast',
+                      compactNavigation ? 'justify-center px-2' : 'gap-3 px-3',
                       active
                         ? 'bg-surface-secondary text-foreground'
                         : 'text-foreground-secondary hover:bg-surface-secondary/60 hover:text-foreground',
                     )}
                   >
                     <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
-                    <span className="truncate">{item.label}</span>
-                    {item.signature && (
+                    <span className={cn('truncate', compactNavigation && 'sr-only')}>{item.label}</span>
+                    {item.signature && !compactNavigation && (
                       <span
                         className="h-1.5 w-1.5 ml-auto rounded-xs bg-gold"
                         aria-hidden

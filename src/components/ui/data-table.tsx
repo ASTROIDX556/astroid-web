@@ -13,7 +13,15 @@ import {
   type RowSelectionState,
   type SortingState,
 } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
+  Search,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 
@@ -42,6 +50,12 @@ export interface DataTableProps<TData, TValue = unknown> {
   /** Called with the selected rows whenever the selection changes (selection spans pages). */
   onSelectionChange?: (rows: TData[]) => void;
   initialSorting?: SortingState;
+  /**
+   * Adds an Export CSV button. It is called with the rows as they currently
+   * are after searching and sorting but before pagination, so exports match
+   * what the table shows.
+   */
+  onExportCSV?: (rows: TData[]) => void;
 }
 
 interface ColumnMeta {
@@ -126,6 +140,7 @@ export function DataTable<TData, TValue = unknown>({
   enableRowSelection = false,
   onSelectionChange,
   initialSorting = [],
+  onExportCSV,
 }: DataTableProps<TData, TValue>) {
   const searchId = useId();
   const initialPageSize = Math.max(1, Math.floor(pageSize) || DEFAULT_PAGE_SIZE);
@@ -193,35 +208,52 @@ export function DataTable<TData, TValue = unknown>({
 
   return (
     <div className={cn('overflow-hidden rounded-card border border-border bg-surface', className)}>
-      {(searchable || caption) && (
+      {(searchable || caption || onExportCSV) && (
         <div className="flex flex-col gap-3 border-b border-border bg-surface-secondary/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-          {caption && (
-            <p
-              aria-hidden
-              className="text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary"
-            >
-              {caption}
-            </p>
-          )}
-          {searchable && (
-            <div role="search" className="relative block w-full sm:max-w-xs">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground-muted"
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-1 sm:flex-row sm:items-center sm:justify-between">
+            {caption && (
+              <p
                 aria-hidden
-              />
-              <input
-                id={searchId}
-                type="search"
-                aria-label={caption ? `Search ${caption}` : 'Search table rows'}
-                value={globalFilter}
-                onChange={(event) => {
-                  setGlobalFilter(event.target.value);
-                  setPagination((current) => ({ ...current, pageIndex: 0 }));
-                }}
-                placeholder={searchPlaceholder}
-                className="h-9 w-full rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
+                className="text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary"
+              >
+                {caption}
+              </p>
+            )}
+            {searchable && (
+              <div role="search" className="relative block w-full sm:max-w-xs">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground-muted"
+                  aria-hidden
+                />
+                <input
+                  id={searchId}
+                  type="search"
+                  aria-label={caption ? `Search ${caption}` : 'Search table rows'}
+                  value={globalFilter}
+                  onChange={(event) => {
+                    setGlobalFilter(event.target.value);
+                    setPagination((current) => ({ ...current, pageIndex: 0 }));
+                  }}
+                  placeholder={searchPlaceholder}
+                  className="h-9 w-full rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+            )}
+          </div>
+          {onExportCSV && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              leftIcon={<FileSpreadsheet className="h-4 w-4" aria-hidden />}
+              onClick={() =>
+                onExportCSV(
+                  table.getPrePaginationRowModel().rows.map((row) => row.original),
+                )
+              }
+            >
+              Export CSV
+            </Button>
           )}
         </div>
       )}
