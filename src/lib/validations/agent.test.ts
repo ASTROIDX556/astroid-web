@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   agentProviderConfigSchema,
+  agentConfigurationSchema,
   agentWizardSchema,
   createAgentSchema,
   providerModelOptions,
@@ -142,4 +143,60 @@ test('agentProviderConfigSchema rejects a model that belongs to another provider
 test('agentProviderConfigSchema does not turn a missing temperature into a value', () => {
   const { temperature: _omitted, ...withoutTemperature } = validSettings;
   assert.ok(messages(agentProviderConfigSchema.safeParse(withoutTemperature)).temperature);
+});
+
+const validAgentConfiguration = {
+  name: 'Treasury Rebalancer',
+  description: '',
+  provider: 'Nvidia',
+  model: 'meta/llama-3.1-405b-instruct',
+  endpointUrl: '',
+  mode: 'assisted',
+  temperature: 0.2,
+  monthlyBudget: 500,
+  dailySpendingLimit: 100,
+  capabilities: ['wallet.read'],
+} as const;
+
+test('agentConfigurationSchema accepts a valid configuration with scopes and limits', () => {
+  assert.equal(agentConfigurationSchema.safeParse(validAgentConfiguration).success, true);
+});
+
+test('agentConfigurationSchema enforces the provider model catalog and endpoint', () => {
+  const modelResult = messages(
+    agentConfigurationSchema.safeParse({
+      ...validAgentConfiguration,
+      model: 'claude-3-5-sonnet-latest',
+    }),
+  );
+  assert.ok(modelResult.model);
+
+  const endpointResult = messages(
+    agentConfigurationSchema.safeParse({
+      ...validAgentConfiguration,
+      provider: 'Custom',
+      model: 'my-model',
+    }),
+  );
+  assert.ok(endpointResult.endpointUrl);
+});
+
+test('agentConfigurationSchema keeps the daily limit within the monthly budget', () => {
+  const result = messages(
+    agentConfigurationSchema.safeParse({
+      ...validAgentConfiguration,
+      dailySpendingLimit: 501,
+    }),
+  );
+  assert.equal(result.dailySpendingLimit, 'Daily spending limit cannot exceed the monthly budget.');
+});
+
+test('agentConfigurationSchema requires at least one permission scope', () => {
+  const result = messages(
+    agentConfigurationSchema.safeParse({
+      ...validAgentConfiguration,
+      capabilities: [],
+    }),
+  );
+  assert.equal(result.capabilities, 'Grant at least one permission scope.');
 });

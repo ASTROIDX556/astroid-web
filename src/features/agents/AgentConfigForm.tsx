@@ -319,7 +319,6 @@ export function AgentConfigForm() {
                 id="agent-config-capabilities"
                 role="group"
                 aria-label="Permission scopes"
-                aria-invalid={Boolean(errors.capabilities)}
                 aria-describedby={
                   errors.capabilities ? 'agent-config-capabilities-error' : undefined
                 }
