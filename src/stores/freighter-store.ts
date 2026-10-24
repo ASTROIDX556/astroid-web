@@ -73,7 +73,7 @@ export function networkLabelForId(target: StellarNetworkId | null): string {
   return (target && STELLAR_NETWORKS[target]?.label) || 'Unknown';
 }
 
-interface FreighterWalletState {
+export interface FreighterWalletState {
   status: FreighterConnectionStatus;
   isInstalled: boolean;
   publicKey: string | null;
@@ -105,6 +105,15 @@ interface FreighterWalletState {
   requestSignature: (xdr: string, options?: { networkPassphrase?: string }) => Promise<string>;
   hydrate: () => Promise<void>;
 }
+
+/** Backward-compatible names retained for consumers of the previous wallet store API. */
+export type StellarWalletNetwork = StellarNetworkId;
+export type WalletState = FreighterWalletState;
+export type WalletActions = Pick<
+  FreighterWalletState,
+  'checkExtension' | 'connect' | 'disconnect' | 'refreshNetwork' | 'switchNetwork' |
+    'startWalletWatch' | 'stopWalletWatch' | 'adoptConnection' | 'requestSignature' | 'hydrate'
+>;
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
 
