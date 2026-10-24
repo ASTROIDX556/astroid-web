@@ -285,18 +285,14 @@ export function useStellarWalletBalance(
   // requirement applies to interactions that never reach the network.
   useEffect(() => {
     if (!enabled || isMockMode || balanceEnabled) return;
-    if (wallet.status !== 'locked' && wallet.status !== 'missing') return;
+    if (wallet.status !== 'missing' && wallet.status !== 'error') return;
     const key = `wallet:${wallet.status}`;
     if (lastToastKeyRef.current === key) return;
     lastToastKeyRef.current = key;
-    const message =
-      wallet.status === 'locked'
-        ? 'Freighter is locked.'
-        : 'Freighter is not installed.';
-    const hint =
-      wallet.status === 'locked'
-        ? 'Unlock the extension with your password to refresh balances.'
-        : 'Install the Freighter extension to load wallet balances.';
+    const message = wallet.status === 'missing' ? 'Freighter is not installed.' : 'Freighter could not connect.';
+    const hint = wallet.status === 'missing'
+      ? 'Install the Freighter extension to load wallet balances.'
+      : 'Reconnect Freighter to refresh balances.';
     toast.error(message, { description: hint, duration: 6_000, id: BALANCE_TOAST_ID });
   }, [enabled, balanceEnabled, wallet.status]);
 
