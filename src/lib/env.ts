@@ -5,6 +5,14 @@
  * screen renders realistic data without a backend. Set the variable to point the
  * typed API client at a live Astroid API.
  */
+
+/** Read an optional numeric env var, falling back when unset or invalid. */
+function readNumber(value: string | undefined, fallback: number): number {
+  if (value === undefined || value.trim() === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 export const env = {
   apiUrl: process.env.NEXT_PUBLIC_API_URL ?? '',
   apiVersion: process.env.NEXT_PUBLIC_API_VERSION ?? '/api/v1',

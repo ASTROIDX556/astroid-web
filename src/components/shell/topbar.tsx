@@ -41,6 +41,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
 
   const activeOrgId = usePreferencesStore((s) => s.activeOrgId);
   const setActiveOrg = usePreferencesStore((s) => s.setActiveOrg);
+  const commandOpen = useCommandStore((s) => s.open);
   const openCommand = useCommandStore((s) => s.setOpen);
   const openAssistant = useAssistantStore((s) => s.setOpen);
   const walletStatus = useFreighterStore((state) => state.status);
@@ -179,6 +180,8 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
           )}
           aria-label="Open command palette"
           aria-haspopup="dialog"
+          aria-expanded={commandOpen}
+          aria-controls="command-palette"
         >
           <Search className="h-3.5 w-3.5" aria-hidden />
           <span>Search command…</span>
@@ -295,6 +298,8 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
             )}
             aria-label="Open command palette"
             aria-haspopup="dialog"
+            aria-expanded={commandOpen}
+            aria-controls="command-palette"
           >
             <Search className="h-5 w-5" aria-hidden />
           </button>

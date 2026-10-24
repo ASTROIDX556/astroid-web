@@ -498,3 +498,95 @@ export const agentConfigSchema = agentCreationSchema.extend({
 });
 
 export type AgentConfigFormValues = z.infer<typeof agentConfigSchema>;
+
+// ---------------------------------------------------------------------------
+// Agent configuration form extensions
+// ---------------------------------------------------------------------------
+
+export const AGENT_PERMISSION_SCOPES = [
+  'wallet.read',
+  'wallet.transfer',
+  'proposal.create',
+  'proposal.approve',
+  'budget.create',
+  'analytics.read',
+  'policy.manage',
+  'apikey.access',
+] as const;
+
+export type AgentPermissionScope = (typeof AGENT_PERMISSION_SCOPES)[number];
+
+export const PERMISSION_SCOPE_LABELS: Record<AgentPermissionScope, string> = {
+  'wallet.read': 'Read wallets',
+  'wallet.transfer': 'Transfer funds',
+  'proposal.create': 'Create proposals',
+  'proposal.approve': 'Approve proposals',
+  'budget.create': 'Manage budgets',
+  'analytics.read': 'Read analytics',
+  'policy.manage': 'Manage policies',
+  'apikey.access': 'Access API keys',
+};
+
+export const PERMISSION_SCOPE_DESCRIPTIONS: Record<AgentPermissionScope, string> = {
+  'wallet.read': 'View balances and transaction history.',
+  'wallet.transfer': 'Initiate governed Stellar transfers.',
+  'proposal.create': 'Draft proposals for human review.',
+  'proposal.approve': 'Approve or reject pending proposals.',
+  'budget.create': 'Allocate and reallocate budgets.',
+  'analytics.read': 'Query spend, risk, and treasury analytics.',
+  'policy.manage': 'Create and edit spending policies.',
+  'apikey.access': 'Read organization API keys and webhook config.',
+};
+
+export const AGENT_DAILY_LIMIT_MAX = 100_000;
+
+const agentConfigurationFields = agentConfigFields.extend({
+  description: z
+    .string()
+    .trim()
+    .max(
+      AGENT_DESCRIPTION_MAX_LENGTH,
+      `Description cannot exceed ${AGENT_DESCRIPTION_MAX_LENGTH} characters`,
+    )
+    .refine(
+      (value) => value.length === 0 || value.length >= 10,
+      'Description must be at least 10 characters when provided.',
+    ),
+  dailySpendingLimit: z
+    .number({
+      required_error: 'Daily spending limit is required.',
+      invalid_type_error: 'Daily spending limit must be a number.',
+    })
+    .positive('Daily spending limit must be greater than 0.')
+    .max(
+      AGENT_DAILY_LIMIT_MAX,
+      `Daily spending limit cannot exceed ${AGENT_DAILY_LIMIT_MAX.toLocaleString()} USDC.`,
+    ),
+  capabilities: z
+    .array(z.enum(AGENT_PERMISSION_SCOPES))
+    .min(1, 'Grant at least one permission scope.')
+    .max(AGENT_PERMISSION_SCOPES.length),
+});
+
+export const agentConfigurationSchema = agentConfigurationFields.superRefine((values, ctx) => {
+  requireProviderEndpoint(values, ctx);
+
+  const catalog = PROVIDER_MODELS[values.provider];
+  if (values.provider !== 'Custom' && catalog.length > 0 && !catalog.includes(values.model)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['model'],
+      message: `"${values.model}" is not part of the ${PROVIDER_LABELS[values.provider]} catalog.`,
+    });
+  }
+
+  if (values.dailySpendingLimit > values.monthlyBudget) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['dailySpendingLimit'],
+      message: 'Daily spending limit cannot exceed the monthly budget.',
+    });
+  }
+});
+
+export type AgentConfigurationValues = z.infer<typeof agentConfigurationSchema>;

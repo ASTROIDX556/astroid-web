@@ -24,6 +24,7 @@ export const queryKeys = {
   proposal: (id: string) => ['proposals', id] as const,
   memory: ['memory'] as const,
   memoryRecord: (id: string) => ['memory', id] as const,
+  auditEvents: ['audit', 'events'] as const,
   rates: ['rates'] as const,
   /** Live Stellar (Horizon) balance for a connected Freighter account. */
   stellarBalance: (publicKey: string, networkUrl: string) =>
