@@ -183,7 +183,8 @@ function Gauge({
   allocated,
   currency,
   history,
-}: BudgetMeterProps) {
+  onDrillDown,
+}: BudgetMeterProps & { onDrillDown?: (meter: BudgetMeterProps) => void }) {
   const safePercent = Math.min(100, Math.max(0, percent));
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
@@ -209,7 +210,18 @@ function Gauge({
   // Side-by-side while the grid is a single column; stacked once three
   // meters share a row (lg) so the details keep their full width.
   return (
-    <div className="rounded-card border border-border bg-surface-secondary/40 p-4">
+    <div
+      className="rounded-card border border-border bg-surface-secondary/40 p-4"
+      onClick={onDrillDown ? () => onDrillDown({ label, allocated, spent, currency, history }) : undefined}
+      role={onDrillDown ? 'button' : undefined}
+      tabIndex={onDrillDown ? 0 : undefined}
+      onKeyDown={onDrillDown ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onDrillDown({ label, allocated, spent, currency, history });
+        }
+      } : undefined}
+    >
       <div className="flex items-center gap-4 lg:flex-col lg:items-stretch">
         <div className="relative grid h-10 w-10 shrink-0 place-items-center">
           <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90" aria-hidden>
@@ -326,7 +338,13 @@ function Gauge({
   );
 }
 
-export function BudgetMeters({ budgets }: { budgets?: BudgetMeterProps[] }) {
+export function BudgetMeters({
+  budgets,
+  onDrillDown,
+}: {
+  budgets?: BudgetMeterProps[];
+  onDrillDown?: (meter: BudgetMeterProps) => void;
+}) {
   const baseBudgets = useMemo<BudgetMeterProps[]>(
     () =>
       budgets ?? [
@@ -366,6 +384,7 @@ export function BudgetMeters({ budgets }: { budgets?: BudgetMeterProps[] }) {
           currency={budget.currency ?? 'USDC'}
           percent={values[index] ?? 0}
           history={budget.history}
+          onDrillDown={onDrillDown}
         />
       ))}
     </div>
