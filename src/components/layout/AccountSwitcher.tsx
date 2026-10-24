@@ -34,7 +34,6 @@ export function AccountSwitcher() {
   const wallets = walletsQuery.data ?? EMPTY_WALLETS;
   const activePublicKey = useFreighterStore((state) => state.publicKey);
   const activeNetwork = useFreighterStore((state) => state.network);
-  const connectedNetwork = useFreighterStore((state) => state.connectedNetwork);
   const activeSource = useFreighterStore((state) => state.activeAccountSource);
   const selectedWalletId = useFreighterStore((state) => state.selectedWalletId);
   const connectedPublicKey = useFreighterStore((state) => state.connectedPublicKey);
@@ -91,7 +90,7 @@ export function AccountSwitcher() {
     if (items.length) items.push('separator');
     items.push({
       label: 'Freighter account',
-      description: `${truncateAddress(connectedPublicKey)} · ${connectedNetwork ?? activeNetwork ?? 'testnet'}`,
+      description: `${truncateAddress(connectedPublicKey)} · ${activeNetwork ?? 'testnet'}`,
       icon: activeSource === 'freighter' ? <Check className="h-4 w-4 text-gold" aria-hidden /> : <PlugZap className="h-4 w-4" aria-hidden />,
       trailing: (
         <span className="flex items-center gap-1.5">
