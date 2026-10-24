@@ -20,15 +20,8 @@ interface MobileNavProps {
 const DRAWER_FOCUS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
-/** Elements inside the panel that can hold focus while the trap is active. */
-const FOCUSABLE_SELECTOR =
-  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
 /** Matches the `lg` breakpoint, above which the drawer is replaced by the dock. */
 const DESKTOP_QUERY = '(min-width: 1024px)';
-
-/** The shell's standard ease — mirrors `ease-astroid` in the Tailwind config. */
-const EASE_ASTROID = [0.22, 1, 0.36, 1] as const;
 
 /**
  * Slide-in navigation for narrow viewports (mirrors the desktop command dock).
@@ -84,20 +77,6 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
     onEscape: onClose,
     initialFocusRef: closeButtonRef,
   });
-
-  const panelTransition: Transition = reduceMotion
-    ? { duration: 0 }
-    : { type: 'spring', stiffness: 420, damping: 38, mass: 0.9 };
-
-  const fadeTransition: Transition = {
-    duration: reduceMotion ? 0 : 0.2,
-    ease: EASE_ASTROID,
-  };
-
-  // Reduced motion gets a cross-fade in place rather than a slide.
-  const panelOffset = reduceMotion ? 0 : '-100%';
-
-  const handleLinkSelect = useCallback(() => onClose(), [onClose]);
 
   return (
     <AnimatePresence>
