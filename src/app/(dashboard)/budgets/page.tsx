@@ -19,7 +19,6 @@ import { PageTransition } from '@/components/ui/motion';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
-import { DepartmentBudgetConsumptionChart } from '@/features/budgets/DepartmentBudgetConsumptionChart';
 import { DepartmentBudgetChart } from '@/features/budgets/DepartmentBudgetChart';
 import { DepartmentBudgetBreakdown } from '@/features/budgets/DepartmentBudgetBreakdown';
 import { BudgetBreakdownChart } from '@/features/budgets/BudgetBreakdownChart';
