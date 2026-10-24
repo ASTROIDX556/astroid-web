@@ -9,6 +9,7 @@ import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { transactionStatus } from '@/lib/status';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
+import { buildTransactionSearchText } from './transactionFilters';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -98,7 +99,9 @@ export function TransactionTable({ transactions, className }: TransactionTablePr
       columns={columns}
       getRowId={(row) => row.id}
       searchable
-      searchPlaceholder="Search counterparty, purpose, or asset"
+      searchPlaceholder="Search recipient address, memo, counterparty, or asset"
+      enableMultiSort
+      getRowSearchText={buildTransactionSearchText}
       pageSize={8}
       className={className}
       caption="Transactions"
