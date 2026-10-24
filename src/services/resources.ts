@@ -1,4 +1,6 @@
 import { isMockMode } from '@/lib/env';
+import { mockTrustlineBalances } from '@/features/wallet/mock-data';
+import type { HorizonBalance } from '@/features/wallet/types';
 import { apiClient } from '@/services/client';
 import * as mock from '@/services/mock';
 import type {
@@ -105,6 +107,16 @@ export const resources = {
     resolve(
       mock.wallets.find((w) => w.id === id)?.balances ?? notFound('Balances'),
       () => one<AssetBalance[]>(`/wallets/${id}/balances`),
+    ),
+  /**
+   * Raw Horizon-shaped trustlines for the asset breakdown. Kept separate from
+   * `getWalletBalances` because it carries issuers, trustline limits, and
+   * authorization flags that the aggregated balance cards do not need.
+   */
+  getWalletTrustlines: (id: string): Promise<HorizonBalance[]> =>
+    resolve(
+      mockTrustlineBalances,
+      () => one<HorizonBalance[]>(`/wallets/${id}/trustlines`),
     ),
 
   // -- agents -------------------------------------------------------------

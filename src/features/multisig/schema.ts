@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { STELLAR_PUBLIC_KEY_PATTERN, validateStellarPublicKey } from '@/lib/stellar';
+
 /**
  * Zod contracts for the signer management forms.
  *
@@ -8,8 +10,11 @@ import { z } from 'zod';
  * proper `number`.
  */
 
-/** Ed25519 account IDs are base32: a leading `G` plus 55 more characters. */
-export const STELLAR_PUBLIC_KEY_REGEX = /^G[A-Z2-7]{55}$/;
+/**
+ * Ed25519 account IDs are base32: a leading `G` plus 55 more characters.
+ * Re-exported from `@/lib/stellar` so the shape lives in exactly one place.
+ */
+export const STELLAR_PUBLIC_KEY_REGEX = STELLAR_PUBLIC_KEY_PATTERN;
 
 /** Signer kinds an administrator may add — the master key is never added here. */
 export const ADDABLE_SIGNER_KINDS = ['co-signer', 'pre-auth', 'hash'] as const;
@@ -30,10 +35,15 @@ export const addSignerSchema = z.object({
   publicKey: z
     .string()
     .trim()
-    .regex(
-      STELLAR_PUBLIC_KEY_REGEX,
-      'Enter a valid Stellar public key (a G followed by 55 base32 characters)',
-    ),
+    .min(1, 'Enter a Stellar public key')
+    .superRefine((value, ctx) => {
+      // Shape *and* checksum — a transposed character in a pasted key is the
+      // failure mode that matters most when adding a signer to a live account.
+      const result = validateStellarPublicKey(value);
+      if (!result.valid) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: result.message });
+      }
+    }),
   weight: weightField(1, 'Weight must be at least 1'),
   kind: z.enum(ADDABLE_SIGNER_KINDS),
 });

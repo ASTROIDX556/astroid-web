@@ -27,6 +27,7 @@ import { FileSignature } from 'lucide-react';
 import { TransactionSigningModal } from '@/features/wallet/components/TransactionSigningModal';
 import { mockMultisigRequest } from '@/features/approvals/fixtures/multisig';
 import { ProposalAuditTrail } from '@/features/approvals/components/ProposalAuditTrail';
+import { ProposalTimeline } from '@/features/approvals/components/ProposalTimeline';
 
 const decisionMeta: Record<
   ApprovalDecision['decision'],
@@ -160,6 +161,9 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                     Approval chain — {approved} of {data.requiredApprovals} satisfied
                   </SectionLabel>
                   <ProposalAuditTrail events={data.approvals} />
+
+                  <SectionLabel>Multi-party signer timeline</SectionLabel>
+                  <ProposalTimeline threshold={mockMultisigRequest.threshold} />
                 </div>
 
                 {/* Detail rail */}

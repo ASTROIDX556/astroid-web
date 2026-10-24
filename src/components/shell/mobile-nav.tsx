@@ -20,7 +20,27 @@ interface MobileNavProps {
 const DRAWER_FOCUS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
-/** Slide-in navigation for narrow viewports (mirrors the desktop sidebar). */
+/** Elements inside the panel that can hold focus while the trap is active. */
+const FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+/** Matches the `lg` breakpoint, above which the drawer is replaced by the dock. */
+const DESKTOP_QUERY = '(min-width: 1024px)';
+
+/** The shell's standard ease — mirrors `ease-astroid` in the Tailwind config. */
+const EASE_ASTROID = [0.22, 1, 0.36, 1] as const;
+
+/**
+ * Slide-in navigation for narrow viewports (mirrors the desktop command dock).
+ *
+ * Framer Motion drives the open and close animation, and `AnimatePresence`
+ * keeps the panel out of the DOM entirely while closed — so an off-screen
+ * drawer can never put its links in the keyboard tab order. While open the
+ * drawer traps focus, closes on Escape, on backdrop click, and on selecting a
+ * link (including a link to the current route), locks body scroll, and returns
+ * focus to whatever opened it. Animation collapses to an instant state change
+ * when the viewer prefers reduced motion.
+ */
 export function MobileNav({ open, onClose }: MobileNavProps) {
   const pathname = usePathname();
   const panelRef = useRef<HTMLElement>(null);
@@ -31,11 +51,31 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   const compactNavigation = hydrated && sidebarCollapsed;
   const shouldReduceMotion = useReducedMotion();
 
-  // Dismiss whenever the route changes.
+  // Dismiss on route change — but not on first mount, where there is no
+  // navigation to react to.
+  const lastPathRef = useRef(pathname);
   useEffect(() => {
-    onClose();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+    if (lastPathRef.current !== pathname) {
+      lastPathRef.current = pathname;
+      onClose();
+    }
+  }, [pathname, onClose]);
+
+  // Growing past `lg` swaps the drawer for the dock; leaving it open there
+  // would trap focus in a panel the viewport no longer shows.
+  useEffect(() => {
+    if (!open || typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const query = window.matchMedia(DESKTOP_QUERY);
+    if (query.matches) {
+      onClose();
+      return undefined;
+    }
+    const onChange = (event: MediaQueryListEvent) => {
+      if (event.matches) onClose();
+    };
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, [open, onClose]);
 
   // Escape dismissal, focus trap, scroll lock, and trigger focus restoration.
   useFocusTrap({
@@ -44,6 +84,20 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
     onEscape: onClose,
     initialFocusRef: closeButtonRef,
   });
+
+  const panelTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : { type: 'spring', stiffness: 420, damping: 38, mass: 0.9 };
+
+  const fadeTransition: Transition = {
+    duration: reduceMotion ? 0 : 0.2,
+    ease: EASE_ASTROID,
+  };
+
+  // Reduced motion gets a cross-fade in place rather than a slide.
+  const panelOffset = reduceMotion ? 0 : '-100%';
+
+  const handleLinkSelect = useCallback(() => onClose(), [onClose]);
 
   return (
     <AnimatePresence>
