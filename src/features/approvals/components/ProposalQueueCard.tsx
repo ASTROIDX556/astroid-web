@@ -12,7 +12,6 @@ import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { proposalStatus } from '@/lib/status';
 import type { Proposal } from '@/types/domain';
 
-<<<<<<< HEAD
 import { ProposalApprovalConfirmDialog } from './ProposalApprovalConfirmDialog';
 import { SignatureStatusBadge } from './SignatureStatusBadge';
 import { ProposalActionBar } from './ProposalActionBar';
