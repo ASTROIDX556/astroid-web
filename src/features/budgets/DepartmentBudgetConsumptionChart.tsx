@@ -23,8 +23,8 @@ import {
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartTooltipShell, type TooltipPayloadItem } from '@/components/charts';
+import { utilizationPercent } from '@/components/charts/theme';
 import { formatCurrency, formatPercent } from '@/lib/format';
-import { budgetUtilizationPercent } from './BudgetAllocationChart';
 import { buildConsumptionHistory } from './components/BudgetAllocationDashboard';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
 import type { DepartmentBudget } from './types';
@@ -62,7 +62,7 @@ export function toBudgetConsumptionPoint(
   return {
     ...point,
     limit,
-    utilization: budgetUtilizationPercent(point.spent, limit),
+    utilization: utilizationPercent(point.spent, limit),
   };
 }
 
