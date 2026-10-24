@@ -243,6 +243,7 @@ export interface ApprovalQueueQueryState {
 }
 
 const QUERY_PARAM_STATUS = 'status';
+const QUERY_PARAM_QUERY = 'q';
 const QUERY_PARAM_AGENT = 'agent';
 const QUERY_PARAM_RISK = 'risk';
 const QUERY_PARAM_SIGNATURE = 'sig';
@@ -256,6 +257,7 @@ const QUERY_PARAM_DIR = 'dir';
  */
 export function parseApprovalQueueQuery(params: URLSearchParams): ApprovalQueueQueryState {
   const status = params.get(QUERY_PARAM_STATUS);
+  const query = params.get(QUERY_PARAM_QUERY);
   const agent = params.get(QUERY_PARAM_AGENT);
   const riskTier = params.get(QUERY_PARAM_RISK);
   const signature = params.get(QUERY_PARAM_SIGNATURE);
@@ -264,6 +266,7 @@ export function parseApprovalQueueQuery(params: URLSearchParams): ApprovalQueueQ
 
   return {
     filters: {
+      query: query?.trim() ?? '',
       status:
         status !== null && (status === 'all' || APPROVAL_STATUS_ORDER.includes(status as ProposalStatus))
           ? (status as ApprovalQueueFilters['status'])
