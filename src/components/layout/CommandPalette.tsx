@@ -95,7 +95,7 @@ export function CommandPalette() {
         document.activeElement instanceof HTMLElement &&
         !document.activeElement.closest('[cmdk-root]')
       ) {
-        previousActiveElement.current = document.activeElement;
+        previouslyFocusedRef.current = document.activeElement;
       }
 
       toggle();
