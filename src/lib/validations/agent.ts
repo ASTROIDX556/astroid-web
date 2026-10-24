@@ -236,6 +236,28 @@ const agentConfigFields = z.object({
     .min(1, 'Timeout must be at least 1 second')
     .max(600, 'Timeout cannot exceed 600 seconds')
     .optional(),
+  dailyBudget: z
+    .number({ invalid_type_error: 'Daily budget must be a number' })
+    .positive('Daily budget must be greater than 0')
+    .max(1_000_000, 'Daily budget cannot exceed 1,000,000 USDC')
+    .optional(),
+  maxSpendPerTransaction: z
+    .number({ invalid_type_error: 'Max spend must be a number' })
+    .positive('Max spend must be greater than 0')
+    .max(1_000_000, 'Max spend cannot exceed 1,000,000 USDC')
+    .optional(),
+  rateLimitPerMinute: z
+    .number({ invalid_type_error: 'Rate limit must be a number' })
+    .int('Rate limit must be a whole number')
+    .positive('Rate limit must be greater than 0')
+    .max(100_000, 'Rate limit is too large')
+    .optional(),
+  tokenThreshold: z
+    .number({ invalid_type_error: 'Token threshold must be a number' })
+    .int('Token threshold must be a whole number')
+    .min(1_000, 'Token threshold must be at least 1,000')
+    .max(10_000_000, 'Token threshold is too large')
+    .optional(),
 });
 
 /** Validates a full agent configuration before the agent is created. */
