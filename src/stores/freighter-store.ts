@@ -91,7 +91,7 @@ export interface FreighterWalletState {
   /** Re-reads the extension's active network + passphrase into state. */
   refreshNetwork: () => Promise<void>;
   /** Sets the expected network and re-syncs against the wallet. */
-  switchNetwork: (target: StellarNetworkId) => Promise<{ matched: boolean }>;
+  switchNetwork: (target: StellarNetworkId | 'mainnet') => Promise<{ matched: boolean } | boolean>;
   /** Subscribes to Freighter account/network change events (WatchWalletChanges). */
   startWalletWatch: () => void;
   stopWalletWatch: () => void;
@@ -102,6 +102,8 @@ export interface FreighterWalletState {
    * exactly like `disconnect()`.
    */
   adoptConnection: (publicKey: string | null) => void;
+  /** Compatibility setter retained for consumers of the original wallet API. */
+  updatePublicKey: (publicKey: string) => void;
   requestSignature: (xdr: string, options?: { networkPassphrase?: string }) => Promise<string>;
   hydrate: () => Promise<void>;
 }
@@ -291,12 +293,21 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   },
 
   switchNetwork: async (target) => {
-    set({ targetNetwork: target, isSwitching: true, error: null });
+    const legacyMainnet = target === 'mainnet';
+    if (legacyMainnet) {
+      if (get().status !== 'connected' || !get().publicKey) {
+        set({ error: 'Connect a Freighter wallet before switching networks.' });
+        return false;
+      }
+    }
+
+    const networkTarget: StellarNetworkId = legacyMainnet ? 'public' : target;
+    set({ targetNetwork: networkTarget, isSwitching: true, error: null });
     await get().refreshNetwork();
-    const expected = resolveExpectedPassphrase(target);
+    const expected = resolveExpectedPassphrase(networkTarget);
     const matched = get().networkPassphrase === expected;
     set({ isSwitching: false });
-    return { matched };
+    return legacyMainnet ? matched : { matched };
   },
 
   startWalletWatch: () => {
@@ -350,6 +361,13 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
       return;
     }
     if (get().status === 'connected' && get().publicKey === publicKey) return;
+    set({ status: 'connected', isInstalled: true, publicKey, error: null });
+  },
+
+  updatePublicKey: (publicKey) => {
+    if (!isValidStellarAddress(publicKey)) {
+      throw new Error('Invalid Stellar public key.');
+    }
     set({ status: 'connected', isInstalled: true, publicKey, error: null });
   },
 

@@ -263,6 +263,16 @@ const agentConfigFields = z.object({
 /** Validates a full agent configuration before the agent is created. */
 export const createAgentSchema = agentConfigFields.superRefine((values, ctx) => {
   requireProviderEndpoint(values, ctx);
+
+  const catalog = PROVIDER_MODELS[values.provider];
+  if (catalog.length > 0 && !catalog.includes(values.model)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['model'],
+      message: 'Select a model offered by the chosen provider.',
+    });
+  }
+
   // A single transaction can never be larger than the budget it draws from.
   if (
     typeof values.singleTransactionCap === 'number' &&
