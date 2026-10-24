@@ -7,7 +7,7 @@
  * tools parse them correctly.
  */
 
-import { downloadCsv, serializeCsv, type CsvValue } from '@/lib/csv';
+import { downloadCsv, type CsvValue, type CsvColumn } from '@/lib/csv';
 import {
   BUDGET_LEDGER_STATUS_LABELS,
   agentBudgetStatus,
@@ -70,8 +70,13 @@ export function buildBudgetLedgerRows(departments: DepartmentBudget[]): CsvValue
 
 /** Serialize + download the currently visible (filtered) budget data as CSV. */
 export function exportBudgetLedgerCsv(departments: DepartmentBudget[]): void {
-  downloadCsv({
-    filename: `astroid-department-budget-${new Date().toISOString().slice(0, 10)}`,
-    content: serializeCsv([...HEADERS], buildBudgetLedgerRows(departments)),
-  });
+  const columns: CsvColumn<CsvValue[]>[] = HEADERS.map((header, index) => ({
+    header,
+    value: (row) => row[index],
+  }));
+  downloadCsv(
+    buildBudgetLedgerRows(departments),
+    columns,
+    `astroid-department-budget-${new Date().toISOString().slice(0, 10)}`,
+  );
 }

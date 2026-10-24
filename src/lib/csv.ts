@@ -1,4 +1,5 @@
-export type CsvCell = string | number | boolean | null | undefined;
+export type CsvCell = string | number | boolean | Date | null | undefined;
+export type CsvValue = CsvCell;
 
 export interface CsvColumn<TData> {
   header: string;
@@ -6,7 +7,7 @@ export interface CsvColumn<TData> {
 }
 
 function escapeCsvCell(value: CsvCell): string {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+  return `"${String(value instanceof Date ? value.toISOString() : value ?? '').replace(/"/g, '""')}"`;
 }
 
 export function serializeCsv<TData>(
