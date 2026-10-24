@@ -46,7 +46,6 @@ const decisionMeta: Record<
 function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
   const {
     decision,
-    decidedAt,
     isProcessing,
     signatureSummary,
     isEligible,
@@ -97,7 +96,7 @@ function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
       {decision && (
         <span role="status" className="text-2xs text-foreground-secondary">
           You {decision} this proposal
-          {decidedAt ? ` · ${formatRelativeTime(decidedAt)}` : ''} · {signatureSummary}
+          · {signatureSummary}
         </span>
       )}
       {!isEligibilityResolved && !decision && (
