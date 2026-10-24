@@ -163,6 +163,7 @@ export const proposals: Proposal[] = [
     id: 'prop_2',
     organizationId: 'org_nova',
     transactionId: 'txn_5f88',
+    xdr: 'AAAAAgAAAAB6i0tPnXFdlBqOSAGCcFOFbLZWlUvJHrxJNfmB0kAYRAAAAGQCMYNlAAAAAQAAAAEAAAAAAAAAAAAAAABm1p0nAAAAAAAAAAEAAAAAAAAAAQAAAADXpEeXHkuvVR1yBqz1c8u3jXwSHRJIvhBQNjLPElsHzwAAAAFVU0RDAAAAADuZ0ZI0iUqQ8h4vBBTMEZuHU0DPbLYqL6DE1p9c1LcxAAAAAAdzWUAAAAAAAAAAAA==',
     title: 'Scale AI — safety eval labeling',
     description:
       'Atlas proposes 22,000 USDC to Scale AI for human labeling of the red-team evaluation dataset. Exceeds the 5,000 dual-approval threshold.',
