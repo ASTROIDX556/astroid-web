@@ -100,7 +100,6 @@ export function TransactionTable({ transactions, className }: TransactionTablePr
       getRowId={(row) => row.id}
       searchable
       searchPlaceholder="Search recipient address, memo, counterparty, or asset"
-      enableMultiSort
       getRowSearchText={buildTransactionSearchText}
       pageSize={8}
       className={className}
