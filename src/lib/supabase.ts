@@ -1,16 +1,5 @@
-import { createBrowserClient } from '@supabase/ssr';
-import { env, isSupabaseConfigured } from '@/lib/env';
-
-let client: ReturnType<typeof createBrowserClient> | null = null;
-
 /**
- * Lazily-created Supabase browser client, or `null` when no project URL/anon
- * key is configured. Callers must fall back to mock/polling behavior on `null`.
+ * @deprecated Use `getSupabaseBrowserClient` from `@/lib/supabase/client` instead.
+ * This file is kept for backward compatibility.
  */
-export function getSupabaseClient(): ReturnType<typeof createBrowserClient> | null {
-  if (!isSupabaseConfigured) return null;
-  if (!client) {
-    client = createBrowserClient(env.supabaseUrl, env.supabaseAnonKey);
-  }
-  return client;
-}
+export { getSupabaseBrowserClient as getSupabaseClient } from './supabase/client';

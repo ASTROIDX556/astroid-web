@@ -49,6 +49,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             gcTime: 5 * 60_000,
             retry: (failureCount, error) => isRetryableQueryError(error) && failureCount < 2,
             refetchOnWindowFocus: false,
+            refetchOnReconnect: true,
           },
           mutations: {
             retry: 0,

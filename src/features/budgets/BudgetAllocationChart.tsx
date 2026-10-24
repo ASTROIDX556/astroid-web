@@ -24,6 +24,7 @@ import {
   type BudgetStatus,
 } from '@/components/charts/theme';
 import { formatCurrency } from '@/lib/format';
+import { ChartTooltipShell, useMounted, ChartSkeleton, ChartEmptyState } from '@/components/charts/theme';
 
 export interface BudgetDepartmentData {
   id: string;
@@ -38,6 +39,7 @@ export interface BudgetAllocationChartProps {
   title?: string;
   description?: string;
   className?: string;
+  isLoading?: boolean;
 }
 
 const DEFAULT_BUDGET_DATA: BudgetDepartmentData[] = [
@@ -78,11 +80,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   const { status, color } = getThresholdColor(utilization);
 
   return (
-    <div
-      className="z-50 rounded-lg border border-border bg-surface-primary p-3 shadow-md text-xs space-y-1.5 min-w-[200px]"
-      style={{ borderColor: status !== 'normal' ? color : undefined }}
-    >
-      <p className="font-semibold text-foreground border-b border-border/60 pb-1">{data.department}</p>
+    <ChartTooltipShell label={data.department}>
       <div className="space-y-1">
         <div className="flex justify-between gap-4">
           <span className="text-foreground-secondary">Consumed:</span>
@@ -123,7 +121,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           <span>Budget Limit Exceeded!</span>
         </div>
       )}
-    </div>
+    </ChartTooltipShell>
   );
 };
 
@@ -142,13 +140,41 @@ export function BudgetAllocationChart({
   title = 'Department Budget Allocation & Consumption',
   description = 'Real-time expenditure monitoring with automated 80% & 100% capacity threshold alerts.',
   className = '',
+  isLoading = false,
 }: BudgetAllocationChartProps) {
   const [showTableView, setShowTableView] = useState<boolean>(false);
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
+  const mounted = useMounted();
 
   const warnings = useMemo(() => {
     return data.filter((d) => utilizationPercent(d.consumed, d.allocated) >= 80);
   }, [data]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className={`overflow-hidden ${className}`}>
+        <CardContent className="pt-6">
+          <ChartSkeleton height={320} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Empty state
+  if (!mounted || !data || data.length === 0) {
+    return (
+      <Card className={`overflow-hidden ${className}`}>
+        <CardContent className="pt-6">
+          <ChartEmptyState
+            height={320}
+            title="No budget data"
+            description="Configure department budgets to see allocation and consumption metrics."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={`overflow-hidden ${className}`}>

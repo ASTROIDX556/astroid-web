@@ -15,7 +15,7 @@ import {
   YAxis,
 } from 'recharts';
 import { ChartFrame, RESIZE_DEBOUNCE_MS } from '@/components/charts/chart-frame';
-import { AXIS_TICK, CHART_COLORS, CHART_SERIES } from '@/components/charts/theme';
+import { AXIS_TICK, CHART_COLORS, CHART_SERIES, ChartTooltipShell } from '@/components/charts/theme';
 import { formatCurrency, formatDashboardCurrency } from '@/lib/format';
 import type {
   AgentSpend,
@@ -32,6 +32,18 @@ const DANGER = CHART_COLORS.danger;
 
 export const CATEGORICAL = CHART_SERIES;
 
+export {
+  useMounted,
+  CHART_TOKENS,
+  axisTick,
+  ChartTooltipShell,
+  shortDate,
+  ChartSkeleton,
+  ChartEmptyState,
+  CHART_MARGINS,
+  formatChartCurrency,
+} from './theme';
+
 const axisTick = AXIS_TICK;
 
 export interface TooltipPayloadItem {
@@ -40,23 +52,6 @@ export interface TooltipPayloadItem {
   color?: string;
   dataKey?: string | number;
   payload?: Record<string, unknown>;
-}
-
-export function ChartTooltipShell({
-  label,
-  children,
-}: {
-  label?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="glass min-w-[160px] rounded-md px-3 py-2 text-xs shadow-soft-2">
-      {label != null && (
-        <p className="mb-1.5 font-medium text-foreground">{label}</p>
-      )}
-      <div className="flex flex-col gap-1">{children}</div>
-    </div>
-  );
 }
 
 function shortDate(value: string): string {

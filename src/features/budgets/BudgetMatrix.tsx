@@ -31,20 +31,19 @@ import {
   Cell,
 } from 'recharts';
 import { ChartFrame } from '@/components/charts/chart-frame';
-import { AXIS_TICK, chartToken } from '@/components/charts/theme';
+import { AXIS_TICK, CHART_COLORS, chartToken, ChartTooltipShell } from '@/components/charts/theme';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
 import type { DepartmentBudget, AgentAllocation } from './types';
-
 /** One categorical chart token per asset, so the colors follow the active theme. */
 const ASSET_COLORS: Record<string, string> = {
-  USDC: chartToken('chart-1'), // blue
-  XLM: chartToken('chart-4'), // yellow
-  ASTRO: chartToken('chart-7'), // violet
-  EURC: chartToken('chart-6'), // green
+  USDC: chartToken('chart-1'),
+  XLM: chartToken('chart-4'),
+  ASTRO: chartToken('chart-7'),
+  EURC: chartToken('chart-6'),
 };
 const DEFAULT_ASSET_COLOR = chartToken('chart-4');
 
@@ -289,23 +288,31 @@ export function BudgetMatrix() {
                 <XAxis dataKey="name" tick={AXIS_TICK} />
                 <YAxis tick={AXIS_TICK} unit="%" domain={[0, 100]} />
                 <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length && payload[0]) {
-                      const d = payload[0].payload;
-                      if (!d) return null;
-                      return (
-                        <div className="rounded-button border border-border bg-surface p-3 shadow-xl space-y-1 text-xs">
-                          <p className="font-bold text-foreground">{d.fullName}</p>
-                          <p className="text-foreground-secondary">
-                            Utilization: <span className="font-mono text-gold font-bold">{d.spendPercent}%</span>
-                          </p>
-                          <p className="text-foreground-muted">
-                            Spent: {formatCurrency(d.spent, d.asset)} / {formatCurrency(d.limit, d.asset)}
-                          </p>
+                  cursor={{ fill: CHART_COLORS.grid, fillOpacity: 0.3 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0]?.payload as typeof chartData[0] | undefined;
+                    if (!d) return null;
+                    return (
+                      <ChartTooltipShell label={label ? String(label) : d.fullName}>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-foreground-secondary">Utilization:</span>
+                          <span className="tabular font-bold text-gold">{d.spendPercent}%</span>
                         </div>
-                      );
-                    }
-                    return null;
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-foreground-secondary">Spent:</span>
+                          <span className="tabular font-medium text-foreground">
+                            {formatCurrency(d.spent, d.asset)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-foreground-secondary">Limit:</span>
+                          <span className="tabular font-medium text-foreground">
+                            {formatCurrency(d.limit, d.asset)}
+                          </span>
+                        </div>
+                      </ChartTooltipShell>
+                    );
                   }}
                 />
                 <Bar dataKey="spendPercent" radius={[6, 6, 0, 0]}>
