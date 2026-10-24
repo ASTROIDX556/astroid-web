@@ -7,6 +7,7 @@ export {
   type NotificationPreferences,
   type OrgId,
   type CashflowDisplay,
+  type DashboardCurrency,
 } from './preferences-store';
 export { useHydrated } from '@/hooks/use-hydrated';
 export { useFreighterStore, isValidStellarPublicKey } from './freighter-store';
