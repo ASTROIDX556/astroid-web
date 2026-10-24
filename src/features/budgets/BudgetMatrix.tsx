@@ -37,6 +37,14 @@ import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
+import {
+  EMPTY_BUDGET_LEDGER_FILTERS,
+  applyBudgetLedgerFilters,
+  isBudgetLedgerFilterActive,
+  type BudgetLedgerFilterState,
+} from './budgetLedgerFilters';
+import { exportBudgetLedgerCsv } from './budgetLedgerCsv';
+import { BudgetLedgerFilters, type BudgetAgentOption } from './BudgetLedgerFilters';
 import type { DepartmentBudget, AgentAllocation } from './types';
 /** One categorical chart token per asset, so the colors follow the active theme. */
 const ASSET_COLORS: Record<string, string> = {
@@ -55,12 +63,43 @@ export function BudgetMatrix() {
   ]);
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [activeChartMode, setActiveChartMode] = useState<'bar' | 'distribution'>('bar');
+  const [ledgerFilters, setLedgerFilters] = useState<BudgetLedgerFilterState>(EMPTY_BUDGET_LEDGER_FILTERS);
 
   // Filter department list
   const filteredData = useMemo(() => {
     if (departmentFilter === 'all') return data;
     return data.filter((d) => d.departmentCode === departmentFilter);
   }, [data, departmentFilter]);
+
+  // Advanced agent-level filters (date range / agent id / budget status)
+  const tableData = useMemo(
+    () => applyBudgetLedgerFilters(filteredData, ledgerFilters),
+    [filteredData, ledgerFilters],
+  );
+
+  const agentOptions = useMemo<BudgetAgentOption[]>(() => {
+    const seen = new Map<string, BudgetAgentOption>();
+    for (const dept of data) {
+      for (const agent of dept.agents) {
+        if (!seen.has(agent.agentId)) {
+          seen.set(agent.agentId, { agentId: agent.agentId, agentName: agent.agentName });
+        }
+      }
+    }
+    return [...seen.values()];
+  }, [data]);
+
+  const ledgerEntryCount = (departments: DepartmentBudget[]) =>
+    departments.reduce(
+      (sum, dept) =>
+        sum + dept.agents.reduce((acc, agent) => acc + Math.max(agent.ledger?.length ?? 0, 1), 0),
+      0,
+    );
+
+  const hasLedgerFilters = isBudgetLedgerFilterActive(ledgerFilters);
+
+  const handleLedgerFilterChange = (patch: Partial<BudgetLedgerFilterState>) =>
+    setLedgerFilters((current) => ({ ...current, ...patch }));
 
   // Chart data
   const chartData = useMemo(() => {
@@ -215,7 +254,7 @@ export function BudgetMatrix() {
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: tableData,
     columns,
     state: {
       expanded,
@@ -328,6 +367,18 @@ export function BudgetMatrix() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Advanced ledger filters + CSV export, directly above the budget table */}
+      <BudgetLedgerFilters
+        filters={ledgerFilters}
+        agentOptions={agentOptions}
+        hasActiveFilters={hasLedgerFilters}
+        totalEntryCount={ledgerEntryCount(filteredData)}
+        filteredEntryCount={ledgerEntryCount(tableData)}
+        onChange={handleLedgerFilterChange}
+        onClear={() => setLedgerFilters(EMPTY_BUDGET_LEDGER_FILTERS)}
+        onExportCSV={() => exportBudgetLedgerCsv(tableData)}
+      />
 
       {/* TanStack Department Table with Expandable Agent Rows */}
       <Card className="overflow-hidden border border-border">
