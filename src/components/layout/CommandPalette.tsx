@@ -22,6 +22,13 @@ import { useAssistantStore, useCommandStore } from '@/stores/ui-store';
 import { useThemeStore } from '@/stores/theme-store';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import {
+  isCommandShortcut,
+  restoreFocusToElement,
+  type CommandShortcutEvent,
+} from './commandPaletteUtils';
+
+export { isCommandShortcut, restoreFocusToElement, type CommandShortcutEvent };
 
 const GROUP_CLASS =
   '[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-2xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-foreground-muted';
@@ -76,13 +83,21 @@ export function CommandPalette() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
-      if (event.key.toLowerCase() !== 'k') return;
-      if (event.isComposing || event.repeat) return;
+      if (!isCommandShortcut(event)) return;
 
       // Claim the shortcut before the browser/address bar or page inputs can.
       event.preventDefault();
       event.stopPropagation();
+
+      if (
+        !useCommandStore.getState().open &&
+        typeof document !== 'undefined' &&
+        document.activeElement instanceof HTMLElement &&
+        !document.activeElement.closest('[cmdk-root]')
+      ) {
+        previousActiveElement.current = document.activeElement;
+      }
+
       toggle();
     };
 
@@ -128,19 +143,26 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
         if (!nextOpen) onClose();
       }}
       label="Search Astroid pages and entities"
+      aria-label="Search Astroid pages and entities"
       loop
       overlayClassName="fixed inset-0 z-[100] animate-fade-in bg-foreground/40 backdrop-blur-sm"
       contentClassName="fixed left-1/2 top-[12vh] z-[101] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 animate-fade-up overflow-hidden rounded-dialog border border-border bg-surface shadow-soft-3"
     >
       <div className="flex items-center gap-3 border-b border-border px-4">
-        <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden />
+        <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden="true" />
         <Command.Input
           autoFocus
           aria-label="Search pages, wallets, agents, policies and proposals"
           placeholder="Search pages, wallets, agents, policies, proposals…"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           className="h-14 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted"
         />
-        <kbd className="px-1.5 py-0.5 hidden shrink-0 rounded-xs border border-border bg-surface-secondary font-mono text-2xs text-foreground-muted sm:inline-block">
+        <kbd
+          aria-hidden="true"
+          className="px-1.5 py-0.5 hidden shrink-0 rounded-xs border border-border bg-surface-secondary font-mono text-2xs text-foreground-muted sm:inline-block"
+        >
           esc
         </kbd>
         <button
@@ -149,16 +171,20 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
           aria-label="Close command palette"
           className="rounded-sm p-1 text-foreground-secondary transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:hidden"
         >
-          <X className="h-4 w-4" aria-hidden />
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 
       <Command.List
         className="max-h-[min(60vh,32rem)] overflow-y-auto p-2"
-        aria-label="Command palette results"
+        aria-label="Command palette search results"
       >
-        <Command.Empty className="flex flex-col items-center gap-2 px-3 py-10 text-center">
-          <SearchX className="h-6 w-6 text-foreground-muted" aria-hidden />
+        <Command.Empty
+          role="status"
+          aria-live="polite"
+          className="flex flex-col items-center gap-2 px-3 py-10 text-center"
+        >
+          <SearchX className="h-6 w-6 text-foreground-muted" aria-hidden="true" />
           <p className="text-sm font-medium text-foreground">No results found</p>
           <p className="max-w-xs text-2xs text-foreground-secondary">
             Try a page name, a wallet, an agent, a policy, or a proposal title. You can
@@ -174,7 +200,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
               onClose();
               openAssistant(true);
             }}
-            icon={<Sparkles className="h-4 w-4 text-gold" aria-hidden />}
+            icon={<Sparkles className="h-4 w-4 text-gold" aria-hidden="true" />}
             label="Ask the AI assistant"
             description="Open the financial briefing assistant"
           />
@@ -187,9 +213,9 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
             }}
             icon={
               mode === 'dark' ? (
-                <Sun className="h-4 w-4 text-foreground-secondary" aria-hidden />
+                <Sun className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
               ) : (
-                <Moon className="h-4 w-4 text-foreground-secondary" aria-hidden />
+                <Moon className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
               )
             }
             label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
@@ -207,7 +233,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
                 keywords={['page', 'go to', item.href]}
                 onSelect={() => navigate(item.href)}
                 icon={
-                  <Icon className="h-4 w-4 text-foreground-secondary" aria-hidden />
+                  <Icon className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
                 }
                 label={item.label}
                 description={`${item.href} · navigate`}
@@ -266,7 +292,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
                   agent.role,
                 ]}
                 onSelect={() => navigate(`/agents/${agent.id}`)}
-                icon={<Bot className="h-4 w-4 text-foreground-secondary" aria-hidden />}
+                icon={<Bot className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />}
                 label={agent.name}
                 description={`${agent.role} agent · ${agent.status} · ${agent.model}`}
               />
@@ -287,7 +313,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
                 keywords={['policy', policy.name, policy.type, policy.description]}
                 onSelect={() => navigate(`/policies/${policy.id}`)}
                 icon={
-                  <Shield className="h-4 w-4 text-foreground-secondary" aria-hidden />
+                  <Shield className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
                 }
                 label={policy.name}
                 description={`${policy.type.replace(/_/g, ' ')} · ${
@@ -320,7 +346,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
                 icon={
                   <FileCheck2
                     className="h-4 w-4 text-foreground-secondary"
-                    aria-hidden
+                    aria-hidden="true"
                   />
                 }
                 label={proposal.title}
@@ -334,9 +360,12 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
         </Command.Group>
       </Command.List>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-2xs text-foreground-muted">
+      <div
+        className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-2xs text-foreground-muted"
+        aria-hidden="true"
+      >
         <span className="gap-1.5 inline-flex items-center">
-          <Wallet className="h-3 w-3" aria-hidden />
+          <Wallet className="h-3 w-3" aria-hidden="true" />
           Wallets, agents, policies and proposals are searchable by name and status.
         </span>
         <span className="inline-flex items-center gap-2">
@@ -377,7 +406,10 @@ function PaletteItem({
       aria-label={description ? `${label} — ${description}` : label}
       className={ITEM_CLASS}
     >
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-sm bg-surface-secondary">
+      <span
+        className="grid h-7 w-7 shrink-0 place-items-center rounded-sm bg-surface-secondary"
+        aria-hidden="true"
+      >
         {icon}
       </span>
       <span className="min-w-0 flex-1">
@@ -394,8 +426,14 @@ function PaletteItem({
 
 function LoadingItem({ label }: { label: string }) {
   return (
-    <Command.Item value={`__loading ${label}`} disabled className={ITEM_CLASS}>
-      <Loader2 className="h-4 w-4 animate-spin text-foreground-muted" aria-hidden />
+    <Command.Item
+      value={`__loading ${label}`}
+      disabled
+      role="status"
+      aria-live="polite"
+      className={ITEM_CLASS}
+    >
+      <Loader2 className="h-4 w-4 animate-spin text-foreground-muted" aria-hidden="true" />
       <span className="text-2xs text-foreground-muted">{label}</span>
     </Command.Item>
   );
@@ -406,6 +444,8 @@ function EmptyGroupItem({ label }: { label: string }) {
     <Command.Item
       value={`__empty ${label}`}
       disabled
+      role="option"
+      aria-disabled="true"
       className={cn(ITEM_CLASS, 'py-2')}
     >
       <span className="text-2xs text-foreground-muted">{label}</span>
