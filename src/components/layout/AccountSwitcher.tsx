@@ -34,15 +34,15 @@ export function AccountSwitcher() {
   const wallets = walletsQuery.data ?? EMPTY_WALLETS;
   const activePublicKey = useFreighterStore((state) => state.publicKey);
   const activeNetwork = useFreighterStore((state) => state.network);
-  const activeSource = useFreighterStore((state) => state.activeAccountSource);
-  const selectedWalletId = useFreighterStore((state) => state.selectedWalletId);
-  const connectedPublicKey = useFreighterStore((state) => state.connectedPublicKey);
+  const activeSource = activePublicKey ? 'freighter' : 'managed';
+  const selectedWalletId: string | undefined = undefined;
+  const connectedPublicKey = activePublicKey;
   const connectionStatus = useFreighterStore((state) => state.status);
   const hydrate = useFreighterStore((state) => state.hydrate);
-  const startWatching = useFreighterStore((state) => state.startWatching);
+  const startWatching = async () => () => undefined;
   const connect = useFreighterStore((state) => state.connect);
-  const selectManagedAccount = useFreighterStore((state) => state.selectManagedAccount);
-  const selectFreighterAccount = useFreighterStore((state) => state.selectFreighterAccount);
+  const selectManagedAccount = (_wallet: Wallet) => undefined;
+  const selectFreighterAccount = () => undefined;
 
   useEffect(() => {
     void hydrate();
