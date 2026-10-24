@@ -5,7 +5,6 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { cn } from '@/lib/cn';
-import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { Button } from './button';
 
 export interface DialogProps {
