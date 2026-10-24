@@ -14,7 +14,7 @@
 
 export type StellarWalletStatus = 'idle' | 'checking' | 'connected' | 'missing' | 'error';
 
-export type SharedConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+export type SharedConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'locked';
 
 /**
  * @param local - the widget's own status (its last attempt / validation)

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
+import { Toaster } from 'sonner';
 import { fontVariables } from '@/lib/fonts';
 import { AppProviders } from '@/providers';
 import { CursorProvider } from '@/components/effects/user-cursor';
@@ -86,6 +87,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppProviders>
           <CursorProvider>{children}</CursorProvider>
           <CommandPalette />
+          <Toaster
+            position="bottom-right"
+            theme="system"
+            toastOptions={{
+              classNames: {
+                toast: 'glass !rounded-md !border-border !text-foreground !shadow-soft-2 font-sans',
+                title: '!text-foreground',
+                description: '!text-foreground-secondary',
+                actionButton: '!bg-gold !text-gold-foreground',
+                cancelButton: '!bg-surface-secondary !text-foreground',
+              },
+            }}
+          />
         </AppProviders>
       </body>
     </html>

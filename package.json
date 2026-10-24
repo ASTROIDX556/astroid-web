@@ -16,6 +16,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test": "tsc -p tsconfig.test.json && node --test \".test-build/**/*.test.js\"",
+    "test:agents": "tsc --strict --target ES2022 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir node_modules/.cache/agent-schema-tests src/features/agents/schema.ts src/features/agents/schema.test.ts && node --test \"$PWD/node_modules/.cache/agent-schema-tests/features/agents/schema.test.js\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {

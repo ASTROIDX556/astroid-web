@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Sparkles, ChevronsUpDown, Check, Menu } from 'lucide-react';
+import { Search, Sparkles, ChevronsUpDown, Check, Menu, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Dropdown, type DropdownItem } from '@/components/ui/dropdown';
 import { Avatar } from '@/components/ui/avatar';
 import { NotificationCenter } from '@/components/NotificationCenter';
@@ -13,6 +15,7 @@ import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
 import { WalletNetworkSwitcher } from '@/features/network/WalletNetworkSwitcher';
 import { CircuitBreakerControl } from '@/features/security';
 import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
+import { useFreighterStore } from '@/stores/freighter-store';
 import { cn } from '@/lib/cn';
 
 /** Shared, brand-tinted focus ring for every top-bar control (WCAG AA). */
@@ -40,6 +43,52 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
   const setActiveOrg = usePreferencesStore((s) => s.setActiveOrg);
   const openCommand = useCommandStore((s) => s.setOpen);
   const openAssistant = useAssistantStore((s) => s.setOpen);
+  const walletStatus = useFreighterStore((state) => state.status);
+  const walletAddress = useFreighterStore((state) => state.publicKey);
+  const walletNetwork = useFreighterStore((state) => state.network);
+  const reconnectWallet = useFreighterStore((state) => state.connect);
+
+  useEffect(() => {
+    const walletStore = useFreighterStore;
+    const refreshWallet = () => void walletStore.getState().hydrate();
+    refreshWallet();
+
+    const interval = window.setInterval(refreshWallet, 5000);
+    window.addEventListener('focus', refreshWallet);
+    const unsubscribe = walletStore.subscribe((state, previousState) => {
+      if (previousState.status === 'connected' && state.status === 'locked') {
+        toast.warning('Freighter wallet locked', {
+          description: 'Unlock Freighter and reconnect to continue using Stellar features.',
+        });
+      } else if (previousState.status === 'connected' && state.status === 'disconnected') {
+        toast.warning('Freighter disconnected', {
+          description: 'Reconnect your wallet to continue using Stellar features.',
+        });
+      }
+
+      if (state.error && state.error !== previousState.error && state.status !== 'locked') {
+        toast.error('Freighter connection unavailable', { description: state.error });
+      }
+
+      if (
+        previousState.status === 'connected' &&
+        state.status === 'connected' &&
+        previousState.network &&
+        state.network &&
+        previousState.network !== state.network
+      ) {
+        toast.info('Stellar network changed', {
+          description: `Freighter is now connected to ${state.network}.`,
+        });
+      }
+    });
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshWallet);
+      unsubscribe();
+    };
+  }, []);
 
   const orgs = orgsQuery.data ?? [];
   const activeOrg = orgs.find((o) => o.id === activeOrgId) ?? orgs[0];
@@ -143,6 +192,52 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
 
         {/* Freighter wallet status + Stellar network switcher */}
         <WalletNetworkSwitcher />
+
+        {/* Freighter wallet connection and active Stellar network */}
+        <div
+          className="flex items-center gap-1.5 rounded-button border border-border bg-surface px-2 py-1.5 text-2xs sm:gap-2 sm:px-2.5"
+          aria-live="polite"
+          aria-label="Stellar wallet status"
+        >
+          <span
+            className={cn(
+              'h-2 w-2 shrink-0 rounded-full',
+              walletStatus === 'connected'
+                ? 'bg-success'
+                : walletStatus === 'connecting'
+                  ? 'bg-warning'
+                  : 'bg-danger',
+            )}
+            aria-hidden
+          />
+          <span className="max-w-24 truncate font-medium text-foreground">
+            {walletStatus === 'connected' && walletAddress
+              ? `${walletAddress.slice(0, 5)}…${walletAddress.slice(-4)}`
+              : walletStatus === 'locked'
+                ? 'Wallet locked'
+                : walletStatus === 'connecting'
+                  ? 'Connecting'
+                  : 'Disconnected'}
+          </span>
+          <span className="max-w-16 truncate border-l border-border pl-2 text-foreground-muted sm:max-w-20">
+            {walletNetwork ?? 'No network'}
+          </span>
+          {walletStatus !== 'connected' && (
+            <button
+              type="button"
+              onClick={() => void reconnectWallet()}
+              disabled={walletStatus === 'connecting'}
+              className={cn(
+                'grid h-7 w-7 shrink-0 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground disabled:cursor-wait disabled:opacity-50',
+                TOPBAR_FOCUS,
+              )}
+              aria-label="Reconnect Stellar wallet"
+              title="Reconnect Stellar wallet"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          )}
+        </div>
 
         {/* Stellar Network Health & RPC Latency Widget */}
         <NetworkHealthWidget />
