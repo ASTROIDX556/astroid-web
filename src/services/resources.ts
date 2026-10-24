@@ -31,6 +31,7 @@ import type {
   Wallet,
   Webhook,
 } from '@/types/domain';
+import type { AuditEvent } from '@/types/audit';
 
 /**
  * Resource layer.
@@ -111,6 +112,10 @@ export const resources = {
     ),
   getActivity: (): Promise<ActivityPoint[]> =>
     resolve(mock.activityData, () => list<ActivityPoint[]>('/analytics/activity')),
+
+  // -- audit log -----------------------------------------------------------
+  getAuditEvents: (): Promise<AuditEvent[]> =>
+    resolve(mock.MOCK_AUDIT_EVENTS, () => list<AuditEvent[]>('/audit/logs')),
 
   // -- ai assistant -------------------------------------------------------
   getBriefing: (): Promise<AiBriefing> =>

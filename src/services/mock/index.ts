@@ -4,3 +4,4 @@ export * from './memory';
 export * from './analytics';
 export * from './rates';
 export * from './stellar-account';
+export * from './audit';
