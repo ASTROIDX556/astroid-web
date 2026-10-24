@@ -17,6 +17,7 @@ import type { Proposal, ProposalStatus, RiskLevel } from '@/types/domain';
 
 /** `'all'` means "no constraint" for every dropdown filter. */
 export interface ApprovalQueueFilters {
+  query: string;
   status: 'all' | ProposalStatus;
   /** Matches `proposal.agentName`. */
   agent: 'all' | string;
@@ -44,6 +45,7 @@ export const APPROVAL_SIGNATURE_FILTER_IDS: Array<'all' | ApprovalSignatureFilte
 ];
 
 export const DEFAULT_APPROVAL_QUEUE_FILTERS: ApprovalQueueFilters = {
+  query: '',
   status: 'all',
   agent: 'all',
   riskTier: 'all',
@@ -112,6 +114,7 @@ export function approvalSignatureProgress(proposal: Proposal): ApprovalSignature
 
 export function countActiveApprovalQueueFilters(filters: ApprovalQueueFilters): number {
   return (
+    (filters.query.trim() ? 1 : 0) +
     (filters.status !== 'all' ? 1 : 0) +
     (filters.agent !== 'all' ? 1 : 0) +
     (filters.riskTier !== 'all' ? 1 : 0) +
@@ -123,6 +126,29 @@ export function matchesApprovalQueueFilters(
   proposal: Proposal,
   filters: ApprovalQueueFilters,
 ): boolean {
+  const queryTerms = filters.query
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[$,]/g, '')
+    .split(/\s+/)
+    .filter(Boolean);
+  if (queryTerms.length > 0) {
+    const searchableText = [
+      proposal.title,
+      proposal.description,
+      proposal.agentName,
+      proposal.counterparty,
+      proposal.transactionId,
+      proposal.asset,
+      proposal.amount,
+      proposal.proposerName,
+      proposal.proposerId,
+      ...proposal.approvals.flatMap((approval) => [approval.userName, approval.userId]),
+    ]
+      .join(' ')
+      .toLocaleLowerCase();
+    if (!queryTerms.every((term) => searchableText.includes(term))) return false;
+  }
   if (filters.status !== 'all' && proposal.status !== filters.status) return false;
   if (filters.agent !== 'all' && proposal.agentName !== filters.agent) return false;
   if (filters.riskTier !== 'all' && approvalRiskTier(proposal.riskScore) !== filters.riskTier) {
@@ -191,7 +217,8 @@ export function sortApprovalQueue(proposals: Proposal[], sort: ApprovalQueueSort
 
 export function collectApprovalStatusOptions(proposals: Proposal[]): ProposalStatus[] {
   const present = new Set(proposals.map((proposal) => proposal.status));
-  return APPROVAL_STATUS_ORDER.filter((status) => present.has(status));
+  const required = new Set<ProposalStatus>(['pending', 'approved', 'rejected']);
+  return APPROVAL_STATUS_ORDER.filter((status) => required.has(status) || present.has(status));
 }
 
 /** Distinct agent names in first-seen order. */
