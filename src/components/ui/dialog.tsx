@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { cn } from '@/lib/cn';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { Button } from './button';
 
 export interface DialogProps {
@@ -99,7 +100,10 @@ export function Dialog({
         <div className="flex items-start justify-between gap-4 p-6 pb-2">
           <div className="flex flex-col gap-1">
             {title && (
-              <h2 id={titleId} className="font-display text-xl font-semibold tracking-tight">
+              <h2
+                id={titleId}
+                className="font-display text-xl font-semibold tracking-tight"
+              >
                 {title}
               </h2>
             )}

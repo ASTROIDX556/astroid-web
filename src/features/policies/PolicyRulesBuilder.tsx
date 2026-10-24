@@ -10,6 +10,7 @@ import {
   ruleActionOptions,
   ruleFieldOptions,
   ruleOperatorOptions,
+  simulatePolicyRules,
   type PolicyRule,
   validateRule,
 } from './rulesSchema';
@@ -36,7 +37,8 @@ export function PolicyRulesBuilder() {
   const summary = useMemo(
     () =>
       rules.map(
-        (rule) => `If ${rule.field} ${rule.operator.replace(/_/g, ' ')} ${rule.value} Then ${rule.action.replace(/_/g, ' ')}`,
+        (rule) =>
+          `If ${rule.field} ${rule.operator.replace(/_/g, ' ')} ${rule.value} Then ${rule.action.replace(/_/g, ' ')}`,
       ),
     [rules],
   );
@@ -44,7 +46,9 @@ export function PolicyRulesBuilder() {
   const handleAddRule = () => {
     const result = validateRule(draft);
     if (!result.success) {
-      setError(result.error.issues[0]?.message ?? 'Please fill out the rule before adding it.');
+      setError(
+        result.error.issues[0]?.message ?? 'Please fill out the rule before adding it.',
+      );
       return;
     }
 
@@ -57,17 +61,21 @@ export function PolicyRulesBuilder() {
     setRules((current) => current.filter((_, ruleIndex) => ruleIndex !== index));
   };
 
-  const simulationResults = useMemo(
-    () => rules.map((rule) => {
-      if (rule.field !== 'Transaction Amount') return true;
-      const threshold = Number(rule.value);
-      if (!Number.isFinite(threshold)) return false;
-      if (rule.operator === 'greater_than') return simulationAmount > threshold;
-      if (rule.operator === 'less_than') return simulationAmount < threshold;
-      if (rule.operator === 'equals') return simulationAmount === threshold;
-      return true;
-    }),
+  const simulation = useMemo(
+    () =>
+      simulatePolicyRules(
+        { amount: simulationAmount, asset: 'XLM', destination: 'G...A1' },
+        rules,
+      ),
     [rules, simulationAmount],
+  );
+
+  const evaluationByIndex = useMemo(
+    () =>
+      new Map(
+        simulation.evaluations.map((evaluation) => [evaluation.index, evaluation]),
+      ),
+    [simulation],
   );
 
   return (
@@ -92,7 +100,12 @@ export function PolicyRulesBuilder() {
             <span>Field</span>
             <select
               value={draft.field}
-              onChange={(event) => setDraft((current) => ({ ...current, field: event.target.value as PolicyRule['field'] }))}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  field: event.target.value as PolicyRule['field'],
+                }))
+              }
               className="w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-gold focus:outline-none"
             >
               {ruleFieldOptions.map((field) => (
@@ -107,7 +120,12 @@ export function PolicyRulesBuilder() {
             <span>Operator</span>
             <select
               value={draft.operator}
-              onChange={(event) => setDraft((current) => ({ ...current, operator: event.target.value as PolicyRule['operator'] }))}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  operator: event.target.value as PolicyRule['operator'],
+                }))
+              }
               className="w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-gold focus:outline-none"
             >
               {ruleOperatorOptions.map((operator) => (
@@ -122,7 +140,9 @@ export function PolicyRulesBuilder() {
             <span>Value</span>
             <input
               value={draft.value}
-              onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, value: event.target.value }))
+              }
               className="w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-gold focus:outline-none"
               placeholder="e.g. 5000 or G...A1"
             />
@@ -132,7 +152,12 @@ export function PolicyRulesBuilder() {
             <span>Action</span>
             <select
               value={draft.action}
-              onChange={(event) => setDraft((current) => ({ ...current, action: event.target.value as PolicyRule['action'] }))}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  action: event.target.value as PolicyRule['action'],
+                }))
+              }
               className="w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-gold focus:outline-none"
             >
               {ruleActionOptions.map((action) => (
@@ -145,7 +170,13 @@ export function PolicyRulesBuilder() {
         </div>
 
         <div className="flex items-center justify-between gap-3">
-          <Button type="button" variant="gold" size="sm" leftIcon={<Plus className="h-4 w-4" aria-hidden />} onClick={handleAddRule}>
+          <Button
+            type="button"
+            variant="gold"
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" aria-hidden />}
+            onClick={handleAddRule}
+          >
             Add rule
           </Button>
           {error && <p className="text-xs text-danger">{error}</p>}
@@ -153,7 +184,10 @@ export function PolicyRulesBuilder() {
 
         <div className="space-y-3">
           {summary.map((sentence, index) => (
-            <div key={`${sentence}-${index}`} className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface-secondary/40 p-3">
+            <div
+              key={`${sentence}-${index}`}
+              className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface-secondary/40 p-3"
+            >
               <p className="text-sm text-foreground-secondary">{sentence}</p>
               <button
                 type="button"
@@ -167,13 +201,20 @@ export function PolicyRulesBuilder() {
           ))}
         </div>
 
-        <aside aria-label="Policy simulation" className="rounded-card border border-border bg-surface-secondary/40 p-4">
+        <aside
+          aria-label="Policy simulation"
+          className="rounded-card border border-border bg-surface-secondary/40 p-4"
+        >
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-foreground">Live simulator</h3>
-              <p className="text-xs text-foreground-muted">Test a transaction amount against the active rules.</p>
+              <p className="text-xs text-foreground-muted">
+                Test a transaction amount against the active rules.
+              </p>
             </div>
-            <output aria-live="polite" className="text-xs text-foreground-secondary">{simulationAmount} XLM</output>
+            <output aria-live="polite" className="text-xs text-foreground-secondary">
+              {simulationAmount} XLM
+            </output>
           </div>
           <label className="mt-3 block text-xs text-foreground-secondary">
             <span>Transaction amount</span>
@@ -189,11 +230,36 @@ export function PolicyRulesBuilder() {
             />
           </label>
           <div className="mt-3 space-y-2">
-            {rules.map((rule, index) => (
-              <div key={`simulation-${index}`} className={simulationResults[index] ? 'rounded border border-success/40 bg-success/10 p-2 text-xs text-success' : 'rounded border border-danger/40 bg-danger/10 p-2 text-xs text-danger'}>
-                {simulationResults[index] ? 'Pass' : 'Fail'}: {rule.field} {rule.operator.replace(/_/g, ' ')} {rule.value}
-              </div>
-            ))}
+            {rules.map((rule, index) => {
+              const evaluation = evaluationByIndex.get(index);
+              const matched = evaluation?.matched ?? false;
+              return (
+                <div
+                  key={`simulation-${index}`}
+                  className={
+                    matched
+                      ? 'rounded border border-danger/40 bg-danger/10 p-2 text-xs text-danger'
+                      : 'rounded border border-success/40 bg-success/10 p-2 text-xs text-success'
+                  }
+                >
+                  {matched ? 'Match' : 'Clear'}: {rule.field}{' '}
+                  {rule.operator.replace(/_/g, ' ')} {rule.value}
+                </div>
+              );
+            })}
+            <output
+              aria-live="polite"
+              className="block text-2xs text-foreground-secondary"
+            >
+              Predicted outcome:{' '}
+              <span className="font-medium text-foreground">
+                {simulation.outcome.replace(/_/g, ' ')}
+              </span>
+              {simulation.invalidRules.length > 0 &&
+                ` · ${simulation.invalidRules.length} invalid rule${
+                  simulation.invalidRules.length === 1 ? '' : 's'
+                } skipped`}
+            </output>
           </div>
         </aside>
       </CardContent>

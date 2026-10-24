@@ -19,9 +19,12 @@ import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/cn';
 import { useProposal } from '@/hooks/use-queries';
+import { useProposalApproval } from '@/hooks/useProposalApproval';
+import { ProposalApprovalConfirmDialog } from '@/features/approvals/components/ProposalApprovalConfirmDialog';
 import { proposalStatus } from '@/lib/status';
 import { formatCurrency, formatDateTime, formatRelativeTime } from '@/lib/format';
-import type { ApprovalDecision } from '@/types/domain';
+import type { ApprovalDecision, Proposal } from '@/types/domain';
+import type { LocalApprovalDecision } from '@/stores/proposal-approval-store';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { FileSignature } from 'lucide-react';
 import { TransactionSigningModal } from '@/features/wallet/components/TransactionSigningModal';
@@ -38,6 +41,101 @@ const decisionMeta: Record<
   delegated: { label: 'Delegated', className: 'text-info' },
   pending: { label: 'Awaiting', className: 'text-foreground-muted' },
 };
+
+/** Approve/reject controls wired to the guarded approval state machine. */
+function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
+  const {
+    decision,
+    decidedAt,
+    isProcessing,
+    signatureSummary,
+    isEligible,
+    isEligibilityResolved,
+  } = useProposalApproval(proposal);
+
+  const [pendingAction, setPendingAction] = useState<LocalApprovalDecision | null>(
+    null,
+  );
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const openConfirmation = (action: LocalApprovalDecision) => {
+    setPendingAction(action);
+    setConfirmOpen(true);
+  };
+
+  const closeConfirmation = () => {
+    setConfirmOpen(false);
+    setPendingAction(null);
+  };
+
+  const eligibilitySeparates = isEligibilityResolved && !isEligible && !decision;
+  const disabled = isProcessing || decision !== null || eligibilitySeparates;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button
+        variant="gold"
+        size="sm"
+        leftIcon={<Check className="h-4 w-4" aria-hidden />}
+        onClick={() => openConfirmation('approved')}
+        disabled={disabled}
+        aria-label={`Approve ${proposal.title}`}
+      >
+        {decision === 'approved' ? 'Approved' : 'Approve'}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        leftIcon={<X className="h-4 w-4" aria-hidden />}
+        onClick={() => openConfirmation('rejected')}
+        disabled={disabled}
+        aria-label={`Reject ${proposal.title}`}
+      >
+        {decision === 'rejected' ? 'Rejected' : 'Reject'}
+      </Button>
+
+      {decision && (
+        <span role="status" className="text-2xs text-foreground-secondary">
+          You {decision} this proposal
+          {decidedAt ? ` · ${formatRelativeTime(decidedAt)}` : ''} · {signatureSummary}
+        </span>
+      )}
+      {!isEligibilityResolved && !decision && (
+        <span
+          role="status"
+          aria-live="polite"
+          className="text-2xs text-foreground-secondary"
+        >
+          Checking approver eligibility…
+        </span>
+      )}
+      {eligibilitySeparates && (
+        <span role="status" className="text-2xs text-foreground-secondary">
+          Your account is not an approver on this proposal.
+        </span>
+      )}
+
+      <ProposalApprovalConfirmDialog
+        proposal={proposal}
+        action={pendingAction}
+        open={confirmOpen}
+        onClose={closeConfirmation}
+      />
+    </div>
+  );
+}
+
+/** Live "X of Y signatures collected" label for the approval chain. */
+function SignatureProgressLabel({ proposal }: { proposal: Proposal }) {
+  const { signatureSummary, isQuorumMet } = useProposalApproval(proposal);
+
+  return (
+    <SectionLabel>
+      Approval chain — {signatureSummary}
+      {isQuorumMet && ' · quorum met'}
+    </SectionLabel>
+  );
+}
 
 export default function ApprovalDetailPage({ params }: { params: { id: string } }) {
   const proposal = useProposal(params.id);
@@ -84,9 +182,6 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
       >
         {(data) => {
           const status = proposalStatus(data.status);
-          const approved = data.approvals.filter(
-            (a) => a.decision === 'approved',
-          ).length;
           const isPending = data.status === 'pending';
           const kindLabel = data.kind === 'multisig' ? 'MultiSig' : data.kind;
 
@@ -136,20 +231,7 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
                 </CardContent>
                 {isPending && (
                   <CardFooter className="relative">
-                    <Button
-                      variant="gold"
-                      size="sm"
-                      leftIcon={<Check className="h-4 w-4" />}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      leftIcon={<X className="h-4 w-4" />}
-                    >
-                      Reject
-                    </Button>
+                    <ApprovalDecisionActions proposal={data} />
                   </CardFooter>
                 )}
               </Card>
@@ -157,9 +239,7 @@ export default function ApprovalDetailPage({ params }: { params: { id: string } 
               <div className="grid gap-6 lg:grid-cols-3">
                 {/* Approval timeline */}
                 <div className="space-y-4 lg:col-span-2">
-                  <SectionLabel>
-                    Approval chain — {approved} of {data.requiredApprovals} satisfied
-                  </SectionLabel>
+                  <SignatureProgressLabel proposal={data} />
                   <ProposalAuditTrail events={data.approvals} />
 
                   <SectionLabel>Multi-party signer timeline</SectionLabel>
