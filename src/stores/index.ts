@@ -3,24 +3,19 @@ export type { ThemeMode } from './theme-store';
 export { useCommandStore, useAssistantStore } from './ui-store';
 export {
   usePreferencesStore,
-  type CashflowDisplay,
-  type DashboardCurrency,
   type DashboardDensity,
   type NotificationPreferences,
   type OrgId,
 } from './preferences-store';
 export { useHydrated } from '@/hooks/use-hydrated';
-export {
-  useFreighterStore,
-  isValidStellarPublicKey,
-  STELLAR_NETWORKS,
-  resolveExpectedPassphrase,
-  networkIdForPassphrase,
-  isNetworkMismatch,
-  networkLabelForId,
-  type FreighterConnectionStatus,
-  type StellarNetworkId,
-  type StellarNetworkDescriptor,
+export { useFreighterStore, isValidStellarPublicKey } from './freighter-store';
+export { useWalletStore } from '@/lib/useWalletStore';
+export type {
+  FreighterConnectionStatus,
+  FreighterWalletState,
+  StellarWalletNetwork,
+  WalletActions,
+  WalletState,
 } from './freighter-store';
 export { useCircuitBreakerStore } from './circuit-breaker-store';
 export type { CircuitBreakerStatus } from './circuit-breaker-store';

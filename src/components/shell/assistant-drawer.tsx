@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Sparkles, Send, ArrowUpRight } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import { useAssistantStore } from '@/stores/ui-store';
 import { useAssistantSeed, useBriefing } from '@/hooks/use-queries';
-import { Avatar } from '@/components/ui/avatar';
-import { PromptChips } from '@/features/ai/components/PromptChips';
 import { cn } from '@/lib/cn';
 import { env, isMockMode } from '@/lib/env';
 import type { ChatMessage } from '@/types/domain';
+import { FinancialBriefingPanel } from '@/features/ai/FinancialBriefingPanel';
 
 const defaultSuggestions = [
   {
@@ -26,9 +25,6 @@ const defaultSuggestions = [
 ];
 
 /** Shared, brand-tinted focus ring for drawer controls (WCAG AA). */
-const DRAWER_FOCUS =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
-
 /**
  * Slide-over AI assistant. Seeds from the mock conversation and the daily
  * briefing's suggested prompts. Composer is local-only (no backend in mock
@@ -43,12 +39,8 @@ export function AssistantDrawer() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const [seeded, setSeeded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Synchronous guard: state updates are async, so a double-click could
-  // otherwise enqueue two turns before the disabled UI re-renders.
-  const sendingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -95,10 +87,7 @@ export function AssistantDrawer() {
 
   const send = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || sendingRef.current) return;
-    sendingRef.current = true;
-    setSending(true);
-
+    if (!trimmed) return;
     const stamp = new Date().toISOString();
     const userMsg: ChatMessage = {
       id: `u-${Date.now()}`,
@@ -109,19 +98,19 @@ export function AssistantDrawer() {
     setMessages((prev) => [...prev, userMsg]);
     setDraft('');
 
-    try {
-      if (isMockMode) {
-        const mockReply: ChatMessage = {
-          id: `a-${Date.now()}`,
-          role: 'assistant',
-          content:
-            'I can help with that. In this preview the assistant is running in mock mode — set NEXT_PUBLIC_API_URL to connect to the live API.',
-          createdAt: stamp,
-        };
-        setMessages((prev) => [...prev, mockReply]);
-        return;
-      }
+    if (isMockMode) {
+      const mockReply: ChatMessage = {
+        id: `a-${Date.now()}`,
+        role: 'assistant',
+        content:
+          'I can help with that. In this preview the assistant is running in mock mode — set NEXT_PUBLIC_API_URL to connect to the live API.',
+        createdAt: stamp,
+      };
+      setMessages((prev) => [...prev, mockReply]);
+      return;
+    }
 
+    try {
       const res = await fetch(`${env.apiUrl}${env.apiVersion}/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,16 +137,7 @@ export function AssistantDrawer() {
           createdAt: new Date().toISOString(),
         },
       ]);
-    } finally {
-      sendingRef.current = false;
-      setSending(false);
     }
-  };
-
-  /** Populate the composer with a chip's full prompt, then submit it. */
-  const handlePromptSelect = (prompt: string) => {
-    setDraft(prompt);
-    void send(prompt);
   };
 
   const suggestions = useMemo(
@@ -202,120 +182,29 @@ export function AssistantDrawer() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className={cn(
-                'grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground',
-                DRAWER_FOCUS,
-              )}
+              className="grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label="Close assistant"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
           </header>
 
-          <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-5">
+          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
             {messages.length === 0 && (
-              <div className="rounded-card border border-dashed border-border bg-surface-secondary/40 p-4 text-sm leading-relaxed text-foreground-secondary">
+              <div className="mx-5 mt-5 rounded-card border border-dashed border-border bg-surface-secondary/40 p-4 text-sm leading-relaxed text-foreground-secondary">
                 Ask for a treasury summary, a budget-risk review, or a plain-English
                 explanation of a Stellar transfer.
               </div>
             )}
 
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn('flex gap-3', msg.role === 'user' && 'flex-row-reverse')}
-              >
-                {msg.role === 'assistant' ? (
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-gold-soft font-mono text-xs text-gold">
-                    <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                  </span>
-                ) : (
-                  <Avatar name="You" size="xs" />
-                )}
-                <div
-                  className={cn(
-                    'p-3.5 max-w-[85%] rounded-card text-sm leading-relaxed',
-                    msg.role === 'user'
-                      ? 'bg-accent-gradient font-medium text-background-secondary shadow-sm'
-                      : 'border border-border bg-surface-secondary/60 text-foreground',
-                  )}
-                >
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-
-            {suggestions.length > 0 && (
-              <div className="space-y-2.5 pt-2">
-                <p className="text-2xs font-semibold uppercase tracking-wider text-foreground-muted">
-                  Suggested Actions
-                </p>
-                <div className="flex flex-col gap-2">
-                  {suggestions.map((s) => (
-                    <button
-                      key={s.label}
-                      type="button"
-                      onClick={() => send(s.prompt)}
-                      className={cn(
-                        'group flex items-center justify-between gap-2 rounded-button border border-border bg-surface p-3 text-left text-xs text-foreground-secondary transition-all duration-fast hover:border-gold hover:text-foreground',
-                        DRAWER_FOCUS,
-                      )}
-                    >
-                      <span className="truncate">{s.label}</span>
-                      <ArrowUpRight
-                        className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                        aria-hidden
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <form
-            className="shrink-0 border-t border-border bg-surface-secondary/30 p-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void send(draft);
-            }}
-          >
-            <PromptChips
-              className="mb-3"
-              onSelect={handlePromptSelect}
-              disabled={sending}
-              busy={sending}
+            <FinancialBriefingPanel
+              messages={messages}
+              draft={draft}
+              suggestions={suggestions}
+              onDraftChange={setDraft}
+              onSend={send}
             />
-            <div className="flex items-end gap-2 rounded-button border border-border bg-surface px-3 py-2 transition-colors focus-within:border-gold focus-within:ring-1 focus-within:ring-gold">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    void send(draft);
-                  }
-                }}
-                rows={1}
-                disabled={sending}
-                placeholder={
-                  sending ? 'Assistant is responding…' : 'Ask about spend, policies...'
-                }
-                className="max-h-32 py-1.5 flex-1 resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed disabled:opacity-60"
-              />
-              <button
-                type="submit"
-                disabled={!draft.trim() || sending}
-                className={cn(
-                  'grid h-8 w-8 shrink-0 place-items-center rounded-button bg-accent-gradient font-semibold text-background-secondary transition-opacity duration-fast disabled:opacity-40',
-                  DRAWER_FOCUS,
-                )}
-                aria-label="Send message"
-              >
-                <Send className="h-4 w-4" aria-hidden />
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
       </div>
     </>
