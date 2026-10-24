@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/cn';
 import { ChartTooltipShell, type TooltipPayloadItem } from '@/components/charts';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 
@@ -46,6 +47,13 @@ const STATE_COLORS: Record<BudgetMeterState, string> = {
   normal: 'rgb(var(--success))',
   warning: 'rgb(var(--warning))',
   critical: 'rgb(var(--danger))',
+};
+
+/** Gauge stroke utilities for the same tokens, so the SVG follows the theme. */
+const STATE_STROKE: Record<BudgetMeterState, string> = {
+  normal: 'stroke-success',
+  warning: 'stroke-warning',
+  critical: 'stroke-danger',
 };
 
 const STATE_RING: Record<BudgetMeterState, string> = {
@@ -116,7 +124,7 @@ function BudgetSparkline({
 
   return (
     <div
-      className="h-12 w-full"
+      className="h-8 w-full"
       role="img"
       aria-label={`${label} — 14-day spend velocity sparkline`}
     >
@@ -198,20 +206,19 @@ function Gauge({
     return total / series.length;
   }, [series]);
 
-  const stroke = STATE_COLORS[state];
-  const track = 'rgb(var(--border))';
-
+  // Side-by-side while the grid is a single column; stacked once three
+  // meters share a row (lg) so the details keep their full width.
   return (
     <div className="rounded-card border border-border bg-surface-secondary/40 p-4">
-      <div className="flex items-center gap-4">
-        <div className="h-24 w-24 relative grid shrink-0 place-items-center">
-          <svg viewBox="0 0 140 140" className="h-24 w-24 -rotate-90" aria-hidden>
+      <div className="flex items-center gap-4 lg:flex-col lg:items-stretch">
+        <div className="relative grid h-10 w-10 shrink-0 place-items-center">
+          <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90" aria-hidden>
             <circle
               cx="70"
               cy="70"
               r={radius}
               fill="none"
-              stroke={track}
+              className="stroke-border"
               strokeWidth="10"
             />
             <circle
@@ -219,17 +226,16 @@ function Gauge({
               cy="70"
               r={radius}
               fill="none"
-              stroke={stroke}
               strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
-              className={state === 'critical' ? 'animate-pulse' : ''}
+              className={cn(STATE_STROKE[state], state === 'critical' && 'animate-pulse')}
             />
           </svg>
           <div className="absolute inset-0 grid place-items-center text-center">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-foreground-muted">
+              <p className="text-2xs font-medium uppercase tabular text-foreground-secondary">
                 {safePercent.toFixed(0)}%
               </p>
             </div>
@@ -262,18 +268,18 @@ function Gauge({
           </div>
 
           <div className="flex items-center justify-between text-xs text-foreground-secondary">
-            <span className="gap-1.5 inline-flex items-center">
-              <Wallet className="h-3.5 w-3.5" aria-hidden />
+            <span className="inline-flex items-center gap-1">
+              <Wallet className="h-4 w-4" aria-hidden />
               {formatCurrency(spent, resolvedCurrency, { compact: true })}
             </span>
-            <span className="gap-1.5 inline-flex items-center">
-              <CircleDollarSign className="h-3.5 w-3.5" aria-hidden />
+            <span className="inline-flex items-center gap-1">
+              <CircleDollarSign className="h-4 w-4" aria-hidden />
               {formatCurrency(allocated, resolvedCurrency, { compact: true })}
             </span>
           </div>
 
           <div className="flex items-center gap-2 text-2xs text-foreground-muted">
-            <span className={`inline-flex rounded-full px-2 py-1 ${STATE_RING[state]}`}>
+            <span className={cn('inline-flex rounded-full px-2 py-1', STATE_RING[state])}>
               {state === 'critical'
                 ? 'Over-allocated'
                 : state === 'warning'
@@ -282,7 +288,7 @@ function Gauge({
             </span>
             {state === 'critical' && (
               <span className="inline-flex items-center gap-1 text-danger">
-                <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+                <AlertTriangle className="h-4 w-4" aria-hidden />
                 Action required
               </span>
             )}
@@ -302,7 +308,7 @@ function Gauge({
           initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="h-12 mt-1 w-full"
+          className="mt-1 h-8 w-full"
         >
           {mounted ? (
             <BudgetSparkline
@@ -312,7 +318,7 @@ function Gauge({
               history={series}
             />
           ) : (
-            <div className="skeleton h-12 w-full rounded-sm" aria-hidden />
+            <div className="skeleton h-8 w-full rounded-sm" aria-hidden />
           )}
         </motion.div>
       </div>

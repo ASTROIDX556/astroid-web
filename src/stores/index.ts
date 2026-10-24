@@ -3,6 +3,8 @@ export type { ThemeMode } from './theme-store';
 export { useCommandStore, useAssistantStore } from './ui-store';
 export {
   usePreferencesStore,
+  type CashflowDisplay,
+  type DashboardCurrency,
   type DashboardDensity,
   type NotificationPreferences,
   type OrgId,

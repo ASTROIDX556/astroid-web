@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, type UseQueryResult } from '@tanstack/react-query';
+import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import { resources } from '@/services/resources';
 import type { HorizonBalance } from '@/features/wallet/types';
@@ -68,13 +68,35 @@ export const useWallet = (id: string): UseQueryResult<Wallet> =>
     enabled: Boolean(id),
   });
 
-/** Asset-level balances, fetched separately so the cards own their loading/error state. */
-export const useWalletBalances = (id: string): UseQueryResult<AssetBalance[]> =>
-  useQuery({
+export interface WalletBalancesQueryOptions {
+  /** Poll cadence in ms; `0` polls only on demand. Defaults to 30s. */
+  pollIntervalMs?: number;
+  /** How long a balances payload stays fresh. Defaults to 15s. */
+  staleTimeMs?: number;
+  /** Master switch for the query. Defaults to true. */
+  enabled?: boolean;
+}
+
+/**
+ * Asset-level balances, fetched separately so the cards own their loading/error
+ * state. Polls every 30s by default and keeps the previous payload while a
+ * refresh is in flight, so periodic updates never flash a skeleton.
+ */
+export const useWalletBalances = (
+  id: string,
+  options: WalletBalancesQueryOptions = {},
+): UseQueryResult<AssetBalance[]> => {
+  const { pollIntervalMs = 30_000, staleTimeMs = 15_000, enabled = true } = options;
+
+  return useQuery({
     queryKey: queryKeys.walletBalances(id),
     queryFn: () => resources.getWalletBalances(id),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && enabled,
+    staleTime: staleTimeMs,
+    refetchInterval: pollIntervalMs > 0 ? pollIntervalMs : false,
+    refetchOnWindowFocus: true,
   });
+};
 
 /** Horizon-shaped trustlines powering the multi-currency asset breakdown. */
 export const useWalletTrustlines = (id: string): UseQueryResult<HorizonBalance[]> =>

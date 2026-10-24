@@ -10,6 +10,8 @@ export const env = {
   apiVersion: process.env.NEXT_PUBLIC_API_VERSION ?? '/api/v1',
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+  /** Stellar Horizon node used for live account balance polling. */
+  horizonUrl: process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon.stellar.org',
 } as const;
 
 /** True when no API base is configured — the app serves mock data. */
