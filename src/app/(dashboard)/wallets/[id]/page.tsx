@@ -15,6 +15,7 @@ import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { XdrInspector } from '@/features/wallet/components/XdrInspector';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { WalletBalanceCards } from '@/features/wallet/components/WalletBalanceCards';
+import { AssetBreakdownWidget } from '@/features/wallet/components/AssetBreakdownWidget';
 import { WalletTransactionHistory } from '@/features/wallet/components/WalletTransactionHistory';
 import { StellarAccountSyncPanel } from '@/features/wallet/components/StellarAccountSyncPanel';
 
