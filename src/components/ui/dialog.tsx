@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { cn } from '@/lib/cn';
 import { Button } from './button';
 
@@ -22,16 +23,6 @@ const sizeClass = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
 } as const;
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-/** True for elements that can actually receive keyboard focus right now. */
-function isKeyboardFocusable(el: HTMLElement): boolean {
-  if (el.hasAttribute('disabled') || el.getAttribute('aria-hidden') === 'true') return false;
-  if (el instanceof HTMLInputElement && el.type === 'hidden') return false;
-  return el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0;
-}
 
 /**
  * Accessible modal dialog: portal, focus trap, Escape + overlay dismissal.
@@ -62,102 +53,27 @@ export function Dialog({
   className,
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLElement | null>(null);
-  const mounted = useRef(false);
   const titleId = useId();
   const descriptionId = useId();
 
-  // Keep the latest onClose in a ref so the trap effect below can depend on
-  // `open` alone. Consumers almost always pass a fresh inline arrow per
-  // render; re-running the effect on every render would re-capture
-  // `document.activeElement` (now inside the dialog), steal focus back to the
-  // panel mid-typing, and restore focus to a stale element on cleanup.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
   // Track mount separately from `open` so the portal target exists before the
   // first render that needs it (React portals require an existing DOM node).
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  // Re-render once mounted so an open dialog actually portals on the client.
-  const [, setMounted] = useState(false);
+  // Making this state (rather than a ref) also re-runs the focus trap once the
+  // panel is in the DOM, which matters when a dialog mounts already open.
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!open) return undefined;
-
-    // Captured exactly once per open transition: the element focused before
-    // the dialog appeared (its trigger).
-    triggerRef.current = document.activeElement as HTMLElement | null;
-
-    const getFocusables = () =>
-      Array.from(
-        panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [],
-      ).filter(isKeyboardFocusable);
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onCloseRef.current();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-
-      const panel = panelRef.current;
-      if (!panel) return;
-      const focusables = getFocusables();
-      if (focusables.length === 0) {
-        // Nothing focusable inside: keep focus pinned to the panel itself.
-        e.preventDefault();
-        panel.focus();
-        return;
-      }
-      const first = focusables[0]!;
-      const last = focusables[focusables.length - 1]!;
-      const active = document.activeElement;
-
-      if (!panel.contains(active)) {
-        // Focus drifted outside the dialog (clicked static text, moved via
-        // browser UI, opened on a page where focus was elsewhere). Pull it
-        // back in before the tab order can run over the background page.
-        e.preventDefault();
-        (e.shiftKey ? last : first).focus();
-      } else if (e.shiftKey && (active === first || active === panel)) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    panelRef.current?.focus();
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-      // Restore focus to the trigger on close, but only if it is still in
-      // the document (it may have unmounted with the panel that housed it).
-      const trigger = triggerRef.current;
-      triggerRef.current = null;
-      if (trigger && trigger !== document.body && document.contains(trigger)) {
-        trigger.focus();
-      }
-    };
-  }, [open]);
+  useFocusTrap({
+    active: open && mounted,
+    containerRef: panelRef,
+    onEscape: onClose,
+  });
 
   // `isClient` guards the SSR pass; `mounted` must already be true when `open`
   // is first set because the component is rendered inside a client tree.
-  if (!open || !mounted.current) return null;
+  if (!open || !mounted) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

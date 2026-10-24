@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { transactionStatus } from '@/lib/status';

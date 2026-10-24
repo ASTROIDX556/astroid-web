@@ -23,7 +23,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
@@ -31,13 +30,22 @@ import {
   Tooltip as RechartsTooltip,
   Cell,
 } from 'recharts';
+import { ChartFrame } from '@/components/charts/chart-frame';
+import { AXIS_TICK, CHART_COLORS, chartToken, ChartTooltipShell } from '@/components/charts/theme';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
 import type { DepartmentBudget, AgentAllocation } from './types';
-import { CHART_TOKENS, axisTick, ChartTooltipShell } from '@/components/charts/theme';
+/** One categorical chart token per asset, so the colors follow the active theme. */
+const ASSET_COLORS: Record<string, string> = {
+  USDC: chartToken('chart-1'),
+  XLM: chartToken('chart-4'),
+  ASTRO: chartToken('chart-7'),
+  EURC: chartToken('chart-6'),
+};
+const DEFAULT_ASSET_COLOR = chartToken('chart-4');
 
 export function BudgetMatrix() {
   const [data] = useState<DepartmentBudget[]>(MOCK_DEPARTMENT_BUDGETS);
@@ -269,24 +277,18 @@ export function BudgetMatrix() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartFrame
+              label="Spend utilization by department"
+              height="100%"
+              empty={chartData.length === 0}
+              emptyTitle="No department spend yet"
+              emptyDescription="Utilization per department appears here once budgets are in use."
+            >
               <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-                <XAxis
-                  dataKey="name"
-                  tick={{ ...axisTick, fontFamily: 'var(--font-sans)' }}
-                  axisLine={{ stroke: CHART_TOKENS.axis }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={axisTick}
-                  axisLine={false}
-                  tickLine={false}
-                  unit="%"
-                  domain={[0, 100]}
-                  tickFormatter={(v: number) => `${v}%`}
-                />
+                <XAxis dataKey="name" tick={AXIS_TICK} />
+                <YAxis tick={AXIS_TICK} unit="%" domain={[0, 100]} />
                 <RechartsTooltip
-                  cursor={{ fill: CHART_TOKENS.grid, fillOpacity: 0.3 }}
+                  cursor={{ fill: CHART_COLORS.grid, fillOpacity: 0.3 }}
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
                     const d = payload[0]?.payload as typeof chartData[0] | undefined;
@@ -317,12 +319,12 @@ export function BudgetMatrix() {
                   {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={CHART_TOKENS.assets[entry.asset as keyof typeof CHART_TOKENS.assets] ?? CHART_TOKENS.categorical[index % CHART_TOKENS.categorical.length]}
+                      fill={ASSET_COLORS[entry.asset] || DEFAULT_ASSET_COLOR}
                     />
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ChartFrame>
           </div>
         </CardContent>
       </Card>

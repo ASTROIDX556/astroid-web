@@ -1,5 +1,12 @@
 import { useMemo, useState } from 'react';
-import type { Policy, PolicyType } from '@/types/domain';
+import type { Policy, PolicyType } from '../../types/domain';
+import { useStellarFeeEstimate } from '../../hooks/useStellarFeeEstimate';
+import {
+  describeFeeSufficiencyViolation,
+  evaluateAmountBoundary,
+  evaluateFeeSufficiency,
+  parseAssetOperationList,
+} from './policySimulationEdgeCases';
 
 export type PolicyRuleType =
   | 'max_amount'
@@ -180,6 +187,15 @@ export function parseXdrPayload(value: string): ParsedOperation[] {
     return [{ type: 'No transaction', asset: 'XLM', amount: '0', source: 'manual input' }];
   }
 
+  // Plaintext operation lists (`payment,USD2,1500;...`) let operators exercise
+  // custom trustline asset codes end to end — the base64 heuristic below only
+  // ever emits XLM/USDC. Base64 XDR never contains commas, so this cannot
+  // shadow real XDR input.
+  const operationList = parseAssetOperationList(payload);
+  if (operationList !== null) {
+    return operationList;
+  }
+
   try {
     if (typeof window === 'undefined') {
       return [{ type: 'Simulated operation', asset: 'XLM', amount: '0', source: 'server preview' }];
@@ -207,9 +223,22 @@ export function parseXdrPayload(value: string): ParsedOperation[] {
   }
 }
 
+/**
+ * Optional fee context for a simulation run. All fields share one amount
+ * unit — stroops for XLM operations — so `amount + fee > balance` comparisons
+ * stay dimensionally honest.
+ */
+export interface PolicySimulationFeeContext {
+  availableBalance: number;
+  networkFee: number;
+  /** Unit suffix used in violation messages; defaults to `stroops`. */
+  unitLabel?: string;
+}
+
 export function evaluatePolicySimulation(
   payload: string,
   rule: PolicyRule,
+  feeContext?: PolicySimulationFeeContext,
 ): PolicySimulationResult {
   const parsedOperations = parseXdrPayload(payload);
   const violations: PolicySimulationViolation[] = [];
@@ -217,13 +246,23 @@ export function evaluatePolicySimulation(
   const firstAmount = Number(parsedOperations[0]?.amount ?? 0);
   const assetSet = new Set(parsedOperations.map((op) => op.asset));
 
-  if (rule.type === 'max_amount' && rule.threshold !== undefined && firstAmount > rule.threshold) {
-    violations.push({
-      ruleId: rule.id,
-      name: rule.name,
-      severity: 'danger',
-      message: `Transaction amount ${firstAmount} exceeds the configured cap of ${rule.threshold}.`,
-    });
+  if (rule.type === 'max_amount' && rule.threshold !== undefined) {
+    const boundary = evaluateAmountBoundary(firstAmount, rule.threshold);
+    if (boundary?.over) {
+      violations.push({
+        ruleId: rule.id,
+        name: rule.name,
+        severity: 'danger',
+        message: `Transaction amount ${firstAmount} exceeds the configured cap of ${rule.threshold}.`,
+      });
+    } else if (boundary?.atLimit) {
+      violations.push({
+        ruleId: rule.id,
+        name: rule.name,
+        severity: 'warning',
+        message: `Transaction amount ${firstAmount} is exactly at the configured cap of ${rule.threshold}. Boundary matches are flagged for explicit review instead of passing silently.`,
+      });
+    }
   }
 
   if (
@@ -252,6 +291,26 @@ export function evaluatePolicySimulation(
     });
   }
 
+  if (feeContext !== undefined) {
+    const feeResult = evaluateFeeSufficiency({
+      availableBalance: feeContext.availableBalance,
+      transactionAmount: firstAmount,
+      networkFee: feeContext.networkFee,
+    });
+    const feeViolation = describeFeeSufficiencyViolation(
+      feeResult,
+      feeContext.unitLabel ?? 'stroops',
+    );
+    if (feeViolation !== null) {
+      violations.push({
+        ruleId: 'fee_reserve',
+        name: 'Network fee reserve',
+        severity: feeViolation.severity,
+        message: feeViolation.message,
+      });
+    }
+  }
+
   const passed = violations.length === 0;
   return {
     passed,
@@ -262,6 +321,16 @@ export function evaluatePolicySimulation(
     parsedOperations,
   };
 }
+
+/**
+ * Small mock-mode balance (stroops) so the low-balance fee-depletion edge
+ * case from #245 is exercised out of the box even when the Horizon fee fetch
+ * is unavailable — `useStellarFeeEstimate` falls back to 100 stroops, and the
+ * default payload's first operation (1200 stroops) then leaves a sub-one-fee
+ * reserve of 50, surfacing the "low fee reserve" warning. Callers can raise
+ * it via `setAvailableBalanceStroops` for manual checks.
+ */
+export const DEFAULT_SIMULATION_BALANCE_STROOPS = 1350;
 
 export function usePolicySimulation() {
   const defaultRule = defaultPolicyRules[0] ?? {
@@ -277,11 +346,30 @@ export function usePolicySimulation() {
   const [xdr, setXdr] = useState(
     'AAAABQAAAAAAABQ3Yf5fE1FUv0ZxK8n2D0Yy3i4iT1sE8wM1PqQ7Q7jZ4o7hD3nM2QmE0C5lB1sW1wC4j0sG2cW1lj6p9D8M5lVYQ9w==',
   );
+  const [availableBalanceStroops, setAvailableBalanceStroops] = useState<number>(
+    DEFAULT_SIMULATION_BALANCE_STROOPS,
+  );
+
+  // Live network fee from Horizon fee_stats; degrades to the base fee when
+  // the fetch is unavailable (mock mode / offline), so evaluation never blocks.
+  const feeEstimate = useStellarFeeEstimate();
 
   const activeRule =
     defaultPolicyRules.find((rule) => rule.id === activeRuleId) ?? defaultRule;
 
-  const result = useMemo(() => evaluatePolicySimulation(xdr, activeRule), [activeRule, xdr]);
+  const feeContext = useMemo<PolicySimulationFeeContext>(
+    () => ({
+      availableBalance: availableBalanceStroops,
+      networkFee: feeEstimate.suggestedFeeStroops,
+      unitLabel: 'stroops',
+    }),
+    [availableBalanceStroops, feeEstimate.suggestedFeeStroops],
+  );
+
+  const result = useMemo(
+    () => evaluatePolicySimulation(xdr, activeRule, feeContext),
+    [activeRule, xdr, feeContext],
+  );
   const parsedOperations = useMemo(() => parseXdrPayload(xdr), [xdr]);
 
   return {
@@ -293,6 +381,10 @@ export function usePolicySimulation() {
     setXdr,
     parsedOperations,
     result,
+    feeContext,
+    feeEstimate,
+    availableBalanceStroops,
+    setAvailableBalanceStroops,
     simulate: () => result,
   };
 }

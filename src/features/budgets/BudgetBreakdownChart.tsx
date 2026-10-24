@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ResponsiveContainer, Treemap, Tooltip } from 'recharts';
+import { Treemap, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Layers, Receipt, TrendingDown, TrendingUp } from 'lucide-react';
 
@@ -11,9 +11,11 @@ import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getThresholdColor } from '@/features/budgets/BudgetAllocationChart';
+import { ChartFrame } from '@/components/charts/chart-frame';
+import { BUDGET_STATUS_COLOR, CHART_COLORS } from '@/components/charts/theme';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
 import type { AgentAllocation, DepartmentBudget } from './types';
-import { CHART_TOKENS, useMounted, ChartSkeleton, ChartEmptyState, ChartTooltipShell } from '@/components/charts/theme';
+import { useMounted, ChartSkeleton, ChartEmptyState, ChartTooltipShell } from '@/components/charts/theme';
 
 export interface BudgetBreakdownChartProps {
   data?: DepartmentBudget[];
@@ -69,7 +71,7 @@ interface TreemapContentProps {
 function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapContentProps) {
   if (!payload || width <= 0 || height <= 0) return null;
   const pct = payload.allocated > 0 ? (payload.consumed / payload.allocated) * 100 : 0;
-  const { hex } = getThresholdColor(pct);
+  const { color } = getThresholdColor(pct);
   const showLabel = width > 70 && height > 32;
 
   return (
@@ -80,9 +82,9 @@ function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapCo
         width={width}
         height={height}
         style={{
-          fill: hex,
+          fill: color,
           fillOpacity: 0.85,
-          stroke: CHART_TOKENS.surface,
+          stroke: CHART_COLORS.surface,
           strokeWidth: 2,
           cursor: 'pointer',
           transition: 'fill-opacity 0.15s ease-in-out',
@@ -90,10 +92,10 @@ function TreemapCell({ x = 0, y = 0, width = 0, height = 0, payload }: TreemapCo
       />
       {showLabel && (
         <>
-          <text x={x + 8} y={y + 18} fontSize={11} fontWeight={600} fill="#ffffff">
+          <text x={x + 8} y={y + 18} fontSize={11} fontWeight={600} fill={CHART_COLORS.onFill}>
             {payload.name.length > (width / 7) ? `${payload.name.slice(0, Math.max(1, Math.floor(width / 7) - 1))}…` : payload.name}
           </text>
-          <text x={x + 8} y={y + 34} fontSize={10} fill="rgba(255,255,255,0.85)">
+          <text x={x + 8} y={y + 34} fontSize={10} fill={CHART_COLORS.onFill} fillOpacity={0.85}>
             {Math.round(pct)}% utilized
           </text>
         </>
@@ -237,12 +239,12 @@ export function BudgetBreakdownChart({
             role="region"
             aria-label={activeDept ? `${activeDept.departmentName} agent breakdown` : 'Department budget breakdown'}
           >
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartFrame label="Department budget treemap" height="100%">
               <Treemap
                 data={nodes}
                 dataKey="size"
                 nameKey="name"
-                stroke={CHART_TOKENS.surface}
+                stroke={CHART_COLORS.surface}
                 content={<TreemapCell />}
                 isAnimationActive={false}
                 onClick={(node: unknown) => {
@@ -257,22 +259,22 @@ export function BudgetBreakdownChart({
               >
                 <Tooltip content={<BreakdownTooltip />} />
               </Treemap>
-            </ResponsiveContainer>
+            </ChartFrame>
           </motion.div>
         </AnimatePresence>
 
         <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-border/60 pt-3 text-2xs text-foreground-secondary">
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_TOKENS.categorical[0] }} />
-            <span>{'Optimal (<80%)'}</span>
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: BUDGET_STATUS_COLOR.normal }} aria-hidden="true" />
+            <span>Optimal (&lt;80%)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_TOKENS.warning }} />
-            <span>{'Warning (80%\u201399%)'}</span>
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: BUDGET_STATUS_COLOR.warning }} aria-hidden="true" />
+            <span>Warning (80%–99%)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_TOKENS.danger }} />
-            <span>{'Over budget (\u2265100%)'}</span>
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: BUDGET_STATUS_COLOR.danger }} aria-hidden="true" />
+            <span>Over budget (&ge;100%)</span>
           </span>
         </div>
       </CardContent>
