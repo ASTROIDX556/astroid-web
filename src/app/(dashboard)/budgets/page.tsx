@@ -124,6 +124,7 @@ export default function BudgetsPage() {
                 <BudgetAllocationChart data={chartData} />
               </ErrorBoundary>
 
+              <DepartmentBudgetChart data={MOCK_DEPARTMENT_BUDGETS} />
               <ErrorBoundary section="Department budget breakdown">
                 <DepartmentBudgetBreakdown />
               </ErrorBoundary>

@@ -10,6 +10,7 @@ import {
 
 export type PolicyRuleType =
   | 'max_amount'
+  | 'min_amount'
   | 'allowed_assets'
   | 'multi_sig'
   | 'allowed_recipients'
@@ -63,7 +64,7 @@ function mapPolicyType(type: PolicyType): PolicyRuleType {
     case 'emergency_lock':
       return 'emergency_lock';
     case 'min_spend':
-      return 'max_amount'; // closest analog — lower-bound is evaluated inversely
+      return 'min_amount';
   }
 }
 
