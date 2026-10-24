@@ -47,9 +47,8 @@ function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
   const {
     decision,
     isProcessing,
-    signatureSummary,
-    isEligible,
-    isEligibilityResolved,
+    approvedWeight,
+    requiredApprovals,
   } = useProposalApproval(proposal);
 
   const [pendingAction, setPendingAction] = useState<LocalApprovalDecision | null>(
@@ -67,8 +66,7 @@ function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
     setPendingAction(null);
   };
 
-  const eligibilitySeparates = isEligibilityResolved && !isEligible && !decision;
-  const disabled = isProcessing || decision !== null || eligibilitySeparates;
+  const disabled = isProcessing || decision !== null;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -96,24 +94,9 @@ function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
       {decision && (
         <span role="status" className="text-2xs text-foreground-secondary">
           You {decision} this proposal
-          · {signatureSummary}
+          · {approvedWeight} of {requiredApprovals} signatures collected
         </span>
       )}
-      {!isEligibilityResolved && !decision && (
-        <span
-          role="status"
-          aria-live="polite"
-          className="text-2xs text-foreground-secondary"
-        >
-          Checking approver eligibility…
-        </span>
-      )}
-      {eligibilitySeparates && (
-        <span role="status" className="text-2xs text-foreground-secondary">
-          Your account is not an approver on this proposal.
-        </span>
-      )}
-
       <ProposalApprovalConfirmDialog
         proposal={proposal}
         action={pendingAction}
@@ -126,11 +109,11 @@ function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
 
 /** Live "X of Y signatures collected" label for the approval chain. */
 function SignatureProgressLabel({ proposal }: { proposal: Proposal }) {
-  const { signatureSummary, isQuorumMet } = useProposalApproval(proposal);
+  const { approvedWeight, requiredApprovals, isQuorumMet } = useProposalApproval(proposal);
 
   return (
     <SectionLabel>
-      Approval chain — {signatureSummary}
+      Approval chain — {approvedWeight} of {requiredApprovals} signatures collected
       {isQuorumMet && ' · quorum met'}
     </SectionLabel>
   );
