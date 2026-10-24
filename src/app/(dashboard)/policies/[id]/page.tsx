@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useReducer, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Gauge, Play, ShieldAlert, X } from 'lucide-react';
+import { ArrowLeft, Check, Gauge, Play, ShieldAlert, ShieldCheck, X } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
@@ -17,6 +17,11 @@ import { formatCurrency, formatNumber, formatDateTime } from '@/lib/format';
 import type { PolicySimulationResult } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { TransactionSimulator } from '@/features/policies/TransactionSimulator';
+import { PolicySimulationModal } from '@/features/policies/PolicySimulationModal';
+import {
+  initialPolicySimulationModalMountState,
+  policySimulationModalMountReducer,
+} from '@/features/policies/policySimulationModalMount';
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -40,6 +45,10 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
   const policy = usePolicy(params.id);
   const sim = usePolicySimulation();
   const [amount, setAmount] = useState(1000);
+  const [simPreview, dispatchSimPreview] = useReducer(
+    policySimulationModalMountReducer,
+    initialPolicySimulationModalMountState,
+  );
 
   return (
     <PageTransition className="space-y-8">
@@ -68,9 +77,24 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                 title={data.name}
                 description={data.description}
                 actions={
-                  <Badge variant={data.enabled ? 'success' : 'neutral'} dot>
-                    {data.enabled ? 'Enabled' : 'Disabled'}
-                  </Badge>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      leftIcon={<ShieldCheck className="h-4 w-4" aria-hidden />}
+                      onClick={() => dispatchSimPreview({ type: 'open' })}
+                    >
+                      Simulate before commit
+                    </Button>
+                    {simPreview.lastResult && !simPreview.isOpen && (
+                      <Badge variant={simPreview.lastResult.success ? 'success' : 'warning'} dot>
+                        Preview: {simPreview.lastResult.success ? 'Pass' : 'Blocked'}
+                      </Badge>
+                    )}
+                    <Badge variant={data.enabled ? 'success' : 'neutral'} dot>
+                      {data.enabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  </>
                 }
               />
 
@@ -162,6 +186,16 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
 
                 <ErrorBoundary section="Transaction simulator">
                   <TransactionSimulator />
+                </ErrorBoundary>
+
+                <ErrorBoundary section="Policy simulation preview">
+                  <PolicySimulationModal
+                    isOpen={simPreview.isOpen}
+                    onClose={() => dispatchSimPreview({ type: 'close' })}
+                    onSimulationComplete={(result) =>
+                      dispatchSimPreview({ type: 'simulation-complete', result })
+                    }
+                  />
                 </ErrorBoundary>
               </div>
             </div>

@@ -10,6 +10,8 @@ export const queryKeys = {
   wallets: ['wallets'] as const,
   wallet: (id: string) => ['wallets', id] as const,
   walletBalances: (id: string) => ['wallets', id, 'balances'] as const,
+  /** Live Stellar account snapshot (holdings + activity) keyed by public key. */
+  walletAccount: (publicKey: string) => ['wallet', publicKey] as const,
   agents: ['agents'] as const,
   agent: (id: string) => ['agents', id] as const,
   policies: ['policies'] as const,

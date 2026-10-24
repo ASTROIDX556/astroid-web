@@ -44,17 +44,6 @@ export default function TransactionsPage() {
               <TransactionAuditToolbar
                 totalRecordsCount={data.length}
                 filteredRecordsCount={data.length}
-                onExportCSV={() => {
-                  const headers = ['ID', 'Counterparty', 'Purpose', 'Agent', 'Amount', 'Asset', 'Status'];
-                  const rows = data.map((t) => [t.id, `"${t.counterparty}"`, `"${t.purpose}"`, `"${t.agentName || ''}"`, t.amount, t.asset, t.status]);
-                  const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `agent-transactions-${Date.now()}.csv`;
-                  a.click();
-                }}
               />
               <TransactionHistory transactions={data} />
             </div>

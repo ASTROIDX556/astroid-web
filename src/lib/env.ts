@@ -18,12 +18,8 @@ export const env = {
   apiVersion: process.env.NEXT_PUBLIC_API_VERSION ?? '/api/v1',
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
-  /** Base simulated network latency (ms) for mock requests. Defaults to 320. */
-  mockLatencyMs: readNumber(process.env.NEXT_PUBLIC_MOCK_LATENCY_MS, 320),
-  /** Random jitter (ms) added on top of the base mock latency. Defaults to 80. */
-  mockLatencyJitterMs: readNumber(process.env.NEXT_PUBLIC_MOCK_LATENCY_JITTER_MS, 80),
-  /** Probability in [0, 1] that a mock request fails transiently. Defaults to 0. */
-  mockFailureRate: Math.min(1, readNumber(process.env.NEXT_PUBLIC_MOCK_FAILURE_RATE, 0)),
+  /** Stellar Horizon node used for live account balance polling. */
+  horizonUrl: process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon.stellar.org',
 } as const;
 
 /** True when no API base is configured — the app serves mock data. */

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { Policy, PolicyType } from '@/types/domain';
-import { useStellarFeeEstimate } from '@/hooks/useStellarFeeEstimate';
+import type { Policy, PolicyType } from '../../types/domain';
+import { useStellarFeeEstimate } from '../../hooks/useStellarFeeEstimate';
 import {
   describeFeeSufficiencyViolation,
   evaluateAmountBoundary,

@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Sparkles } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Search, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { navSections } from '@/lib/nav';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
+import { usePreferencesStore } from '@/stores/preferences-store';
+import { useHydrated } from '@/hooks/use-hydrated';
 import { cn } from '@/lib/cn';
 
 /**
@@ -26,6 +28,10 @@ export function CommandDock() {
   const commandOpen = useCommandStore((s) => s.open);
   const openCommand = useCommandStore((s) => s.setOpen);
   const openAssistant = useAssistantStore((s) => s.setOpen);
+  const hydrated = useHydrated();
+  const sidebarCollapsed = usePreferencesStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = usePreferencesStore((s) => s.setSidebarCollapsed);
+  const compactNavigation = hydrated && sidebarCollapsed;
 
   return (
     <nav
@@ -42,6 +48,17 @@ export function CommandDock() {
           focusRing={DOCK_FOCUS}
           expanded={commandOpen}
           controls="command-palette"
+        />
+
+        <DockButton
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          label={compactNavigation ? 'Expand navigation' : 'Collapse navigation'}
+          icon={
+            compactNavigation
+              ? <PanelLeftOpen className="h-[18px] w-[18px]" aria-hidden />
+              : <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden />
+          }
+          focusRing={DOCK_FOCUS}
         />
 
         <Divider />
@@ -82,7 +99,7 @@ export function CommandDock() {
                       )}
                       aria-hidden
                     />
-                    {active && (
+                    {active && !compactNavigation && (
                       <motion.span
                         initial={{ opacity: 0, width: 0 }}
                         animate={{ opacity: 1, width: 'auto' }}

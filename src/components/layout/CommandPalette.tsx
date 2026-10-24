@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import {
@@ -17,7 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { navItems } from '@/lib/nav';
-import { useAgents, usePolicies, useProposals } from '@/hooks/use-queries';
+import { useAgents, usePolicies, useProposals, useWallets } from '@/hooks/use-queries';
 import { useAssistantStore, useCommandStore } from '@/stores/ui-store';
 import { useThemeStore } from '@/stores/theme-store';
 import { formatCurrency } from '@/lib/format';
@@ -34,8 +34,8 @@ const ITEM_CLASS =
  *
  * The shortcut listener is registered once at the app shell with capture so it
  * beats native browser search/inputs, then `preventDefault` stops the browser's
- * default address-bar shortcut. Results are grouped into Navigation, Agents,
- * Policies and Proposals, and cmdk handles arrow-key navigation + Enter.
+ * default address-bar shortcut. Results are grouped into Navigation, Wallets,
+ * Agents, Policies and Proposals, and cmdk handles arrow-key navigation + Enter.
  * Entity queries only mount while the dialog is open, so the palette adds no
  * background requests while it is closed.
  */
@@ -44,6 +44,35 @@ export function CommandPalette() {
   const setOpen = useCommandStore((s) => s.setOpen);
   const toggle = useCommandStore((s) => s.toggle);
   const pathname = usePathname();
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  // Capture the trigger the moment the palette opens — before the dialog
+  // mounts and moves focus into its input — so focus can be restored on close.
+  useEffect(() => {
+    const unsubscribe = useCommandStore.subscribe((state, previousState) => {
+      if (state.open && !previousState.open) {
+        previouslyFocusedRef.current =
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // Give focus back to whatever opened the palette once it closes.
+  useEffect(() => {
+    if (!open) return undefined;
+    return () => {
+      const previouslyFocused = previouslyFocusedRef.current;
+      previouslyFocusedRef.current = null;
+      if (
+        previouslyFocused &&
+        previouslyFocused !== document.body &&
+        previouslyFocused.isConnected
+      ) {
+        previouslyFocused.focus({ preventScroll: true });
+      }
+    };
+  }, [open]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -77,6 +106,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
   const agentsQuery = useAgents();
   const policiesQuery = usePolicies();
   const proposalsQuery = useProposals();
+  const walletsQuery = useWallets();
   const openAssistant = useAssistantStore((s) => s.setOpen);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
@@ -84,7 +114,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
   const agents = agentsQuery.data ?? [];
   const policies = policiesQuery.data ?? [];
   const proposals = proposalsQuery.data ?? [];
-  const [selectedLabel, setSelectedLabel] = useState('');
+  const wallets = walletsQuery.data ?? [];
 
   const navigate = (href: string) => {
     onClose();
@@ -113,8 +143,8 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
         <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden />
         <Command.Input
           autoFocus
-          aria-label="Search pages, agents, policies and proposals"
-          placeholder="Search pages, agents, policies, proposals…"
+          aria-label="Search pages, wallets, agents, policies and proposals"
+          placeholder="Search pages, wallets, agents, policies, proposals…"
           className="h-14 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted"
         />
         <kbd className="px-1.5 py-0.5 hidden shrink-0 rounded-xs border border-border bg-surface-secondary font-mono text-2xs text-foreground-muted sm:inline-block">
@@ -146,8 +176,8 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
           <SearchX className="h-6 w-6 text-foreground-muted" aria-hidden />
           <p className="text-sm font-medium text-foreground">No results found</p>
           <p className="max-w-xs text-2xs text-foreground-secondary">
-            Try a page name, an agent, a policy, or a proposal title. You can also clear
-            the search to browse everything.
+            Try a page name, a wallet, an agent, a policy, or a proposal title. You can
+            also clear the search to browse everything.
           </p>
         </Command.Empty>
 
@@ -199,6 +229,38 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
               />
             );
           })}
+        </Command.Group>
+
+        <Command.Group heading="Wallets" className={GROUP_CLASS}>
+          {walletsQuery.isPending ? (
+            <LoadingItem label="Loading wallets…" />
+          ) : wallets.length === 0 ? (
+            <EmptyGroupItem label="No wallets indexed yet" />
+          ) : (
+            wallets.map((wallet) => (
+              <PaletteItem
+                key={wallet.id}
+                value={`Wallet ${wallet.name} ${wallet.id} ${wallet.stellarAddress}`}
+                keywords={[
+                  'wallet',
+                  wallet.name,
+                  wallet.walletType,
+                  wallet.network,
+                  wallet.status,
+                ]}
+                onSelect={() => navigate(`/wallets/${wallet.id}`)}
+                icon={
+                  <Wallet className="h-4 w-4 text-foreground-secondary" aria-hidden />
+                }
+                label={wallet.name}
+                description={`${wallet.walletType} wallet · ${wallet.status} · ${wallet.network} · ${formatCurrency(
+                  wallet.totalUsdValue,
+                  'USDC',
+                  { compact: true },
+                )}`}
+              />
+            ))
+          )}
         </Command.Group>
 
         <Command.Group heading="Agents" className={GROUP_CLASS}>
@@ -290,7 +352,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-2xs text-foreground-muted">
         <span className="gap-1.5 inline-flex items-center">
           <Wallet className="h-3 w-3" aria-hidden />
-          Agents, policies and proposals are searchable by name and status.
+          Wallets, agents, policies and proposals are searchable by name and status.
         </span>
         <span className="inline-flex items-center gap-2">
           <kbd className="py-0.5 rounded-xs border border-border bg-surface-secondary px-1 font-mono">
