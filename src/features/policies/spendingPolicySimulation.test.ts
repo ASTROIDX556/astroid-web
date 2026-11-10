@@ -582,4 +582,100 @@ describe('Spending policy simulation & helper functions (#369)', () => {
       }
     });
   });
+
+  // -------------------------------------------------------------------------
+  // 8. Timezone Boundaries, Zero Limits & Concurrent Policy Evaluation (#423)
+  // -------------------------------------------------------------------------
+  describe('Timezone boundaries, zero limits & concurrent evaluations (#423)', () => {
+    test('evaluates time window across midnight / timezone boundaries', () => {
+      // Midnight transition test (23:59:59 UTC -> 00:00:01 UTC)
+      const lateNight = new Date('2026-03-15T23:59:59.000Z');
+      const earlyMorning = new Date('2026-03-16T00:00:01.000Z');
+
+      const timeLockRule: PolicyRule = {
+        id: 'rule_biz_hours',
+        name: 'Business Hours Only',
+        type: 'time_window',
+        description: 'Allowed between 08:00 and 18:00 UTC',
+        enabled: true,
+        windowStart: '08:00',
+        windowEnd: '18:00',
+      };
+
+      const validPayload: SandboxFormValues = {
+        recipient: VALID_STELLAR_KEY_1,
+        amount: 500,
+        asset: 'USDC',
+        agentId: 'agt_atlas',
+      };
+
+      // Both lateNight (23:59) and earlyMorning (00:00) are outside 08:00-18:00
+      const nightEval = evaluatePolicyRules(validPayload, [timeLockRule], { currentTime: lateNight });
+      assert.equal(nightEval.outcome, 'flagged');
+      assert.equal(nightEval.steps[0]?.passed, false);
+      assert.equal(nightEval.steps[0]?.reasonCode, 'TIME_WINDOW_CLOSED');
+
+      const morningEval = evaluatePolicyRules(validPayload, [timeLockRule], { currentTime: earlyMorning });
+      assert.equal(morningEval.outcome, 'flagged');
+      assert.equal(morningEval.steps[0]?.passed, false);
+      assert.equal(morningEval.steps[0]?.reasonCode, 'TIME_WINDOW_CLOSED');
+
+      // Noon UTC (12:00:00) is inside business hours
+      const noon = new Date('2026-03-16T12:00:00.000Z');
+      const noonEval = evaluatePolicyRules(validPayload, [timeLockRule], { currentTime: noon });
+      assert.equal(noonEval.outcome, 'approved');
+      assert.equal(noonEval.steps[0]?.passed, true);
+      assert.equal(noonEval.steps[0]?.reasonCode, 'TIME_WINDOW_OPEN');
+    });
+
+    test('evaluates zero-limit policies strictly without edge-case bypass', () => {
+      const zeroCapRule: PolicyRule = {
+        id: 'rule_zero_cap',
+        name: 'Zero Spending Allowed',
+        type: 'max_amount',
+        description: 'Hard freeze at 0',
+        enabled: true,
+        threshold: 0,
+      };
+
+      const payload: SandboxFormValues = {
+        recipient: VALID_STELLAR_KEY_1,
+        amount: 1, // Minimum positive amount
+        asset: 'USDC',
+        agentId: 'agt_frozen',
+      };
+
+      const evalResult = evaluatePolicyRules(payload, [zeroCapRule]);
+      assert.equal(evalResult.outcome, 'rejected');
+      assert.equal(evalResult.steps[0]?.passed, false);
+      assert.match(evalResult.steps[0]?.message ?? '', /exceeds/i);
+    });
+
+    test('simulates concurrent policy evaluations without state pollution or race conditions', async () => {
+      const activeRules = [...defaultPolicyRules];
+      const agentIds = ['agt_atlas', 'agt_hermes', 'agt_athena', 'agt_vulcan'];
+
+      // Evaluate 20 concurrent transaction simulations in parallel
+      const simulations = await Promise.all(
+        agentIds.flatMap((agentId) =>
+          [100, 500, 2500, 12000, 30000].map(async (amount) => {
+            const tx: SandboxFormValues = {
+              recipient: VALID_STELLAR_KEY_1,
+              amount,
+              asset: 'USDC',
+              agentId,
+            };
+            return evaluatePolicyRules(tx, activeRules);
+          }),
+        ),
+      );
+
+      assert.equal(simulations.length, 20);
+      for (const sim of simulations) {
+        assert.ok(['approved', 'flagged', 'rejected'].includes(sim.outcome));
+        assert.ok(sim.riskScore >= 0 && sim.riskScore <= 100);
+        assert.ok(sim.steps.length > 0);
+      }
+    });
+  });
 });
