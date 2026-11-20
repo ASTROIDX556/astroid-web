@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
 import {
+  commandSearchText,
+  filterCommandItems,
   isCommandShortcut,
   restoreFocusToElement,
   type CommandShortcutEvent,
@@ -156,7 +158,67 @@ describe('CommandPalette keyboard navigation & accessibility (#362)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 3. Focus restoration helper (restoreFocusToElement)
+  // 3. Command filtering logic (filterCommandItems)
+  // -------------------------------------------------------------------------
+  describe('Command filtering logic (filterCommandItems)', () => {
+    const commands = [
+      {
+        label: 'Switch to dark theme',
+        description: 'Toggle the app theme',
+        keywords: ['appearance', 'light'],
+      },
+      {
+        label: 'Ask the AI assistant',
+        description: 'Open the financial briefing assistant',
+        keywords: ['chat', 'briefing'],
+      },
+      { label: 'Overview', description: '/overview · navigate', keywords: ['page'] },
+    ];
+
+    test('an empty query keeps every command', () => {
+      assert.equal(filterCommandItems(commands, '').length, 3);
+      assert.equal(filterCommandItems(commands, '   ').length, 3);
+    });
+
+    test('matches labels case-insensitively', () => {
+      assert.deepEqual(
+        filterCommandItems(commands, 'DARK').map((item) => item.label),
+        ['Switch to dark theme'],
+      );
+    });
+
+    test('matches descriptions and keywords as well as labels', () => {
+      assert.deepEqual(
+        filterCommandItems(commands, 'appearance').map((item) => item.label),
+        ['Switch to dark theme'],
+      );
+      assert.deepEqual(
+        filterCommandItems(commands, '/overview').map((item) => item.label),
+        ['Overview'],
+      );
+    });
+
+    test('requires every whitespace-separated token to match', () => {
+      assert.deepEqual(
+        filterCommandItems(commands, 'theme toggle').map((item) => item.label),
+        ['Switch to dark theme'],
+      );
+      assert.equal(filterCommandItems(commands, 'theme overview').length, 0);
+    });
+
+    test('returns an empty list when nothing matches', () => {
+      assert.deepEqual(filterCommandItems(commands, 'nonexistent'), []);
+    });
+
+    test('builds searchable text from label, description, and keywords', () => {
+      const text = commandSearchText(commands[1]!);
+      assert.match(text, /ask the ai assistant/);
+      assert.match(text, /briefing/);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 4. Focus restoration helper (restoreFocusToElement)
   // -------------------------------------------------------------------------
   describe('Focus restoration helper (restoreFocusToElement)', () => {
     test('returns false for null element', () => {

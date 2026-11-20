@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ResponsiveContainer } from 'recharts';
 import { ChartIllustration } from '@/components/illustrations';
+import { ChartErrorBoundary } from '@/components/ui/chart-error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 
@@ -104,15 +105,21 @@ export function ChartFrame({
       role="group"
       aria-label={label}
     >
-      <ResponsiveContainer
-        width="100%"
-        height={aspect ? undefined : '100%'}
-        aspect={aspect}
-        minHeight={minHeight}
-        debounce={RESIZE_DEBOUNCE_MS}
+      <ChartErrorBoundary
+        compact
+        title={`${label} unavailable`}
+        description="This chart hit a rendering error. Retry to remount it without reloading the dashboard."
       >
-        {children}
-      </ResponsiveContainer>
+        <ResponsiveContainer
+          width="100%"
+          height={aspect ? undefined : '100%'}
+          aspect={aspect}
+          minHeight={minHeight}
+          debounce={RESIZE_DEBOUNCE_MS}
+        >
+          {children}
+        </ResponsiveContainer>
+      </ChartErrorBoundary>
     </div>
   );
 }
