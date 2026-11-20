@@ -426,6 +426,13 @@ export const providerModelOptions: Record<AgentProviderType, string[]> = {
 export const isHostedProvider = (provider: AgentProviderType): boolean =>
   provider !== 'ollama' && provider !== 'custom';
 
+const providerApiKeyPatterns: Partial<Record<AgentProviderType, RegExp>> = {
+  nvidia: /^nvapi-[A-Za-z0-9_-]{20,}$/,
+  openai: /^sk-(?:proj-)?[A-Za-z0-9_-]{20,}$/,
+  anthropic: /^sk-ant-[A-Za-z0-9_-]{20,}$/,
+  gemini: /^AIza[A-Za-z0-9_-]{20,}$/,
+};
+
 /** Validates the provider settings form on an agent's page. */
 export const agentUpdateSchema = z
   .object({
@@ -455,6 +462,16 @@ export const agentUpdateSchema = z
         path: ['apiKey'],
         message: 'An API key is required for this provider.',
       });
+    }
+    if (hosted && values.apiKey) {
+      const pattern = providerApiKeyPatterns[values.provider];
+      if (!pattern?.test(values.apiKey)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['apiKey'],
+          message: `Enter a valid ${values.provider} API key format.`,
+        });
+      }
     }
 
     if (!hosted && !values.endpointUrl) {

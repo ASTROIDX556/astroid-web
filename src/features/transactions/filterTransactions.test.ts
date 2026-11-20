@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Transaction } from '@/types/domain';
-import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
+import {
+  filterTransactions,
+  sortTransactions,
+  type TransactionFilterValues,
+} from './filterTransactions';
 
 const records: Transaction[] = [
   {
@@ -87,6 +91,17 @@ test('includes transactions on both selected date boundaries', () => {
   );
 });
 
+test('excludes transactions outside selected date boundaries', () => {
+  const filtered = filterTransactions(records, {
+    ...noFilters,
+    dateFrom: '2026-07-11',
+  });
+  assert.deepEqual(
+    filtered.map((transaction) => transaction.id),
+    ['txn-beta'],
+  );
+});
+
 test('returns an empty list when filters have no matches', () => {
   const filtered = filterTransactions(records, {
     ...noFilters,
@@ -94,4 +109,85 @@ test('returns an empty list when filters have no matches', () => {
   });
 
   assert.deepEqual(filtered, []);
+});
+
+test('matches partial memo text case-insensitively', () => {
+  const filtered = filterTransactions(records, {
+    ...noFilters,
+    query: 'services',
+  });
+  assert.deepEqual(filtered.map((transaction) => transaction.id), ['txn-alpha']);
+});
+
+test('matches asset codes case-insensitively', () => {
+  const filtered = filterTransactions(records, {
+    ...noFilters,
+    asset: 'usdc',
+  });
+  assert.deepEqual(filtered.map((transaction) => transaction.id), ['txn-alpha']);
+});
+
+test('handles null, undefined, empty, and whitespace queries safely', () => {
+  for (const query of [null, undefined, '', '   '] as const) {
+    const filtered = filterTransactions(records, { ...noFilters, query });
+    assert.equal(filtered.length, records.length);
+  }
+});
+
+test('returns no rows for an empty dataset', () => {
+  assert.deepEqual(
+    filterTransactions([], { ...noFilters, query: 'anything' }),
+    [],
+  );
+});
+
+test('sorts amounts ascending and descending without mutating the source', () => {
+  const originalIds = records.map((transaction) => transaction.id);
+  assert.deepEqual(
+    sortTransactions(records, { field: 'amount', direction: 'asc' }).map(
+      (transaction) => transaction.amount,
+    ),
+    [25, 50],
+  );
+  assert.deepEqual(
+    sortTransactions(records, { field: 'amount', direction: 'desc' }).map(
+      (transaction) => transaction.amount,
+    ),
+    [50, 25],
+  );
+  assert.deepEqual(records.map((transaction) => transaction.id), originalIds);
+});
+
+test('sorts timestamps ascending and descending', () => {
+  const ascending = sortTransactions(records, {
+    field: 'timestamp',
+    direction: 'asc',
+  });
+  assert.deepEqual(ascending.map((transaction) => transaction.id), [
+    'txn-alpha',
+    'txn-beta',
+  ]);
+
+  const descending = sortTransactions(records, {
+    field: 'timestamp',
+    direction: 'desc',
+  });
+  assert.deepEqual(descending.map((transaction) => transaction.id), [
+    'txn-beta',
+    'txn-alpha',
+  ]);
+});
+
+test('combines filters with sorting and handles missing optional fields', () => {
+  const filtered = filterTransactions(records, {
+    ...noFilters,
+    status: 'pending',
+  });
+  assert.deepEqual(
+    sortTransactions(filtered, { field: 'amount', direction: 'asc' }).map(
+      (transaction) => transaction.id,
+    ),
+    ['txn-beta'],
+  );
+  assert.equal(records[1]?.memo, undefined);
 });

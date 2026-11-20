@@ -1,7 +1,7 @@
 import type { Transaction, TransactionStatus } from '@/types/domain';
 
 export interface TransactionFilterValues {
-  query: string;
+  query: string | null | undefined;
   status: 'all' | TransactionStatus;
   asset: string;
   agentId: string;
@@ -13,7 +13,7 @@ export function filterTransactions(
   transactions: Transaction[],
   filters: TransactionFilterValues,
 ): Transaction[] {
-  const query = filters.query.trim().toLowerCase();
+  const query = (filters.query ?? '').trim().toLowerCase();
   const dateFrom = filters.dateFrom
     ? new Date(`${filters.dateFrom}T00:00:00`).getTime()
     : null;
@@ -23,7 +23,10 @@ export function filterTransactions(
 
   return transactions.filter((transaction) => {
     if (filters.status !== 'all' && transaction.status !== filters.status) return false;
-    if (filters.asset !== 'all' && transaction.asset !== filters.asset) return false;
+    if (
+      filters.asset !== 'all' &&
+      transaction.asset.toLowerCase() !== filters.asset.toLowerCase()
+    ) return false;
     if (filters.agentId !== 'all' && transaction.agentId !== filters.agentId)
       return false;
 
@@ -50,5 +53,31 @@ export function filterTransactions(
         .toLowerCase()
         .includes(query),
     );
+  });
+}
+
+export type TransactionSortField = 'amount' | 'timestamp';
+export type TransactionSortDirection = 'asc' | 'desc';
+
+export interface TransactionSort {
+  field: TransactionSortField;
+  direction: TransactionSortDirection;
+}
+
+/** Sort a copy of the transaction dataset without mutating the source array. */
+export function sortTransactions(
+  transactions: readonly Transaction[],
+  sort: TransactionSort,
+): Transaction[] {
+  const direction = sort.direction === 'desc' ? -1 : 1;
+  return [...transactions].sort((left, right) => {
+    if (sort.field === 'amount') {
+      return (left.amount - right.amount) * direction;
+    }
+    const leftTime = new Date(left.createdAt).getTime();
+    const rightTime = new Date(right.createdAt).getTime();
+    const leftSafe = Number.isFinite(leftTime) ? leftTime : 0;
+    const rightSafe = Number.isFinite(rightTime) ? rightTime : 0;
+    return (leftSafe - rightSafe) * direction;
   });
 }

@@ -75,7 +75,7 @@ export function TransactionHistory({
     const timeout = window.setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
       const values: Array<[string, string, string]> = [
-        ['q', filters.query.trim(), ''],
+        ['q', (filters.query ?? '').trim(), ''],
         ['status', filters.status, 'all'],
         ['asset', filters.asset, 'all'],
         ['agent', filters.agentId, 'all'],
