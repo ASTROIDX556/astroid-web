@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, ShieldCheck, Wallet } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
@@ -59,7 +59,9 @@ export function ProposalApprovalConfirmDialog({
   // Safe default focus target for a destructive confirmation.
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
+  const riskNoteId = useId();
   const isApprove = action === 'approved';
+  const isHighRisk = proposal.riskScore >= 70;
   const isRequestChanges = action === 'changes_requested';
   const busy = isProcessing || isSigning;
 
@@ -184,7 +186,7 @@ export function ProposalApprovalConfirmDialog({
                   ? `Request changes to ${proposal.title}`
                   : `Confirm rejection of ${proposal.title}`
             }
-            aria-describedby="proposal-confirm-risk-note"
+            aria-describedby={isHighRisk ? riskNoteId : undefined}
           >
             {isApprove
               ? 'Confirm approval'
@@ -202,7 +204,9 @@ export function ProposalApprovalConfirmDialog({
             ? isSigning
               ? 'Waiting for wallet signature.'
               : 'Recording your decision.'
-            : `Reviewing ${isApprove ? 'approval' : 'rejection'} of proposal ${proposal.title}.`}
+            : `Reviewing ${
+                isApprove ? 'approval' : isRequestChanges ? 'change request' : 'rejection'
+              } of proposal ${proposal.title}.`}
         </p>
 
         {/* Proposal summary ------------------------------------------------- */}
@@ -281,9 +285,9 @@ export function ProposalApprovalConfirmDialog({
           </div>
         )}
 
-        {proposal.riskScore >= 70 && (
+        {isHighRisk && (
           <p
-            id="proposal-confirm-risk-note"
+            id={riskNoteId}
             className={cn(
               'flex items-start gap-2 rounded-card border border-danger/30 bg-danger-soft/40 p-3 text-2xs text-danger',
             )}

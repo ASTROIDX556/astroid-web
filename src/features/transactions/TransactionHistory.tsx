@@ -19,39 +19,16 @@ import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { TransactionDetailDrawer } from './TransactionDetailDrawer';
 import { TransactionFilters } from './TransactionFilters';
-import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
+import {
+  filterTransactions,
+  parseTransactionFilterParams,
+  writeTransactionFilterParams,
+  type TransactionFilterValues,
+} from './filterTransactions';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
   onExportCSV?: (transactions: Transaction[]) => void;
-}
-
-const transactionStatuses: Transaction['status'][] = [
-  'draft',
-  'pending',
-  'approved',
-  'submitting',
-  'confirmed',
-  'completed',
-  'rejected',
-  'expired',
-  'cancelled',
-  'failed',
-];
-
-function initialFilters(searchParams: URLSearchParams): TransactionFilterValues {
-  const status = searchParams.get('status');
-  return {
-    query: searchParams.get('q') ?? '',
-    status:
-      status && transactionStatuses.includes(status as Transaction['status'])
-        ? (status as Transaction['status'])
-        : 'all',
-    asset: searchParams.get('asset') ?? 'all',
-    agentId: searchParams.get('agent') ?? 'all',
-    dateFrom: searchParams.get('from') ?? '',
-    dateTo: searchParams.get('to') ?? '',
-  };
 }
 
 export function TransactionHistory({
@@ -63,7 +40,7 @@ export function TransactionHistory({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<TransactionFilterValues>(() =>
-    initialFilters(searchParams),
+    parseTransactionFilterParams(searchParams),
   );
 
   const filteredTransactions = useMemo(
@@ -73,19 +50,10 @@ export function TransactionHistory({
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      const values: Array<[string, string, string]> = [
-        ['q', filters.query.trim(), ''],
-        ['status', filters.status, 'all'],
-        ['asset', filters.asset, 'all'],
-        ['agent', filters.agentId, 'all'],
-        ['from', filters.dateFrom, ''],
-        ['to', filters.dateTo, ''],
-      ];
-      for (const [key, value, emptyValue] of values) {
-        if (value && value !== emptyValue) params.set(key, value);
-        else params.delete(key);
-      }
+      const params = writeTransactionFilterParams(
+        new URLSearchParams(searchParams.toString()),
+        filters,
+      );
       const queryString = params.toString();
       if (queryString !== searchParams.toString()) {
         router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
@@ -193,10 +161,12 @@ export function TransactionHistory({
         emptyState={
           <div className="py-5 text-center">
             <p className="text-sm font-medium text-foreground">
-              No matching transactions
+              {transactions.length === 0 ? 'No transactions yet' : 'No matching transactions'}
             </p>
             <p className="mt-1 text-xs text-foreground-secondary">
-              Try adjusting or clearing the active filters.
+              {transactions.length === 0
+                ? 'Transactions will appear here once your agents start moving funds.'
+                : 'Try adjusting or clearing the active filters.'}
             </p>
           </div>
         }

@@ -13,13 +13,33 @@
 
 - **Agent management** — create, configure, and monitor AI agents with provider/model selection (Nvidia, OpenAI, Anthropic, Gemini, Ollama, Custom)
 - **Wallet dashboard** — Stellar wallet balances, transaction history, and XDR signing
-- **Policy engine UI** — create spending rules and simulate them against proposed transactions
+- **Transaction history filters** — combine asset, status (Success / Pending / Failed or an exact status), agent, a free-text search (memo, counterparty, hash, ...) and an inclusive date range; all active filters apply together and are kept in the URL. See `src/features/transactions/filterTransactions.ts` for the exact matching rules
+- **Policy engine UI** — create spending rules and simulate them against proposed transactions in a keyboard-accessible, two-step simulation dialog with screen-reader announcements (see [Accessibility](#accessibility))
 - **Approval workflows** — multi-party proposal review with approve/reject controls
 - **Budget tracking** — department-level budgets with real-time consumption meters
 - **AI assistant** — Nvidia NIM-powered chat with financial briefings and anomaly alerts
 - **Audit log** — immutable log of every agent action and governance decision
 - **Developer portal** — API keys and webhook management
 - **Live / mock mode** — set `NEXT_PUBLIC_API_URL` to switch from local fixtures to the live API automatically
+
+## Accessibility
+
+Modals use the shared `Dialog` primitive (`src/components/ui/dialog.tsx`) and `useFocusTrap`:
+
+- **Focus** moves into the dialog when it opens and returns to the control that opened it when it closes.
+- **Tab / Shift+Tab** cycle only through the dialog's controls; focus cannot reach the page behind it. With nested overlays only the innermost one responds.
+- **Escape** closes the top-most dialog.
+
+The policy simulation dialog (**Simulate before commit** on a policy page) has two steps, *Transaction parameters* and *Simulation results*, shown in a step list whose current step is marked `aria-current="step"`. Opening it focuses the Amount field. Running a simulation moves focus to the results heading, and **Edit parameters** moves it back to the Amount field. Invalid fields are marked `aria-invalid`, linked to their error message, and focused. Two visually hidden live regions announce changes in the simulation's state:
+
+| State | Live region | Example announcement |
+| --- | --- | --- |
+| In progress | `role="status"` (polite) | "Simulation in progress. Evaluating policy rules…" |
+| Passed | `role="status"` (polite) | "Simulation passed. All 3 policy rules passed." |
+| Blocked by a rule | `role="alert"` (assertive) | "Simulation failed. 1 policy rule blocked this transaction: Single Transaction Spend Ceiling." |
+| Error | `role="alert"` (assertive) | "Simulation could not be completed. …" |
+
+The transaction filter bar uses native, labelled `<input>` / `<select>` controls, so standard keyboard and screen-reader behaviour applies. Its result count ("Showing 3 of 8 transactions", "No transactions match the 2 active filters.") is announced politely as filters change.
 
 ## Tech Stack
 
