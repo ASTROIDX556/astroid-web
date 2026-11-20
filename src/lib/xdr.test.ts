@@ -104,7 +104,12 @@ test('parseTransactionXdr normalizes whitespace inside base64', () => {
 });
 
 test('parseTransactionXdr never throws on empty or non-string input', () => {
-  for (const input of ['', '   ', null as unknown as string, undefined as unknown as string]) {
+  for (const input of [
+    '',
+    '   ',
+    null as unknown as string,
+    undefined as unknown as string,
+  ]) {
     assert.doesNotThrow(() => parseTransactionXdr(input));
     const result = parseTransactionXdr(input);
     assert.strictEqual(result.valid, false);
@@ -134,9 +139,18 @@ test('parseTransactionXdr derives operation count from the operations array', ()
       type: 'TransactionEnvelope',
       sourceAccount: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
       operations: [
-        { type: 'Payment', destination: 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ' },
-        { type: 'Payment', destination: 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ' },
-        { type: 'Payment', destination: 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ' },
+        {
+          type: 'Payment',
+          destination: 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ',
+        },
+        {
+          type: 'Payment',
+          destination: 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ',
+        },
+        {
+          type: 'Payment',
+          destination: 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ',
+        },
       ],
     }),
   ).toString('base64');

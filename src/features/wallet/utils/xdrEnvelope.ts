@@ -35,4 +35,3 @@ export interface ParsedEnvelope extends ParsedXdrTransaction {}
 export function parseEnvelope(value: string): ParsedEnvelope {
   return parseTransactionXdr(value) as ParsedEnvelope;
 }
-

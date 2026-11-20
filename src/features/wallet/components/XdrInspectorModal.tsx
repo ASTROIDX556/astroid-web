@@ -36,10 +36,16 @@ const SAMPLE_XDR = (() => {
         amount: '125.50',
         asset: 'USDC',
       },
-      { type: 'ManageData', source: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H' },
+      {
+        type: 'ManageData',
+        source: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
+      },
     ],
     signatures: [
-      { publicKey: 'GD2E5MGVZ4XGIVLNCF4YBZV3JR5M2U3A2P6Q4Y4M7P6KOCZQ7W6I3Q4', hint: 'ed25519' },
+      {
+        publicKey: 'GD2E5MGVZ4XGIVLNCF4YBZV3JR5M2U3A2P6Q4Y4M7P6KOCZQ7W6I3Q4',
+        hint: 'ed25519',
+      },
     ],
   };
   return typeof Buffer !== 'undefined'
@@ -49,10 +55,10 @@ const SAMPLE_XDR = (() => {
 
 function operationIcon(type: string) {
   const normalized = type.toLowerCase();
-  if (normalized.includes('payment')) return <FileCode2 className="h-3.5 w-3.5" aria-hidden />;
-  if (normalized.includes('manage') || normalized.includes('data')) return (
-    <FileCode2 className="h-3.5 w-3.5 text-gold" aria-hidden />
-  );
+  if (normalized.includes('payment'))
+    return <FileCode2 className="h-3.5 w-3.5" aria-hidden />;
+  if (normalized.includes('manage') || normalized.includes('data'))
+    return <FileCode2 className="h-3.5 w-3.5 text-gold" aria-hidden />;
   return <FileCode2 className="h-3.5 w-3.5" aria-hidden />;
 }
 
@@ -69,8 +75,14 @@ function escapeHtml(value: string): string {
 /** Minimal syntax-aware highlighting for a JSON envelope without extra deps. */
 function highlightJson(text: string): string {
   return text
-    .replace(/"([^"\\]*(?:\\.[^"\\]*)*)"\s*:/g, '<span class="text-gold-strong">"$1"</span>:')
-    .replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, '<span class="text-foreground-muted">"$1"</span>')
+    .replace(
+      /"([^"\\]*(?:\\.[^"\\]*)*)"\s*:/g,
+      '<span class="text-gold-strong">"$1"</span>:',
+    )
+    .replace(
+      /"([^"\\]*(?:\\.[^"\\]*)*)"/g,
+      '<span class="text-foreground-muted">"$1"</span>',
+    )
     .replace(/\b(true|false|null)\b/g, '<span class="text-danger">$1</span>')
     .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="text-info">$1</span>');
 }
@@ -104,7 +116,7 @@ export function XdrInspectorModal({ open, onClose, xdr }: XdrInspectorModalProps
     <Dialog open={open} onClose={onClose} title="Transaction XDR inspector" size="lg">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="mb-2 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <FileCode2 className="h-4 w-4 text-gold" aria-hidden />
               <CardTitle className="text-base">
@@ -123,7 +135,7 @@ export function XdrInspectorModal({ open, onClose, xdr }: XdrInspectorModalProps
         <CardContent className="space-y-4">
           {/* Raw XDR — scrollable, monospace, syntax-highlighted view */}
           <Card className="border border-border bg-surface-secondary/40">
-            <CardHeader className="px-3 py-2 bg-surface-secondary/30 border-b border-border">
+            <CardHeader className="border-b border-border bg-surface-secondary/30 px-3 py-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] uppercase tracking-wider text-foreground-secondary">
                   Raw XDR (base64)
@@ -136,7 +148,10 @@ export function XdrInspectorModal({ open, onClose, xdr }: XdrInspectorModalProps
                     disabled={isCopied}
                     aria-label={isCopied ? 'Copied' : 'Copy XDR to clipboard'}
                   >
-                    <Clipboard className={cn('h-4 w-4', isCopied && 'text-success')} aria-hidden />
+                    <Clipboard
+                      className={cn('h-4 w-4', isCopied && 'text-success')}
+                      aria-hidden
+                    />
                   </Button>
                   <Button
                     variant="ghost"
@@ -151,7 +166,7 @@ export function XdrInspectorModal({ open, onClose, xdr }: XdrInspectorModalProps
             </CardHeader>
             <CardContent className="p-3">
               <div
-                className="overflow-auto font-mono text-xs text-foreground max-h-96 whitespace-pre"
+                className="max-h-96 overflow-auto whitespace-pre font-mono text-xs text-foreground"
                 // `rawXdr` is run through `escapeHtml` before highlighting; the only
                 // unescaped markup inserted here is the author-generated `<span>`
                 // tags from `highlightJson`, so this is safe.
@@ -161,27 +176,27 @@ export function XdrInspectorModal({ open, onClose, xdr }: XdrInspectorModalProps
           </Card>
 
           {/* Decoded operations — formatted, scrollable list */}
-          <Card className="border border-border bg-surface-secondary/40 flex flex-col">
-            <CardHeader className="px-3 py-2 bg-surface-secondary/30 border-b border-border">
+          <Card className="flex flex-col border border-border bg-surface-secondary/40">
+            <CardHeader className="border-b border-border bg-surface-secondary/30 px-3 py-2">
               <span className="text-[10px] uppercase tracking-wider text-foreground-secondary">
                 Decoded operations ({parsed.operations.length})
               </span>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-y-auto max-h-64">
+              <div className="max-h-64 overflow-y-auto">
                 {parsed.operations.length > 0 ? (
                   <ul className="divide-y divide-border">
                     {parsed.operations.map((operation, index) => (
-                      <li key={`${operation.type}-${index}`} className="px-3 py-2.5">
+                      <li key={`${operation.type}-${index}`} className="py-2.5 px-3">
                         <div className="flex items-start gap-2">
                           <div className="mt-0.5 shrink-0">
                             {operationIcon(operation.type)}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-foreground truncate">
+                            <p className="truncate text-xs font-medium text-foreground">
                               {operation.type}
                             </p>
-                            <div className="mt-1 space-y-0.5 text-[10px] text-foreground-secondary">
+                            <div className="space-y-0.5 mt-1 text-[10px] text-foreground-secondary">
                               {operation.source && (
                                 <p className="truncate">
                                   <span className="font-medium">Source:</span>{' '}
