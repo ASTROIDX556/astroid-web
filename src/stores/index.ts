@@ -22,3 +22,17 @@ export type {
 export { useCircuitBreakerStore } from './circuit-breaker-store';
 export type { CircuitBreakerStatus } from './circuit-breaker-store';
 export { useNotificationStore } from './notification-store';
+export type { NotificationSeverityFilter } from './notification-store';
+export {
+  useWalletAccountStore,
+  truncateWalletAddress,
+  walletAccountLabel,
+} from './wallet-store';
+export type {
+  WalletAccount,
+  WalletAccountActivator,
+  WalletAccountSource,
+  WalletAccountsState,
+  WalletConnectionStatus,
+  WalletQueryInvalidator,
+} from './wallet-store';
