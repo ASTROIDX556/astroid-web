@@ -26,6 +26,7 @@ import { BudgetAllocationDashboard } from '@/features/budgets/components/BudgetA
 import { BudgetAllocationModal } from '@/features/budgets/BudgetAllocationModal';
 import { BudgetMatrix } from '@/features/budgets/BudgetMatrix';
 import { BudgetMeterCard } from '@/features/budgets/BudgetMeters';
+import { BudgetConsumptionMeter } from '@/features/budgets/components/BudgetConsumptionMeter';
 import { BudgetExportMenu } from '@/features/budgets/BudgetExportMenu';
 import { MOCK_DEPARTMENT_BUDGETS } from '@/features/budgets/mock-data';
 
@@ -124,6 +125,31 @@ export default function BudgetsPage() {
               <ErrorBoundary section="Budget allocation chart">
                 <BudgetAllocationChart data={chartData} />
               </ErrorBoundary>
+
+              <section className="space-y-4" aria-label="Department budget consumption">
+                <div className="space-y-1.5">
+                  <SectionLabel>Department budget consumption</SectionLabel>
+                  <p className="max-w-prose text-xs text-foreground-secondary">
+                    Warning at 80% of the period budget, critical at 95%.
+                  </p>
+                </div>
+                <ErrorBoundary section="Department budget consumption">
+                  <Card>
+                    <CardContent className="grid gap-6 pt-5 sm:grid-cols-2">
+                      {MOCK_DEPARTMENT_BUDGETS.map((dept) => (
+                        <BudgetConsumptionMeter
+                          key={dept.id}
+                          label={dept.departmentName}
+                          caption={`${dept.departmentCode} · ${dept.managerName} · ${dept.period}`}
+                          total={dept.totalLimit}
+                          spent={dept.totalSpent}
+                          currency={dept.asset}
+                        />
+                      ))}
+                    </CardContent>
+                  </Card>
+                </ErrorBoundary>
+              </section>
 
               <DepartmentBudgetChart data={MOCK_DEPARTMENT_BUDGETS} />
               <ErrorBoundary section="Department budget breakdown">

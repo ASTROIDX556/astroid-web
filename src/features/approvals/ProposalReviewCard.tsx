@@ -7,6 +7,7 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  FlaskConical,
   ShieldAlert,
   X,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ import { formatCurrency, formatDateTime, formatRelativeTime } from '@/lib/format
 import { proposalStatus } from '@/lib/status';
 import type { Proposal } from '@/types/domain';
 
+import { ProposalSimulationModal } from './components/ProposalSimulationModal';
 import {
   approvalQueryKeys,
   fetchProposalApprovalState,
@@ -100,6 +102,8 @@ export function ProposalReviewCard({
   const [confirmAction, setConfirmAction] = useState<ReviewDecision | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [simulationOpen, setSimulationOpen] = useState(false);
+  const [pendingDecision, setPendingDecision] = useState<ReviewDecision | null>(null);
 
   const snapshotQuery = useQuery({
     queryKey: approvalQueryKeys.proposal(proposal.id),
@@ -163,12 +167,18 @@ export function ProposalReviewCard({
     setActionError(null);
   };
 
-  const handleConfirm = async () => {
-    if (!confirmAction || busy) return;
+  /**
+   * Signs (when an envelope is attached) and records a decision. Shared by the
+   * confirmation dialog and the simulation preview modal so both paths hit the
+   * same workflow API. Resolves `true` once the decision is recorded.
+   */
+  const performDecision = async (decision: ReviewDecision): Promise<boolean> => {
+    if (busy || pendingDecision) return false;
     setActionError(null);
+    setPendingDecision(decision);
 
     try {
-      if (confirmAction === 'approved' && xdr) {
+      if (decision === 'approved' && xdr) {
         if (!isConnected) {
           throw new Error(
             'Freighter wallet is not connected. Reconnect the extension and try again.',
@@ -181,14 +191,14 @@ export function ProposalReviewCard({
         }
       }
 
-      const next = await mutation.mutateAsync(confirmAction);
-      toast.success(DECISION_COPY[confirmAction].success, {
+      const next = await mutation.mutateAsync(decision);
+      toast.success(DECISION_COPY[decision].success, {
         description:
-          confirmAction === 'approved'
+          decision === 'approved'
             ? `${approvalProgress(next).approved} of ${next.requiredApprovals} approvals collected.`
             : 'The rejection has been added to the audit trail.',
       });
-      setConfirmAction(null);
+      return true;
     } catch (error) {
       const message =
         error instanceof Error && error.message
@@ -196,9 +206,22 @@ export function ProposalReviewCard({
           : 'The decision could not be recorded. Please try again.';
       setActionError(message);
       toast.error(message);
+      return false;
     } finally {
       setIsSigning(false);
+      setPendingDecision(null);
     }
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmAction || busy) return;
+    const recorded = await performDecision(confirmAction);
+    if (recorded) setConfirmAction(null);
+  };
+
+  const openSimulation = () => {
+    setActionError(null);
+    setSimulationOpen(true);
   };
 
   const disabledReason = !authorized
@@ -362,10 +385,37 @@ export function ProposalReviewCard({
             Reject
           </Button>
         </div>
-        {disabledReason && (
-          <p className="text-2xs text-foreground-muted">{disabledReason}</p>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {disabledReason && (
+            <p className="text-2xs text-foreground-muted">{disabledReason}</p>
+          )}
+          {isPending && (
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<FlaskConical className="h-4 w-4" aria-hidden />}
+              onClick={openSimulation}
+              aria-haspopup="dialog"
+            >
+              Preview simulation
+            </Button>
+          )}
+        </div>
       </CardFooter>
+
+      <ProposalSimulationModal
+        proposal={proposal}
+        open={simulationOpen}
+        onClose={() => {
+          setSimulationOpen(false);
+          setActionError(null);
+        }}
+        onDecide={performDecision}
+        canAct={canAct || pendingDecision !== null}
+        disabledReason={disabledReason}
+        pendingDecision={pendingDecision}
+        error={simulationOpen ? actionError : null}
+      />
 
       <Dialog
         open={confirmAction !== null}
