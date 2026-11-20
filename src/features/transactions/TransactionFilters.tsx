@@ -4,11 +4,7 @@ import { FileSpreadsheet, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
 import type { Transaction, TransactionStatus } from '@/types/domain';
-import {
-  TRANSACTION_FILTER_PRESET_IDS,
-  TRANSACTION_FILTER_PRESETS,
-  type TransactionFilterValues,
-} from './filterTransactions';
+import type { TransactionFilterValues } from './filterTransactions';
 
 interface TransactionFiltersProps {
   transactions: Transaction[];
@@ -58,7 +54,6 @@ export function TransactionFilters({
     value.status !== 'all' ||
     value.asset !== 'all' ||
     value.agentId !== 'all' ||
-    value.preset !== 'all' ||
     Boolean(value.dateFrom) ||
     Boolean(value.dateTo);
 
@@ -67,7 +62,7 @@ export function TransactionFilters({
 
   return (
     <section aria-label="Transaction filters" className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-9">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
         <label className="gap-1.5 flex min-w-0 flex-col sm:col-span-2 xl:col-span-2">
           <span className="text-xs font-medium text-foreground">
             Search transactions
@@ -80,25 +75,6 @@ export function TransactionFilters({
             leftIcon={<Search className="h-4 w-4" aria-hidden />}
             aria-label="Search transactions"
           />
-        </label>
-
-        <label className="gap-1.5 flex min-w-0 flex-col">
-          <span className="text-xs font-medium text-foreground">Preset</span>
-          <Select
-            value={value.preset}
-            onChange={(event) =>
-              update({
-                preset: event.target.value as TransactionFilterValues['preset'],
-              })
-            }
-            aria-label="Filter transactions by preset"
-          >
-            {TRANSACTION_FILTER_PRESET_IDS.map((preset) => (
-              <option key={preset} value={preset}>
-                {TRANSACTION_FILTER_PRESETS[preset]}
-              </option>
-            ))}
-          </Select>
         </label>
 
         <label className="gap-1.5 flex min-w-0 flex-col">
@@ -199,7 +175,6 @@ export function TransactionFilters({
                   agentId: 'all',
                   dateFrom: '',
                   dateTo: '',
-                  preset: 'all',
                 })
               }
             >

@@ -19,7 +19,7 @@ import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { TransactionDetailDrawer } from './TransactionDetailDrawer';
 import { TransactionFilters } from './TransactionFilters';
-import { filterTransactions, TRANSACTION_FILTER_PRESET_IDS, type TransactionFilterValues } from './filterTransactions';
+import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
@@ -41,10 +41,6 @@ const transactionStatuses: Transaction['status'][] = [
 
 function initialFilters(searchParams: URLSearchParams): TransactionFilterValues {
   const status = searchParams.get('status');
-  const requestedPreset = searchParams.get('preset');
-  const preset =
-    TRANSACTION_FILTER_PRESET_IDS.find((candidate) => candidate === requestedPreset) ??
-    'all';
   return {
     query: searchParams.get('q') ?? '',
     status:
@@ -55,7 +51,6 @@ function initialFilters(searchParams: URLSearchParams): TransactionFilterValues 
     agentId: searchParams.get('agent') ?? 'all',
     dateFrom: searchParams.get('from') ?? '',
     dateTo: searchParams.get('to') ?? '',
-    preset,
   };
 }
 
@@ -86,7 +81,6 @@ export function TransactionHistory({
         ['agent', filters.agentId, 'all'],
         ['from', filters.dateFrom, ''],
         ['to', filters.dateTo, ''],
-        ['preset', filters.preset, 'all'],
       ];
       for (const [key, value, emptyValue] of values) {
         if (value && value !== emptyValue) params.set(key, value);
