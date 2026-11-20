@@ -285,6 +285,40 @@ export const createAgentSchema = agentConfigFields.superRefine((values, ctx) => 
       message: 'Transaction limit cannot exceed the monthly budget',
     });
   }
+
+  if (
+    typeof values.dailyBudget === 'number' &&
+    typeof values.monthlyBudget === 'number' &&
+    values.dailyBudget > values.monthlyBudget
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['dailyBudget'],
+      message: 'Daily budget cannot exceed the monthly budget',
+    });
+  }
+
+  if (
+    typeof values.maxSpendPerTransaction === 'number' &&
+    typeof values.dailyBudget === 'number' &&
+    values.maxSpendPerTransaction > values.dailyBudget
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['maxSpendPerTransaction'],
+      message: 'Max spend per transaction cannot exceed the daily budget',
+    });
+  } else if (
+    typeof values.maxSpendPerTransaction === 'number' &&
+    typeof values.monthlyBudget === 'number' &&
+    values.maxSpendPerTransaction > values.monthlyBudget
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['maxSpendPerTransaction'],
+      message: 'Max spend per transaction cannot exceed the monthly budget',
+    });
+  }
 });
 
 export type CreateAgentInput = z.infer<typeof createAgentSchema>;
@@ -382,15 +416,34 @@ export const templateWizardSchema = z
     singleTransactionCap: spendingLimit('Transaction cap', MAX_TRANSACTION_CAP, 'XLM'),
     maxHourlyBudgetUsd: z.coerce
       .number({ invalid_type_error: 'Hourly budget must be a number' })
+      .finite('Hourly budget must be a number')
       .min(1, 'Hourly budget must be at least $1.')
       .max(10000, 'Hourly budget cannot exceed $10,000.'),
-    requireApprovalAbove: z.coerce
-      .number({ invalid_type_error: 'Approval threshold must be a number' })
-      .min(0, 'Value must be zero or greater.')
-      .max(1_000_000, 'Value cannot exceed 1M XLM.'),
+    requireApprovalAbove: z.preprocess(
+      (val) => (val === '' || val === null || val === undefined ? undefined : val),
+      z.coerce
+        .number({ invalid_type_error: 'Approval threshold must be a number' })
+        .finite('Approval threshold must be a number')
+        .min(0, 'Value must be zero or greater.')
+        .max(1_000_000, 'Value cannot exceed 1M XLM.')
+        .optional(),
+    ),
     allowedNetworks: z.array(z.string()).min(1, 'Select at least one network.'),
   })
-  .superRefine((values, ctx) => requireCapWithinBudget(values, ctx));
+  .superRefine((values, ctx) => {
+    requireCapWithinBudget(values, ctx);
+    if (
+      typeof values.requireApprovalAbove === 'number' &&
+      typeof values.budget === 'number' &&
+      values.requireApprovalAbove > values.budget
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['requireApprovalAbove'],
+        message: 'Approval threshold cannot exceed the budget.',
+      });
+    }
+  });
 
 export type TemplateWizardValues = z.infer<typeof templateWizardSchema>;
 
@@ -483,6 +536,67 @@ export type AgentUpdateValues = z.infer<typeof agentUpdateSchema>;
 export const agentProviderConfigSchema = agentUpdateSchema;
 export type AgentProviderConfigValues = AgentUpdateValues;
 export const agentProviderTypes = AGENT_PROVIDER_TYPES;
+
+// ---------------------------------------------------------------------------
+// Update: inline agent model & prompt panel (AgentConfigPanel)
+// ---------------------------------------------------------------------------
+
+export const agentConfigPanelSchema = z
+  .object({
+    provider: z.enum(AGENT_PROVIDER_TYPES, {
+      errorMap: () => ({ message: 'Select a supported provider.' }),
+    }),
+    model: z
+      .string({ required_error: 'Model is required.' })
+      .trim()
+      .min(1, 'Model is required.')
+      .max(AGENT_MODEL_MAX_LENGTH, `Model identifier cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters.`),
+    temperature: z.coerce
+      .number({ invalid_type_error: 'Temperature must be a number.' })
+      .finite('Temperature must be a number.')
+      .min(0, 'Temperature cannot be below 0.')
+      .max(2, 'Temperature cannot exceed 2.'),
+    maxTokens: z.coerce
+      .number({ invalid_type_error: 'Max tokens must be a number.' })
+      .int('Max tokens must be a whole number.')
+      .min(1, 'Max tokens must be at least 1.')
+      .max(2_000_000, 'Max tokens cannot exceed 2,000,000.'),
+    systemPrompt: z
+      .string({ required_error: 'System prompt is required.' })
+      .trim()
+      .min(1, 'System prompt is required.')
+      .max(20_000, 'System prompt cannot exceed 20,000 characters.'),
+    systemPromptTemplate: z.string().optional().or(z.literal('')),
+  })
+  .superRefine((values, ctx) => {
+    const catalog = providerModelOptions[values.provider];
+    if (catalog.length > 0 && values.model && !catalog.includes(values.model)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['model'],
+        message: 'Select a model offered by the chosen provider.',
+      });
+    }
+  });
+
+export type AgentConfigPanelValues = z.infer<typeof agentConfigPanelSchema>;
+
+/**
+ * Extracts the first non-empty error message from a react-hook-form FieldErrors
+ * map so validation error toasts can display actionable guidance.
+ */
+export function getFirstValidationMessage(errors: Record<string, unknown>): string | undefined {
+  for (const value of Object.values(errors)) {
+    if (!value || typeof value !== 'object') continue;
+    if ('message' in value && typeof (value as { message?: unknown }).message === 'string') {
+      const message = (value as { message: string }).message.trim();
+      if (message.length > 0) return message;
+    }
+    const nested = getFirstValidationMessage(value as Record<string, unknown>);
+    if (nested) return nested;
+  }
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Schema for components/agents/AgentCreationForm

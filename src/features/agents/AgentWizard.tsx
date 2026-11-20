@@ -3,12 +3,15 @@
 import { useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Textarea } from '@/components/ui/input';
 import {
+  PROVIDER_LABELS,
   agentWizardSchema,
+  getFirstValidationMessage,
   requiresEndpoint,
   type AgentWizardValues,
 } from '@/features/agents/schema';
@@ -31,7 +34,11 @@ const stepFields: Record<number, (keyof AgentWizardValues)[]> = {
   3: [],
 };
 
-export function AgentWizard() {
+export interface AgentWizardProps {
+  onSubmit?: (values: AgentWizardValues) => void | Promise<void>;
+}
+
+export function AgentWizard({ onSubmit: onSubmitProp }: AgentWizardProps = {}) {
   const [step, setStep] = useState(0);
   const form = useForm<AgentWizardValues>({
     resolver: zodResolver(agentWizardSchema),
@@ -75,14 +82,38 @@ export function AgentWizard() {
     }
 
     const valid = await form.trigger(fields);
-    if (!valid) return;
+    if (!valid) {
+      toast.error('Please resolve the validation errors in this step.', {
+        description:
+          getFirstValidationMessage(form.formState.errors) ??
+          'Check the highlighted fields before continuing.',
+      });
+      return;
+    }
 
     setStep((value) => Math.min(value + 1, steps.length - 1));
   };
 
-  const onSubmit = (values: AgentWizardValues) => {
-    console.info('Agent registration payload', values);
-    setStep(steps.length - 1);
+  const onSubmit = async (values: AgentWizardValues) => {
+    try {
+      await onSubmitProp?.(values);
+      toast.success(`Agent "${values.name}" launched.`, {
+        description: `${PROVIDER_LABELS[values.provider]} · ${values.model} · ${values.budget.toLocaleString()} XLM budget`,
+      });
+      setStep(steps.length - 1);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to register autonomous agent.';
+      toast.error(message);
+    }
+  };
+
+  const onInvalid = (fieldErrors: FieldErrors<AgentWizardValues>) => {
+    toast.error('Agent registration validation failed.', {
+      description:
+        getFirstValidationMessage(fieldErrors) ??
+        'Please resolve the highlighted validation errors before launching.',
+    });
   };
 
   return (
@@ -109,7 +140,7 @@ export function AgentWizard() {
           ))}
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} noValidate className="space-y-5">
           {step === 0 && (
             <div className="space-y-4">
               <FormField label="Agent name" htmlFor="agent-name" error={form.formState.errors.name?.message} required>

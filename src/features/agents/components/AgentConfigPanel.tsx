@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Copy, Settings2 } from 'lucide-react';
-import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Select, Textarea } from '@/components/ui/input';
 import {
-  providerModelOptions,
+  agentConfigPanelSchema,
   agentProviderTypes,
+  getFirstValidationMessage,
+  providerModelOptions,
+  type AgentConfigPanelValues,
   type AgentProviderType,
 } from '@/lib/validations/agent';
 import {
@@ -27,21 +29,6 @@ const PROVIDER_LABELS: Record<AgentProviderType, string> = {
   ollama: 'Ollama',
   custom: 'Custom',
 };
-
-/**
- * Validation schema for the agent configuration panel.
- * Ensures temperature stays in [0, 2] and maxTokens is positive.
- */
-const agentConfigPanelSchema = z.object({
-  provider: z.enum(agentProviderTypes),
-  model: z.string().min(1, 'Model is required.'),
-  temperature: z.coerce.number().min(0, 'Temperature cannot be below 0.').max(2, 'Temperature cannot exceed 2.'),
-  maxTokens: z.coerce.number().min(1, 'Max tokens must be at least 1.'),
-  systemPrompt: z.string().min(1, 'System prompt is required.'),
-  systemPromptTemplate: z.string().optional().or(z.literal('')),
-});
-
-type AgentConfigPanelValues = z.infer<typeof agentConfigPanelSchema>;
 
 export interface AgentConfigPanelProps {
   defaultValues?: Partial<AgentConfigPanelValues>;
@@ -60,16 +47,20 @@ export function AgentConfigPanel({
   onSubmit,
   className,
 }: AgentConfigPanelProps) {
+  const initialProvider = defaultValues?.provider ?? 'openai';
+  const initialModel =
+    defaultValues?.model ?? providerModelOptions[initialProvider][0] ?? '';
+
   const form = useForm<AgentConfigPanelValues>({
     resolver: zodResolver(agentConfigPanelSchema),
     defaultValues: {
-      provider: 'openai',
-      model: providerModelOptions.openai[0] ?? '',
       temperature: 0.7,
       maxTokens: 2048,
       systemPrompt: '',
       systemPromptTemplate: '',
       ...defaultValues,
+      provider: initialProvider,
+      model: initialModel,
     },
     mode: 'onChange',
   });
@@ -77,9 +68,12 @@ export function AgentConfigPanel({
   const provider = form.watch('provider');
   const modelOptions = providerModelOptions[provider];
   const systemPromptTemplate = form.watch('systemPromptTemplate');
+  const previousProvider = useRef<AgentProviderType>(provider);
 
-  // When provider changes, reset only the model to the first available for that provider
+  // When provider changes after initial mount, reset only the model to the first available for that provider
   useEffect(() => {
+    if (previousProvider.current === provider) return;
+    previousProvider.current = provider;
     form.setValue('model', modelOptions[0] ?? '', { shouldValidate: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
@@ -106,8 +100,18 @@ export function AgentConfigPanel({
     }
   };
 
+  const handleInvalid = (fieldErrors: FieldErrors<AgentConfigPanelValues>) => {
+    toast.error('Invalid agent configuration.', {
+      description:
+        getFirstValidationMessage(fieldErrors) ??
+        'Please resolve the highlighted validation errors before saving.',
+    });
+  };
+
+  const watchedTemperature = form.watch('temperature');
+  const safeTemperature = Number.isFinite(watchedTemperature) ? watchedTemperature : 0;
   // Compute temperature percentage for visual feedback (0 to 100%)
-  const temperaturePercent = (form.watch('temperature') / 2) * 100;
+  const temperaturePercent = (safeTemperature / 2) * 100;
 
   return (
     <Card className={className}>
@@ -119,7 +123,7 @@ export function AgentConfigPanel({
       </CardHeader>
       <CardContent>
         <form
-          onSubmit={form.handleSubmit(handleSubmit)}
+          onSubmit={form.handleSubmit(handleSubmit, handleInvalid)}
           className="space-y-6"
           noValidate
         >
@@ -203,10 +207,10 @@ export function AgentConfigPanel({
                     className="h-2 w-full cursor-pointer rounded-full bg-border appearance-none accent-gold"
                     aria-valuemin={0}
                     aria-valuemax={2}
-                    aria-valuenow={form.watch('temperature')}
+                    aria-valuenow={safeTemperature}
                   />
                   <span className="w-12 text-right text-sm font-medium text-foreground">
-                    {form.watch('temperature').toFixed(1)}
+                    {safeTemperature.toFixed(1)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-2xs text-foreground-secondary">

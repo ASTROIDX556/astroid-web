@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Activity, Bot, CalendarDays, Coins, Cpu, Gauge, Link2, Sparkles } from 'lucide-react';
 
@@ -15,16 +15,21 @@ import {
   PROVIDER_LABELS,
   PROVIDER_MODELS,
   createAgentSchema,
+  getFirstValidationMessage,
   requiresEndpoint,
   type CreateAgentInput,
 } from './schema';
+
+export interface AgentConfigFormProps {
+  onSubmit?: (values: CreateAgentInput) => void | Promise<void>;
+}
 
 /**
  * Controlled agent configuration form. Model options are derived from the
  * selected provider, and switching providers resets the model (and clears
  * stale endpoint errors) so only valid configurations can be submitted.
  */
-export function AgentConfigForm() {
+export function AgentConfigForm({ onSubmit: onSubmitProp }: AgentConfigFormProps = {}) {
   const {
     register,
     handleSubmit,
@@ -83,20 +88,33 @@ export function AgentConfigForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
-  const onSubmit = (values: CreateAgentInput) => {
-    // Mock-mode deployment: the API contract is defined in astroid-api
-    // (POST /agents); wire the payload there once the backend ships.
-    toast.success(`${values.name} configured`, {
-      description: `${PROVIDER_LABELS[values.provider]} · ${values.model || 'custom model'} deployed to the Stellar testnet control plane.`,
+  const onSubmit = async (values: CreateAgentInput) => {
+    try {
+      await onSubmitProp?.(values);
+      toast.success(`${values.name} configured`, {
+        description: `${PROVIDER_LABELS[values.provider]} · ${values.model || 'custom model'} deployed to the Stellar testnet control plane.`,
+      });
+      reset();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to save agent configuration.';
+      toast.error(message);
+    }
+  };
+
+  const onInvalid = (fieldErrors: FieldErrors<CreateAgentInput>) => {
+    toast.error('Invalid agent configuration.', {
+      description:
+        getFirstValidationMessage(fieldErrors) ??
+        'Please resolve the highlighted validation errors before saving.',
     });
-    reset();
   };
 
   return (
     <Card className="p-6">
       <form
         noValidate
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit, onInvalid)}
         aria-label="Agent configuration"
         className="space-y-5"
       >

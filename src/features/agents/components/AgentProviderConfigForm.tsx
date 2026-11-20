@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Cpu, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Input, Select } from '@/components/ui/input';
 import {
   agentProviderConfigSchema,
   agentProviderTypes,
+  getFirstValidationMessage,
   isHostedProvider,
   providerModelOptions,
   type AgentProviderConfigValues,
@@ -105,6 +106,14 @@ export function AgentProviderConfigForm({
     }
   };
 
+  const handleInvalid = (fieldErrors: FieldErrors<AgentProviderConfigValues>) => {
+    toast.error('Invalid provider configuration.', {
+      description:
+        getFirstValidationMessage(fieldErrors) ??
+        'Please resolve the highlighted validation errors before saving.',
+    });
+  };
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -115,7 +124,7 @@ export function AgentProviderConfigForm({
       </CardHeader>
       <CardContent>
         <form
-          onSubmit={form.handleSubmit(handleSubmit)}
+          onSubmit={form.handleSubmit(handleSubmit, handleInvalid)}
           className="space-y-5"
           noValidate
         >
