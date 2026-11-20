@@ -15,7 +15,8 @@
     "test": "tsx --test src/stores/freighter-store.test.ts src/features/agents/schema.test.ts src/features/transactions/filterTransactions.test.ts src/lib/balance-utils.test.ts src/features/policies/policyRuleKeyboard.test.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.0",

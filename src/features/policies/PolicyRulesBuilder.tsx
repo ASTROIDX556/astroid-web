@@ -255,13 +255,15 @@ export function PolicyRulesBuilder() {
                 }
                 aria-required
                 aria-invalid={error ? true : undefined}
-                aria-describedby={error ? `${ids.valueHint} ${ids.error}` : ids.valueHint}
+                aria-describedby={
+                  error ? `${ids.valueHint} ${ids.error}` : ids.valueHint
+                }
                 className={cn(fieldClass, error && 'border-danger')}
                 placeholder="e.g. 5000 or G...A1"
               />
               <p id={ids.valueHint} className="sr-only">
-                Amount threshold, asset code, or comma-separated Stellar addresses. Press
-                Enter to add the rule.
+                Amount threshold, asset code, or comma-separated Stellar addresses.
+                Press Enter to add the rule.
               </p>
             </div>
 
@@ -349,7 +351,7 @@ export function PolicyRulesBuilder() {
                         <span
                           aria-hidden
                           className={cn(
-                            'inline-block h-3.5 w-3.5 rounded-full bg-surface shadow transition-transform',
+                            'h-3.5 w-3.5 inline-block rounded-full bg-surface shadow transition-transform',
                             rule.enabled ? 'translate-x-4' : 'translate-x-0.5',
                           )}
                         />

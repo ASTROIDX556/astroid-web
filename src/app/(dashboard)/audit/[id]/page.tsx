@@ -92,22 +92,30 @@ export default function AuditDetailPage({ params }: { params: { id: string } }) 
 
               {/* Immutable envelope */}
               <Card className="relative overflow-hidden bg-surface-secondary">
-                <div className="pointer-events-none absolute inset-0 bg-gold-sheen opacity-40" aria-hidden />
+                <div
+                  className="pointer-events-none absolute inset-0 bg-gold-sheen opacity-40"
+                  aria-hidden
+                />
                 <CardContent className="relative pt-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
                         Signed amount
                       </p>
-                      <p className="mt-1 font-display text-4xl font-semibold leading-none tracking-tight tabular">
-                        <AnimatedNumber value={data.amount} formatter={(v) => formatCurrency(v, data.asset)} />
+                      <p className="tabular mt-1 font-display text-4xl font-semibold leading-none tracking-tight">
+                        <AnimatedNumber
+                          value={data.amount}
+                          formatter={(v) => formatCurrency(v, data.asset)}
+                        />
                       </p>
                     </div>
                     <dl className="grid gap-3 text-right sm:text-left">
                       <KeyValue label="Record ID" mono>
                         {truncateHash(data.id, 4, 0)}
                       </KeyValue>
-                      <KeyValue label="Recorded">{formatDateTime(data.createdAt)}</KeyValue>
+                      <KeyValue label="Recorded">
+                        {formatDateTime(data.createdAt)}
+                      </KeyValue>
                     </dl>
                   </div>
                 </CardContent>
@@ -136,7 +144,9 @@ export default function AuditDetailPage({ params }: { params: { id: string } }) 
                         </span>
                         <div className="ml-4">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-medium text-foreground">{step.title}</p>
+                            <p className="text-sm font-medium text-foreground">
+                              {step.title}
+                            </p>
                             <span className="text-2xs font-medium uppercase tracking-wide text-foreground-muted">
                               {step.kind}
                             </span>
@@ -175,7 +185,9 @@ export default function AuditDetailPage({ params }: { params: { id: string } }) 
                         <RiskBadge score={data.riskScore} showScore />
                       </KeyValue>
                       <KeyValue label="Approvals">
-                        {data.approvedBy.length > 0 ? data.approvedBy.join(', ') : 'Autonomous'}
+                        {data.approvedBy.length > 0
+                          ? data.approvedBy.join(', ')
+                          : 'Autonomous'}
                       </KeyValue>
                       <KeyValue label="Transaction">
                         <Link
@@ -195,8 +207,9 @@ export default function AuditDetailPage({ params }: { params: { id: string } }) 
 
                   <Card elevation="flat" className="p-4">
                     <p className="text-2xs leading-relaxed text-foreground-secondary">
-                      This entry is append-only and cryptographically sealed. Tampering would
-                      invalidate downstream signer hashes and be detectable during reconciliation.
+                      This entry is append-only and cryptographically sealed. Tampering
+                      would invalidate downstream signer hashes and be detectable during
+                      reconciliation.
                     </p>
                   </Card>
                 </div>

@@ -15,7 +15,12 @@ import {
   YAxis,
 } from 'recharts';
 import { ChartFrame, RESIZE_DEBOUNCE_MS } from '@/components/charts/chart-frame';
-import { AXIS_TICK, CHART_COLORS, CHART_SERIES, ChartTooltipShell } from '@/components/charts/theme';
+import {
+  AXIS_TICK,
+  CHART_COLORS,
+  CHART_SERIES,
+  ChartTooltipShell,
+} from '@/components/charts/theme';
 import { formatCurrency, formatDashboardCurrency } from '@/lib/format';
 import type {
   AgentSpend,
@@ -109,7 +114,9 @@ export function CashflowChart({
           axisLine={false}
           tickLine={false}
           width={52}
-          tickFormatter={(v: number) => formatDashboardCurrency(v, currency, { compact: true })}
+          tickFormatter={(v: number) =>
+            formatDashboardCurrency(v, currency, { compact: true })
+          }
         />
         <RechartsTooltip
           cursor={{ stroke: GRID, strokeWidth: 1 }}
@@ -123,7 +130,7 @@ export function CashflowChart({
                     key={String(item.dataKey)}
                     className="flex items-center justify-between gap-4"
                   >
-                    <span className="flex items-center gap-1.5 capitalize text-foreground-secondary">
+                    <span className="gap-1.5 flex items-center capitalize text-foreground-secondary">
                       <span
                         className="h-2 w-2 rounded-full"
                         style={{ backgroundColor: item.color }}
@@ -131,7 +138,9 @@ export function CashflowChart({
                       {item.name}
                     </span>
                     <span className="tabular font-medium text-foreground">
-                      {formatDashboardCurrency(Number(item.value), currency, { compact: true })}
+                      {formatDashboardCurrency(Number(item.value), currency, {
+                        compact: true,
+                      })}
                     </span>
                   </div>
                 ))}

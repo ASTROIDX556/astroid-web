@@ -66,7 +66,7 @@ export function FeeBadge({
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-2 rounded-lg border border-border bg-surface-secondary px-3 py-1.5 text-xs',
+        'py-1.5 inline-flex items-center gap-2 rounded-lg border border-border bg-surface-secondary px-3 text-xs',
         className,
       )}
     >
@@ -89,7 +89,7 @@ export function FeeBadge({
           </span>
         </Badge>
       )}
-      
+
       {showDetails && (
         <div className="flex items-center gap-2 text-foreground-secondary">
           <span className="font-mono font-semibold text-foreground">

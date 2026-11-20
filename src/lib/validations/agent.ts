@@ -43,7 +43,11 @@ export const PROVIDER_MODELS: Record<AgentProviderId, string[]> = {
     'mistralai/mistral-large-2',
   ],
   OpenAI: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o1-preview'],
-  Anthropic: ['claude-3-5-sonnet-latest', 'claude-3-opus-latest', 'claude-3-haiku-latest'],
+  Anthropic: [
+    'claude-3-5-sonnet-latest',
+    'claude-3-opus-latest',
+    'claude-3-haiku-latest',
+  ],
   Gemini: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-exp'],
   Ollama: ['llama3.1:70b', 'mistral:latest', 'qwen2.5:32b', 'gemma2:27b'],
   Custom: [],
@@ -92,13 +96,19 @@ export const agentNameSchema = z
   .trim()
   .min(1, 'Agent name is required')
   .min(2, 'Agent name must be at least 2 characters')
-  .max(AGENT_NAME_MAX_LENGTH, `Agent name cannot exceed ${AGENT_NAME_MAX_LENGTH} characters`);
+  .max(
+    AGENT_NAME_MAX_LENGTH,
+    `Agent name cannot exceed ${AGENT_NAME_MAX_LENGTH} characters`,
+  );
 
 export const agentModelSchema = z
   .string({ required_error: 'Model name is required' })
   .trim()
   .min(1, 'Model name is required')
-  .max(AGENT_MODEL_MAX_LENGTH, `Model name cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters`);
+  .max(
+    AGENT_MODEL_MAX_LENGTH,
+    `Model name cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters`,
+  );
 
 export const agentProviderSchema = z.enum(AGENT_PROVIDERS, {
   errorMap: () => ({ message: 'Select a supported provider.' }),
@@ -120,7 +130,10 @@ export const optionalEndpointUrlSchema = agentEndpointUrlSchema;
 export const agentApiKeySchema = z
   .string()
   .trim()
-  .max(AGENT_API_KEY_MAX_LENGTH, `API key cannot exceed ${AGENT_API_KEY_MAX_LENGTH} characters`)
+  .max(
+    AGENT_API_KEY_MAX_LENGTH,
+    `API key cannot exceed ${AGENT_API_KEY_MAX_LENGTH} characters`,
+  )
   .refine((value) => !/\s/.test(value), { message: 'API key cannot contain spaces' })
   .optional();
 
@@ -167,8 +180,12 @@ type EndpointFields = { provider?: AgentProviderId; endpointUrl?: string };
  * Self-hosted and custom providers have no default endpoint, so one must be
  * supplied before the agent can be deployed.
  */
-export function requireProviderEndpoint(values: EndpointFields, ctx: z.RefinementCtx): void {
-  if (!values.provider || !requiresEndpoint(values.provider) || values.endpointUrl) return;
+export function requireProviderEndpoint(
+  values: EndpointFields,
+  ctx: z.RefinementCtx,
+): void {
+  if (!values.provider || !requiresEndpoint(values.provider) || values.endpointUrl)
+    return;
   ctx.addIssue({
     code: z.ZodIssueCode.custom,
     path: ['endpointUrl'],
@@ -220,7 +237,10 @@ const agentConfigFields = z.object({
     .string({ required_error: 'Select a model for the chosen provider' })
     .trim()
     .min(1, 'Select a model for the chosen provider')
-    .max(AGENT_MODEL_MAX_LENGTH, `Model name cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters`),
+    .max(
+      AGENT_MODEL_MAX_LENGTH,
+      `Model name cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters`,
+    ),
   endpointUrl: agentEndpointUrlSchema,
   mode: agentModeSchema,
   temperature: temperatureSchema,
@@ -295,16 +315,18 @@ export type CreateAgentInput = z.infer<typeof createAgentSchema>;
  * to a provider that needs an endpoint must also supply that endpoint, since
  * the previous provider's endpoint does not carry over.
  */
-export const updateAgentSchema = agentConfigFields.partial().superRefine((values, ctx) => {
-  if (Object.values(values).every((value) => value === undefined)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Provide at least one field to update.',
-    });
-    return;
-  }
-  requireProviderEndpoint(values, ctx);
-});
+export const updateAgentSchema = agentConfigFields
+  .partial()
+  .superRefine((values, ctx) => {
+    if (Object.values(values).every((value) => value === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Provide at least one field to update.',
+      });
+      return;
+    }
+    requireProviderEndpoint(values, ctx);
+  });
 
 export type UpdateAgentInput = z.infer<typeof updateAgentSchema>;
 
@@ -336,7 +358,11 @@ export const agentWizardSchema = z
       .max(10_000_000, 'Context window cannot exceed 10,000,000 tokens')
       .optional(),
     budget: spendingLimit('Budget', MAX_BUDGET, 'XLM'),
-    singleTransactionCap: spendingLimit('Single-transaction cap', MAX_TRANSACTION_CAP, 'XLM'),
+    singleTransactionCap: spendingLimit(
+      'Single-transaction cap',
+      MAX_TRANSACTION_CAP,
+      'XLM',
+    ),
   })
   .superRefine((values, ctx) => {
     // A custom provider has no sensible default to fall back on: the wizard
@@ -489,21 +515,29 @@ export const agentProviderTypes = AGENT_PROVIDER_TYPES;
 // ---------------------------------------------------------------------------
 
 export const agentCreationSchema = z.object({
-  name: z.string().min(2, "Agent name must be at least 2 characters").max(50, "Agent name must not exceed 50 characters"),
-  provider: z.enum(["openai", "anthropic", "custom"], {
-    required_error: "Please select a valid provider",
+  name: z
+    .string()
+    .min(2, 'Agent name must be at least 2 characters')
+    .max(50, 'Agent name must not exceed 50 characters'),
+  provider: z.enum(['openai', 'anthropic', 'custom'], {
+    required_error: 'Please select a valid provider',
   }),
-  model: z.string().min(1, "Model is required"),
+  model: z.string().min(1, 'Model is required'),
   apiKey: z.string().optional(),
-  endpointUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
-  tokenLimit: z.coerce.number().int().positive("Token limit must be a positive integer"),
-  spendingThreshold: z.coerce.number().nonnegative("Spending threshold must be a non-negative number"),
+  endpointUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  tokenLimit: z.coerce
+    .number()
+    .int()
+    .positive('Token limit must be a positive integer'),
+  spendingThreshold: z.coerce
+    .number()
+    .nonnegative('Spending threshold must be a non-negative number'),
 });
 
 export type AgentCreationFormValues = z.infer<typeof agentCreationSchema>;
 
 export const agentConfigSchema = agentCreationSchema.extend({
-  id: z.string().uuid("Invalid agent ID"),
+  id: z.string().uuid('Invalid agent ID'),
   isActive: z.boolean(),
 });
 
@@ -578,25 +612,31 @@ const agentConfigurationFields = agentConfigFields.extend({
     .max(AGENT_PERMISSION_SCOPES.length),
 });
 
-export const agentConfigurationSchema = agentConfigurationFields.superRefine((values, ctx) => {
-  requireProviderEndpoint(values, ctx);
+export const agentConfigurationSchema = agentConfigurationFields.superRefine(
+  (values, ctx) => {
+    requireProviderEndpoint(values, ctx);
 
-  const catalog = PROVIDER_MODELS[values.provider];
-  if (values.provider !== 'Custom' && catalog.length > 0 && !catalog.includes(values.model)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['model'],
-      message: `"${values.model}" is not part of the ${PROVIDER_LABELS[values.provider]} catalog.`,
-    });
-  }
+    const catalog = PROVIDER_MODELS[values.provider];
+    if (
+      values.provider !== 'Custom' &&
+      catalog.length > 0 &&
+      !catalog.includes(values.model)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['model'],
+        message: `"${values.model}" is not part of the ${PROVIDER_LABELS[values.provider]} catalog.`,
+      });
+    }
 
-  if (values.dailySpendingLimit > values.monthlyBudget) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['dailySpendingLimit'],
-      message: 'Daily spending limit cannot exceed the monthly budget.',
-    });
-  }
-});
+    if (values.dailySpendingLimit > values.monthlyBudget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['dailySpendingLimit'],
+        message: 'Daily spending limit cannot exceed the monthly budget.',
+      });
+    }
+  },
+);
 
 export type AgentConfigurationValues = z.infer<typeof agentConfigurationSchema>;

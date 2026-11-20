@@ -56,11 +56,25 @@ export function buildBudgetLedgerRows(departments: DepartmentBudget[]): CsvValue
 
       if (agent.ledger && agent.ledger.length > 0) {
         for (const entry of agent.ledger) {
-          rows.push([...attribution, entry.id, entry.date, entry.description, entry.counterparty, entry.amount]);
+          rows.push([
+            ...attribution,
+            entry.id,
+            entry.date,
+            entry.description,
+            entry.counterparty,
+            entry.amount,
+          ]);
         }
       } else {
         // No ledger history: one summary row dated by the last transaction.
-        rows.push([...attribution, '', agent.lastTransactionAt, 'No ledger entries recorded', '', '', ]);
+        rows.push([
+          ...attribution,
+          '',
+          agent.lastTransactionAt,
+          'No ledger entries recorded',
+          '',
+          '',
+        ]);
       }
     }
   }

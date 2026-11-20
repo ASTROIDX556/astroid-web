@@ -56,7 +56,9 @@ export function agentBudgetStatus(agent: AgentAllocation): BudgetLedgerStatus {
 }
 
 export function agentUtilizationPercent(agent: AgentAllocation): number {
-  return agent.allocatedAmount > 0 ? (agent.spentAmount / agent.allocatedAmount) * 100 : 0;
+  return agent.allocatedAmount > 0
+    ? (agent.spentAmount / agent.allocatedAmount) * 100
+    : 0;
 }
 
 function isWithinDateRange(iso: string, from: string, to: string): boolean {
@@ -73,7 +75,8 @@ export function matchesBudgetLedgerFilters(
   filters: BudgetLedgerFilterState,
 ): boolean {
   if (filters.agentId !== 'all' && agent.agentId !== filters.agentId) return false;
-  if (filters.status !== 'all' && agentBudgetStatus(agent) !== filters.status) return false;
+  if (filters.status !== 'all' && agentBudgetStatus(agent) !== filters.status)
+    return false;
 
   const hasDateBounds = filters.dateFrom !== '' || filters.dateTo !== '';
   if (!hasDateBounds) return true;
@@ -81,7 +84,10 @@ export function matchesBudgetLedgerFilters(
   const ledgerInRange = (agent.ledger ?? []).some((entry) =>
     isWithinDateRange(entry.date, filters.dateFrom, filters.dateTo),
   );
-  return ledgerInRange || isWithinDateRange(agent.lastTransactionAt, filters.dateFrom, filters.dateTo);
+  return (
+    ledgerInRange ||
+    isWithinDateRange(agent.lastTransactionAt, filters.dateFrom, filters.dateTo)
+  );
 }
 
 /**

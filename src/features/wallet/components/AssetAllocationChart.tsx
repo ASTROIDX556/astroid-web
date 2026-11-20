@@ -65,8 +65,7 @@ export function AssetAllocationChart({
     const fiatTotal = funded.reduce((sum, b) => sum + b.usdValue, 0);
     const balanceTotal = funded.reduce((sum, b) => sum + b.balance, 0);
     const fiatWeights = fiatTotal > 0;
-    const weightOf = (b: AssetBalance) =>
-      fiatWeights ? b.usdValue : b.balance;
+    const weightOf = (b: AssetBalance) => (fiatWeights ? b.usdValue : b.balance);
     const total = fiatWeights ? fiatTotal : balanceTotal;
 
     const sorted = [...funded].sort((a, b) => weightOf(b) - weightOf(a));
@@ -87,7 +86,12 @@ export function AssetAllocationChart({
   }, [balances]);
 
   if (!mounted) {
-    return <div className={cn('skeleton w-full rounded-card', className)} style={{ height }} />;
+    return (
+      <div
+        className={cn('skeleton w-full rounded-card', className)}
+        style={{ height }}
+      />
+    );
   }
 
   if (slices.length === 0) {
@@ -102,8 +106,8 @@ export function AssetAllocationChart({
           Asset allocation
         </p>
         <p className="mt-3 text-sm text-foreground-secondary">
-          No funded assets yet. The allocation chart appears as soon as this
-          wallet holds a non-zero balance.
+          No funded assets yet. The allocation chart appears as soon as this wallet
+          holds a non-zero balance.
         </p>
       </Card>
     );
@@ -162,7 +166,11 @@ export function AssetAllocationChart({
                       {formatNumber(row.balance)} {row.asset}
                     </span>
                     <span className="text-foreground-secondary">
-                      {formatPercent(row.percent, row.percent > 0 && row.percent < 10 ? 1 : 0)} of portfolio
+                      {formatPercent(
+                        row.percent,
+                        row.percent > 0 && row.percent < 10 ? 1 : 0,
+                      )}{' '}
+                      of portfolio
                     </span>
                     {useFiatWeights && (
                       <span className="tabular text-foreground-secondary">
@@ -199,7 +207,7 @@ export function AssetAllocationChart({
         aria-label="Asset allocation legend"
       >
         {slices.map((slice, i) => (
-          <li key={slice.asset} className="inline-flex items-center gap-1.5 text-2xs">
+          <li key={slice.asset} className="gap-1.5 inline-flex items-center text-2xs">
             <span
               className="h-2 w-2 shrink-0 rounded-full"
               style={{ backgroundColor: CATEGORICAL[i % CATEGORICAL.length] }}
@@ -207,13 +215,17 @@ export function AssetAllocationChart({
             />
             <span className="font-medium text-foreground">{slice.asset}</span>
             <span className="tabular text-foreground-muted">
-              {formatPercent(slice.percent, slice.percent > 0 && slice.percent < 10 ? 1 : 0)}
+              {formatPercent(
+                slice.percent,
+                slice.percent > 0 && slice.percent < 10 ? 1 : 0,
+              )}
             </span>
           </li>
         ))}
         {hiddenZeroCount > 0 && (
-          <li className="inline-flex items-center gap-1.5 text-2xs text-foreground-muted">
-            +{hiddenZeroCount} zero-balance {hiddenZeroCount === 1 ? 'asset' : 'assets'} hidden
+          <li className="gap-1.5 inline-flex items-center text-2xs text-foreground-muted">
+            +{hiddenZeroCount} zero-balance {hiddenZeroCount === 1 ? 'asset' : 'assets'}{' '}
+            hidden
           </li>
         )}
       </ul>

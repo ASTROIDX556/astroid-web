@@ -107,7 +107,9 @@ export function PreferencesPanel() {
             <Select
               id="pref-currency"
               value={hydrated ? activeCurrency : 'USD'}
-              onChange={(event) => setActiveCurrency(event.target.value as DashboardCurrency)}
+              onChange={(event) =>
+                setActiveCurrency(event.target.value as DashboardCurrency)
+              }
             >
               <option value="USD">USD</option>
               <option value="USDC">USDC</option>
@@ -122,7 +124,9 @@ export function PreferencesPanel() {
             <Select
               id="pref-cashflow-display"
               value={hydrated ? cashflowDisplay : 'area'}
-              onChange={(event) => setCashflowDisplay(event.target.value as CashflowDisplay)}
+              onChange={(event) =>
+                setCashflowDisplay(event.target.value as CashflowDisplay)
+              }
             >
               <option value="area">Area</option>
               <option value="line">Line</option>
@@ -132,7 +136,9 @@ export function PreferencesPanel() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-medium text-foreground">Compact navigation</p>
-              <p className="mt-1 text-2xs text-foreground-muted">Show navigation icons without labels.</p>
+              <p className="mt-1 text-2xs text-foreground-muted">
+                Show navigation icons without labels.
+              </p>
             </div>
             <Switch
               id="pref-sidebar-collapsed"
@@ -165,7 +171,7 @@ export function PreferencesPanel() {
               </li>
             ))}
           </ul>
-          <p className="mt-5 flex items-start gap-1.5 text-2xs text-foreground-muted">
+          <p className="gap-1.5 mt-5 flex items-start text-2xs text-foreground-muted">
             <LayoutDashboard className="mt-px h-3 w-3 shrink-0" aria-hidden />
             Preferences persist locally and survive reloads.
           </p>

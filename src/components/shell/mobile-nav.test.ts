@@ -29,7 +29,10 @@ describe('Mobile Navigation Drawer (#368)', () => {
       for (const section of navSections) {
         for (const item of section.items) {
           assert.ok(item.label.length > 0, `Item label is defined`);
-          assert.ok(item.href.startsWith('/'), `Item href ${item.href} is relative root route`);
+          assert.ok(
+            item.href.startsWith('/'),
+            `Item href ${item.href} is relative root route`,
+          );
           assert.ok(
             typeof item.icon === 'function' || typeof item.icon === 'object',
             `Icon component is present for ${item.label}`,

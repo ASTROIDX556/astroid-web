@@ -8,7 +8,8 @@ interface CommandPaletteState {
 }
 
 function getFocusedElement(): HTMLElement | null {
-  return typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+  return typeof document !== 'undefined' &&
+    document.activeElement instanceof HTMLElement
     ? document.activeElement
     : null;
 }
@@ -17,12 +18,18 @@ function getFocusedElement(): HTMLElement | null {
 export const useCommandStore = create<CommandPaletteState>((set) => ({
   open: false,
   returnFocusTarget: null,
-  setOpen: (value) => set((state) => value
-    ? { open: true, returnFocusTarget: getFocusedElement() }
-    : { open: false, returnFocusTarget: state.returnFocusTarget }),
-  toggle: () => set((state) => state.open
-    ? { open: false, returnFocusTarget: state.returnFocusTarget }
-    : { open: true, returnFocusTarget: getFocusedElement() }),
+  setOpen: (value) =>
+    set((state) =>
+      value
+        ? { open: true, returnFocusTarget: getFocusedElement() }
+        : { open: false, returnFocusTarget: state.returnFocusTarget },
+    ),
+  toggle: () =>
+    set((state) =>
+      state.open
+        ? { open: false, returnFocusTarget: state.returnFocusTarget }
+        : { open: true, returnFocusTarget: getFocusedElement() },
+    ),
 }));
 
 interface AssistantState {

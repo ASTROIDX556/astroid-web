@@ -50,7 +50,12 @@ export function DataTable<T>({
   const pad = compact ? 'px-5 py-3' : 'px-6 py-4';
 
   return (
-    <div className={cn('overflow-hidden rounded-card border border-border bg-surface', className)}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-card border border-border bg-surface',
+        className,
+      )}
+    >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>

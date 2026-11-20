@@ -21,8 +21,8 @@ export default function MultisigPage() {
         <div className="space-y-1.5">
           <SectionLabel>In-flight signing progress</SectionLabel>
           <p className="max-w-prose text-xs text-foreground-secondary">
-            Collected weight against the account threshold for the pending multi-signature
-            request, with each co-signer&apos;s decision.
+            Collected weight against the account threshold for the pending
+            multi-signature request, with each co-signer&apos;s decision.
           </p>
         </div>
         <MultisigProgressCard request={mockMultisigRequest} />

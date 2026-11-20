@@ -12,7 +12,13 @@ import {
   YAxis,
 } from 'recharts';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { formatCurrency } from '@/lib/format';
 import type { DepartmentBudget } from './types';
 
@@ -55,7 +61,9 @@ export function DepartmentBudgetChart({ data }: DepartmentBudgetChartProps) {
   return (
     <Card className="overflow-hidden">
       <CardHeader className="border-b border-border bg-surface-secondary/40">
-        <CardTitle className="text-base font-semibold">Department budget consumption</CardTitle>
+        <CardTitle className="text-base font-semibold">
+          Department budget consumption
+        </CardTitle>
         <CardDescription>
           Current spend as a share of each department&apos;s allocated limit.
         </CardDescription>
@@ -63,7 +71,7 @@ export function DepartmentBudgetChart({ data }: DepartmentBudgetChartProps) {
       <CardContent className="pt-5">
         {data.length === 0 || rows.length === 0 ? (
           <div
-            className="grid min-h-64 place-items-center rounded-md border border-dashed border-border bg-surface-secondary/30 px-6 text-center text-sm text-foreground-secondary"
+            className="min-h-64 grid place-items-center rounded-md border border-dashed border-border bg-surface-secondary/30 px-6 text-center text-sm text-foreground-secondary"
             role="status"
           >
             {data.length === 0
@@ -120,7 +128,10 @@ export function DepartmentBudgetChart({ data }: DepartmentBudgetChartProps) {
                           Spent: {formatCurrency(row.spent, row.asset)} of{' '}
                           {formatCurrency(row.limit, row.asset)}
                         </p>
-                        <p className="font-medium" style={{ color: utilizationColor(row.utilization) }}>
+                        <p
+                          className="font-medium"
+                          style={{ color: utilizationColor(row.utilization) }}
+                        >
                           {Math.round(row.utilization)}% utilized
                         </p>
                       </div>

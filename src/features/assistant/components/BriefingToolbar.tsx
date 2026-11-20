@@ -47,7 +47,7 @@ export function BriefingToolbar({
     <div
       role="toolbar"
       aria-label="Financial briefing export and share actions"
-      className="flex flex-wrap items-center gap-2 rounded-card border border-border bg-surface p-2.5"
+      className="p-2.5 flex flex-wrap items-center gap-2 rounded-card border border-border bg-surface"
     >
       <Button
         type="button"

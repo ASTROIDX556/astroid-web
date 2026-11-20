@@ -30,14 +30,21 @@ function stroopsToXlm(stroops: number): string {
   return (stroops / 10_000_000).toFixed(7);
 }
 
-export function useStellarFeeEstimate(options: UseStellarFeeEstimateOptions = {}): FeeEstimate {
+export function useStellarFeeEstimate(
+  options: UseStellarFeeEstimateOptions = {},
+): FeeEstimate {
   const { pollIntervalMs, enabled = true } = options;
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [baseFeeStroops, setBaseFeeStroops] = useState<number>(DEFAULT_BASE_FEE_STROOPS);
-  const [suggestedFeeStroops, setSuggestedFeeStroops] = useState<number>(DEFAULT_BASE_FEE_STROOPS);
+  const [baseFeeStroops, setBaseFeeStroops] = useState<number>(
+    DEFAULT_BASE_FEE_STROOPS,
+  );
+  const [suggestedFeeStroops, setSuggestedFeeStroops] = useState<number>(
+    DEFAULT_BASE_FEE_STROOPS,
+  );
   const [congestion, setCongestion] = useState<CongestionState>('low');
-  const [estimatedInclusionSec, setEstimatedInclusionSec] = useState<number>(DEFAULT_INCLUSION_SEC);
+  const [estimatedInclusionSec, setEstimatedInclusionSec] =
+    useState<number>(DEFAULT_INCLUSION_SEC);
   const [inclusionLabel, setInclusionLabel] = useState<string>('3–5 sec');
   const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
@@ -83,10 +90,16 @@ export function useStellarFeeEstimate(options: UseStellarFeeEstimateOptions = {}
       setBaseFeeStroops(DEFAULT_BASE_FEE_STROOPS);
       setSuggestedFeeStroops(Math.round(feeRate));
       setCongestion(congState);
-      
+
       const incSec = congState === 'high' ? 15 : congState === 'medium' ? 8 : 5;
       setEstimatedInclusionSec(incSec);
-      setInclusionLabel(congState === 'high' ? '10–30 sec' : congState === 'medium' ? '5–10 sec' : '3–5 sec');
+      setInclusionLabel(
+        congState === 'high'
+          ? '10–30 sec'
+          : congState === 'medium'
+            ? '5–10 sec'
+            : '3–5 sec',
+      );
       setLastUpdated(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch fee estimate');

@@ -20,9 +20,9 @@ export default function GlobalError({
 
   return (
     <html lang="en" data-theme="light">
-      <body className="min-h-screen bg-[#F6F2EA] font-sans text-[#171412] flex items-center justify-center p-8">
-        <div className="flex flex-col items-center gap-6 rounded-xl border border-dashed border-red-500/40 bg-red-50 p-10 text-center max-w-md w-full">
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-red-100 text-red-600">
+      <body className="flex min-h-screen items-center justify-center bg-[#F6F2EA] p-8 font-sans text-[#171412]">
+        <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-xl border border-dashed border-red-500/40 bg-red-50 p-10 text-center">
+          <span className="h-14 w-14 grid place-items-center rounded-full bg-red-100 text-red-600">
             <AlertTriangle className="h-7 w-7" aria-hidden />
           </span>
           <div className="space-y-2">
@@ -35,7 +35,7 @@ export default function GlobalError({
           </div>
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 rounded-md bg-[#171412] px-5 py-2.5 text-sm font-medium text-[#F6F2EA] hover:opacity-80 transition-opacity"
+            className="py-2.5 inline-flex items-center gap-2 rounded-md bg-[#171412] px-5 text-sm font-medium text-[#F6F2EA] transition-opacity hover:opacity-80"
           >
             <RefreshCw className="h-4 w-4" aria-hidden />
             Try again

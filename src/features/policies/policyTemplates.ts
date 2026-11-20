@@ -186,7 +186,9 @@ export function validatePolicyTemplateLibrary(
       const issues = result.error.issues
         .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
         .join('; ');
-      errors.push(`Template "${template.id}" does not match the policy schema — ${issues}`);
+      errors.push(
+        `Template "${template.id}" does not match the policy schema — ${issues}`,
+      );
     }
   }
   return errors;

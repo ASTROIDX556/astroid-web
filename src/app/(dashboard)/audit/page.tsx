@@ -95,8 +95,10 @@ export default function AuditPage() {
               rowKey={(r) => r.id}
               rowHref={(r) => `/audit/${r.id}`}
             />
-            <div className="pt-6 border-t border-border space-y-4">
-              <h3 className="font-display text-lg font-semibold tracking-tight">Organization Audit Log Stream Timeline</h3>
+            <div className="space-y-4 border-t border-border pt-6">
+              <h3 className="font-display text-lg font-semibold tracking-tight">
+                Organization Audit Log Stream Timeline
+              </h3>
               <AuditTimeline />
             </div>
           </div>

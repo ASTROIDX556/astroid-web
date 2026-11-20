@@ -3,7 +3,11 @@
 import { create } from 'zustand';
 import type { StateCreator } from 'zustand';
 
-export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'locked';
+export type FreighterConnectionStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'locked';
 
 /**
  * Stellar networks the app can target. Freighter itself owns the extension's
@@ -42,12 +46,16 @@ export const STELLAR_NETWORKS: Record<StellarNetworkId, StellarNetworkDescriptor
 };
 
 /** Passphrase for an app-side target network id (never null for known ids). */
-export function resolveExpectedPassphrase(target: StellarNetworkId | null): string | null {
-  return target ? STELLAR_NETWORKS[target]?.passphrase ?? null : null;
+export function resolveExpectedPassphrase(
+  target: StellarNetworkId | null,
+): string | null {
+  return target ? (STELLAR_NETWORKS[target]?.passphrase ?? null) : null;
 }
 
 /** Reverse map a wallet passphrase back to a known network id, if recognized. */
-export function networkIdForPassphrase(passphrase: string | null): StellarNetworkId | null {
+export function networkIdForPassphrase(
+  passphrase: string | null,
+): StellarNetworkId | null {
   if (!passphrase) return null;
   const entry = (Object.values(STELLAR_NETWORKS) as StellarNetworkDescriptor[]).find(
     (network) => network.passphrase === passphrase,
@@ -91,7 +99,9 @@ export interface FreighterWalletState {
   /** Re-reads the extension's active network + passphrase into state. */
   refreshNetwork: () => Promise<void>;
   /** Sets the expected network and re-syncs against the wallet. */
-  switchNetwork: (target: StellarNetworkId | 'mainnet') => Promise<{ matched: boolean } | boolean>;
+  switchNetwork: (
+    target: StellarNetworkId | 'mainnet',
+  ) => Promise<{ matched: boolean } | boolean>;
   /** Subscribes to Freighter account/network change events (WatchWalletChanges). */
   startWalletWatch: () => void;
   stopWalletWatch: () => void;
@@ -104,7 +114,10 @@ export interface FreighterWalletState {
   adoptConnection: (publicKey: string | null) => void;
   /** Compatibility setter retained for consumers of the original wallet API. */
   updatePublicKey: (publicKey: string) => void;
-  requestSignature: (xdr: string, options?: { networkPassphrase?: string }) => Promise<string>;
+  requestSignature: (
+    xdr: string,
+    options?: { networkPassphrase?: string },
+  ) => Promise<string>;
   hydrate: () => Promise<void>;
 }
 
@@ -113,8 +126,16 @@ export type StellarWalletNetwork = StellarNetworkId;
 export type WalletState = FreighterWalletState;
 export type WalletActions = Pick<
   FreighterWalletState,
-  'checkExtension' | 'connect' | 'disconnect' | 'refreshNetwork' | 'switchNetwork' |
-    'startWalletWatch' | 'stopWalletWatch' | 'adoptConnection' | 'requestSignature' | 'hydrate'
+  | 'checkExtension'
+  | 'connect'
+  | 'disconnect'
+  | 'refreshNetwork'
+  | 'switchNetwork'
+  | 'startWalletWatch'
+  | 'stopWalletWatch'
+  | 'adoptConnection'
+  | 'requestSignature'
+  | 'hydrate'
 >;
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
@@ -124,7 +145,11 @@ const withTimeout = async <T>(promise: Promise<T>, ms = 15000): Promise<T> => {
 
   return await new Promise<T>((resolve, reject) => {
     timeoutId = setTimeout(() => {
-      reject(new Error('Freighter wallet request timed out. Check that the extension is installed and unlocked.'));
+      reject(
+        new Error(
+          'Freighter wallet request timed out. Check that the extension is installed and unlocked.',
+        ),
+      );
     }, ms);
 
     promise.then(
@@ -151,10 +176,18 @@ const getFreighter = async () =>
     setAllowed?: () => Promise<boolean | { isAllowed?: boolean }>;
     getAddress?: () => Promise<string | { address?: string; publicKey?: string }>;
     getNetwork?: () => Promise<string | FreighterNetworkResult>;
-    signTransaction?: (xdr: string, options?: Record<string, unknown>) => Promise<string | { signedTxXdr?: string; signedXDR?: string; xdr?: string }>;
+    signTransaction?: (
+      xdr: string,
+      options?: Record<string, unknown>,
+    ) => Promise<string | { signedTxXdr?: string; signedXDR?: string; xdr?: string }>;
     WatchWalletChanges?: new (timeout?: number) => {
       watch: (
-        cb: (params: { address: string; network: string; networkPassphrase: string; error?: unknown }) => void,
+        cb: (params: {
+          address: string;
+          network: string;
+          networkPassphrase: string;
+          error?: unknown;
+        }) => void,
       ) => { error?: unknown };
       stop: () => void;
     };
@@ -166,7 +199,9 @@ const isValidStellarAddress = (value: string | null | undefined): value is strin
 const resolveWalletAddress = (value: unknown): string | null => {
   if (typeof value === 'string') return isValidStellarAddress(value) ? value : null;
   if (value && typeof value === 'object') {
-    const candidate = (value as { address?: string; publicKey?: string }).address ?? (value as { address?: string; publicKey?: string }).publicKey;
+    const candidate =
+      (value as { address?: string; publicKey?: string }).address ??
+      (value as { address?: string; publicKey?: string }).publicKey;
     return isValidStellarAddress(candidate) ? candidate : null;
   }
   return null;
@@ -207,12 +242,24 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   checkExtension: async () => {
     try {
       const freighter = await getFreighter();
-      const connectedResult = typeof freighter.isConnected === 'function' ? await withTimeout(freighter.isConnected()) : { isConnected: true };
-      const connected = typeof connectedResult === 'boolean' ? connectedResult : Boolean((connectedResult as { isConnected?: boolean } | undefined)?.isConnected);
+      const connectedResult =
+        typeof freighter.isConnected === 'function'
+          ? await withTimeout(freighter.isConnected())
+          : { isConnected: true };
+      const connected =
+        typeof connectedResult === 'boolean'
+          ? connectedResult
+          : Boolean(
+              (connectedResult as { isConnected?: boolean } | undefined)?.isConnected,
+            );
       set({ isInstalled: true, status: connected ? 'connected' : 'disconnected' });
       return Boolean(connected);
     } catch {
-      set({ isInstalled: false, status: 'disconnected', error: 'Freighter extension is not installed or unavailable.' });
+      set({
+        isInstalled: false,
+        status: 'disconnected',
+        error: 'Freighter extension is not installed or unavailable.',
+      });
       return false;
     }
   },
@@ -222,27 +269,44 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
 
     try {
       const freighter = await getFreighter();
-      const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
+      const installed =
+        typeof window !== 'undefined' &&
+        !!(window as typeof window & { freighter?: unknown }).freighter;
       if (!installed && typeof freighter.isConnected !== 'function') {
-        set({ isInstalled: false, status: 'disconnected', error: 'Freighter extension is not installed.' });
+        set({
+          isInstalled: false,
+          status: 'disconnected',
+          error: 'Freighter extension is not installed.',
+        });
         return null;
       }
 
       if (typeof freighter.setAllowed === 'function') {
         const allowed = await withTimeout(freighter.setAllowed());
-        const isAllowed = typeof allowed === 'boolean' ? allowed : Boolean((allowed as { isAllowed?: boolean })?.isAllowed);
+        const isAllowed =
+          typeof allowed === 'boolean'
+            ? allowed
+            : Boolean((allowed as { isAllowed?: boolean })?.isAllowed);
         if (!isAllowed) {
-          throw new Error('Freighter access was rejected. Please approve the connection request.');
+          throw new Error(
+            'Freighter access was rejected. Please approve the connection request.',
+          );
         }
       }
 
-      const addressResult = typeof freighter.getAddress === 'function' ? await withTimeout(freighter.getAddress()) : null;
+      const addressResult =
+        typeof freighter.getAddress === 'function'
+          ? await withTimeout(freighter.getAddress())
+          : null;
       const publicKey = resolveWalletAddress(addressResult);
       if (!publicKey) {
         throw new Error('Freighter did not return a valid Stellar public key.');
       }
 
-      const networkResult = typeof freighter.getNetwork === 'function' ? await withTimeout(freighter.getNetwork()) : null;
+      const networkResult =
+        typeof freighter.getNetwork === 'function'
+          ? await withTimeout(freighter.getNetwork())
+          : null;
       const network = resolveNetwork(networkResult) ?? 'testnet';
       // Unknown passphrase stays null on purpose: signing gates fail closed.
       const networkPassphrase = resolvePassphrase(networkResult);
@@ -258,7 +322,10 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
 
       return publicKey;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to connect to the Freighter wallet.';
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to connect to the Freighter wallet.';
       set({
         status: 'disconnected',
         isInstalled: false,
@@ -272,7 +339,13 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   },
 
   disconnect: () => {
-    set({ status: 'disconnected', publicKey: null, network: null, networkPassphrase: null, error: null });
+    set({
+      status: 'disconnected',
+      publicKey: null,
+      network: null,
+      networkPassphrase: null,
+      error: null,
+    });
   },
 
   refreshNetwork: async () => {
@@ -333,15 +406,22 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
           }
 
           const state = get();
-          const patch: Partial<Pick<FreighterWalletState, 'status' | 'isInstalled' | 'publicKey' | 'network' | 'networkPassphrase'>> = {};
+          const patch: Partial<
+            Pick<
+              FreighterWalletState,
+              'status' | 'isInstalled' | 'publicKey' | 'network' | 'networkPassphrase'
+            >
+          > = {};
           if (state.publicKey !== address) {
             patch.publicKey = address;
             patch.status = 'connected';
             patch.isInstalled = true;
           }
           if (network && state.network !== network) patch.network = network;
-          const nextPassphrase = networkPassphrase && networkPassphrase.trim() ? networkPassphrase : null;
-          if (state.networkPassphrase !== nextPassphrase) patch.networkPassphrase = nextPassphrase;
+          const nextPassphrase =
+            networkPassphrase && networkPassphrase.trim() ? networkPassphrase : null;
+          if (state.networkPassphrase !== nextPassphrase)
+            patch.networkPassphrase = nextPassphrase;
           if (Object.keys(patch).length > 0) set(patch);
         });
       } catch {
@@ -379,7 +459,8 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     // Fail-closed network gate: never sign against a wallet network that
     // differs from the expected one, and never sign when the wallet's
     // network cannot be verified at all.
-    const expectedPassphrase = options?.networkPassphrase ?? resolveExpectedPassphrase(get().targetNetwork);
+    const expectedPassphrase =
+      options?.networkPassphrase ?? resolveExpectedPassphrase(get().targetNetwork);
     let walletPassphrase = get().networkPassphrase;
     if (!walletPassphrase) {
       await get().refreshNetwork();
@@ -387,7 +468,9 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     }
     if (isNetworkMismatch(walletPassphrase, expectedPassphrase)) {
       const walletLabel = networkLabelForId(networkIdForPassphrase(walletPassphrase));
-      const expectedLabel = networkLabelForId(networkIdForPassphrase(expectedPassphrase));
+      const expectedLabel = networkLabelForId(
+        networkIdForPassphrase(expectedPassphrase),
+      );
       const message = `Network mismatch: Freighter is on ${walletLabel}, but this action targets ${expectedLabel}. Switch the wallet to ${expectedLabel} before signing.`;
       set({ error: message });
       throw new Error(message);
@@ -400,14 +483,20 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
       }
 
       const response = await withTimeout(
-        freighter.signTransaction(xdr, expectedPassphrase ? { networkPassphrase: expectedPassphrase } : undefined),
+        freighter.signTransaction(
+          xdr,
+          expectedPassphrase ? { networkPassphrase: expectedPassphrase } : undefined,
+        ),
       );
       const signedXdr =
         typeof response === 'string'
           ? response
-          : (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.signedTxXdr ??
-            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.signedXDR ??
-            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.xdr;
+          : ((response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })
+              ?.signedTxXdr ??
+            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })
+              ?.signedXDR ??
+            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })
+              ?.xdr);
 
       if (!signedXdr) {
         throw new Error('Freighter did not return a signed transaction payload.');
@@ -415,7 +504,8 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
 
       return signedXdr;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Signature request failed.';
+      const message =
+        error instanceof Error ? error.message : 'Signature request failed.';
       set({ error: message, status: 'disconnected' });
       throw error;
     }
@@ -424,21 +514,31 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   hydrate: async () => {
     try {
       const freighter = await getFreighter();
-      const connectedResult = typeof freighter.isConnected === 'function'
-        ? await withTimeout(freighter.isConnected())
-        : false;
-      const connected = typeof connectedResult === 'boolean'
-        ? connectedResult
-        : Boolean((connectedResult as { isConnected?: boolean } | null)?.isConnected);
+      const connectedResult =
+        typeof freighter.isConnected === 'function'
+          ? await withTimeout(freighter.isConnected())
+          : false;
+      const connected =
+        typeof connectedResult === 'boolean'
+          ? connectedResult
+          : Boolean((connectedResult as { isConnected?: boolean } | null)?.isConnected);
 
       if (!connected) {
-        set({ status: 'disconnected', publicKey: null, network: null, networkPassphrase: null, isInstalled: false, error: null });
+        set({
+          status: 'disconnected',
+          publicKey: null,
+          network: null,
+          networkPassphrase: null,
+          isInstalled: false,
+          error: null,
+        });
         return;
       }
 
-      const addressResult = typeof freighter.getAddress === 'function'
-        ? await withTimeout(freighter.getAddress())
-        : null;
+      const addressResult =
+        typeof freighter.getAddress === 'function'
+          ? await withTimeout(freighter.getAddress())
+          : null;
       const walletAddress = resolveWalletAddress(addressResult);
 
       if (!walletAddress) {
@@ -474,7 +574,10 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
         error: null,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Freighter wallet status is unavailable.';
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Freighter wallet status is unavailable.';
       const isLocked = /locked|unlock/i.test(message);
       set({
         status: isLocked ? 'locked' : 'disconnected',

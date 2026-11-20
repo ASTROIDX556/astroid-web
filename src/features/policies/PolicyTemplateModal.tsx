@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  CalendarClock,
-  Coins,
-  Gauge,
-  ListChecks,
-  Search,
-  Users,
-} from 'lucide-react';
+import { CalendarClock, Coins, Gauge, ListChecks, Search, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -108,29 +101,35 @@ export function PolicyTemplateModal({
     return ordered;
   }, [filtered]);
 
-  const handleListKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-    const items = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE_ITEM_SELECTOR),
-    );
-    if (items.length === 0) return;
-    const active = document.activeElement;
-    const index = items.findIndex((item) => item === active);
+  const handleListKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const items = Array.from(
+        event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE_ITEM_SELECTOR),
+      );
+      if (items.length === 0) return;
+      const active = document.activeElement;
+      const index = items.findIndex((item) => item === active);
 
-    let target: HTMLElement | undefined;
-    if (event.key === 'ArrowDown') {
-      target = index < 0 ? items[0] : items[(index + 1) % items.length];
-    } else if (event.key === 'ArrowUp') {
-      target = index < 0 ? items[items.length - 1] : items[(index - 1 + items.length) % items.length];
-    } else if (event.key === 'Home') {
-      target = items[0];
-    } else if (event.key === 'End') {
-      target = items[items.length - 1];
-    }
-    if (target) {
-      event.preventDefault();
-      target.focus();
-    }
-  }, []);
+      let target: HTMLElement | undefined;
+      if (event.key === 'ArrowDown') {
+        target = index < 0 ? items[0] : items[(index + 1) % items.length];
+      } else if (event.key === 'ArrowUp') {
+        target =
+          index < 0
+            ? items[items.length - 1]
+            : items[(index - 1 + items.length) % items.length];
+      } else if (event.key === 'Home') {
+        target = items[0];
+      } else if (event.key === 'End') {
+        target = items[items.length - 1];
+      }
+      if (target) {
+        event.preventDefault();
+        target.focus();
+      }
+    },
+    [],
+  );
 
   const handleApply = useCallback(
     (template: PolicyTemplate) => {
@@ -141,7 +140,10 @@ export function PolicyTemplateModal({
   );
 
   const categoriesPresent = useMemo(
-    () => POLICY_TEMPLATE_CATEGORIES.filter((cat) => templates.some((t) => t.category === cat)),
+    () =>
+      POLICY_TEMPLATE_CATEGORIES.filter((cat) =>
+        templates.some((t) => t.category === cat),
+      ),
     [templates],
   );
 
@@ -167,7 +169,7 @@ export function PolicyTemplateModal({
         <div
           role="group"
           aria-label="Filter templates by category"
-          className="flex flex-wrap gap-1.5"
+          className="gap-1.5 flex flex-wrap"
         >
           {(['All', ...categoriesPresent] as const).map((option) => {
             const isActive = category === option;
@@ -178,7 +180,7 @@ export function PolicyTemplateModal({
                 onClick={() => setCategory(option)}
                 aria-pressed={isActive}
                 className={cn(
-                  'rounded-button border px-2.5 py-1 text-2xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
+                  'px-2.5 rounded-button border py-1 text-2xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface',
                   isActive
                     ? 'border-gold bg-gold-soft text-foreground'
                     : 'border-border bg-surface text-foreground-secondary hover:text-foreground',
@@ -203,8 +205,9 @@ export function PolicyTemplateModal({
         >
           {grouped.length === 0 ? (
             <p className="rounded-card border border-dashed border-border p-6 text-center text-sm text-foreground-secondary">
-              No templates match <span className="font-medium text-foreground">“{query}”</span>.
-              Try a different term such as “velocity”, “whitelist”, or “budget”.
+              No templates match{' '}
+              <span className="font-medium text-foreground">“{query}”</span>. Try a
+              different term such as “velocity”, “whitelist”, or “budget”.
             </p>
           ) : (
             grouped.map(({ category: cat, items }) => (
@@ -233,7 +236,9 @@ export function PolicyTemplateModal({
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-sm font-medium text-foreground">{template.name}</p>
+                                <p className="text-sm font-medium text-foreground">
+                                  {template.name}
+                                </p>
                                 <Badge variant="outline" size="sm">
                                   {template.category}
                                 </Badge>
@@ -241,10 +246,10 @@ export function PolicyTemplateModal({
                               <p className="mt-1 text-xs leading-relaxed text-foreground-secondary">
                                 {template.description}
                               </p>
-                              <ul className="mt-2 flex flex-wrap gap-1.5">
+                              <ul className="gap-1.5 mt-2 flex flex-wrap">
                                 {template.highlights.map((highlight) => (
                                   <li key={highlight}>
-                                    <span className="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-2xs text-foreground-secondary ring-1 ring-border">
+                                    <span className="py-0.5 inline-flex items-center rounded-full bg-surface px-2 text-2xs text-foreground-secondary ring-1 ring-border">
                                       {highlight}
                                     </span>
                                   </li>

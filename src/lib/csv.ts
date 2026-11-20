@@ -7,7 +7,7 @@ export interface CsvColumn<TData> {
 }
 
 function escapeCsvCell(value: CsvCell): string {
-  return `"${String(value instanceof Date ? value.toISOString() : value ?? '').replace(/"/g, '""')}"`;
+  return `"${String(value instanceof Date ? value.toISOString() : (value ?? '')).replace(/"/g, '""')}"`;
 }
 
 export function serializeCsv<TData>(
@@ -19,9 +19,7 @@ export function serializeCsv<TData>(
     ...rows.map((row) => columns.map((column) => column.value(row))),
   ];
 
-  return records
-    .map((record) => record.map(escapeCsvCell).join(','))
-    .join('\r\n');
+  return records.map((record) => record.map(escapeCsvCell).join(',')).join('\r\n');
 }
 
 export function downloadCsv<TData>(

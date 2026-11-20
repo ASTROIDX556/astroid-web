@@ -10,7 +10,11 @@ export function Skeleton({ className, rounded = 'sm', ...props }: SkeletonProps)
     <div
       className={cn(
         'skeleton',
-        rounded === 'full' ? 'rounded-full' : rounded === 'md' ? 'rounded-md' : 'rounded-sm',
+        rounded === 'full'
+          ? 'rounded-full'
+          : rounded === 'md'
+            ? 'rounded-md'
+            : 'rounded-sm',
         className,
       )}
       aria-hidden
@@ -32,28 +36,31 @@ export function SkeletonCard({ className }: { className?: string }) {
       </div>
       <Skeleton className="mt-5 h-8 w-2/3" />
       <div className="mt-4 flex gap-2">
-        <Skeleton className="h-3 w-16" />
-        <Skeleton className="h-3 w-16" />
+        <Skeleton className="w-16 h-3" />
+        <Skeleton className="w-16 h-3" />
       </div>
     </div>
   );
 }
 
 /** A skeleton table body with configurable rows/columns. */
-export function SkeletonTable({ rows = 6, cols = 5 }: { rows?: number; cols?: number }) {
+export function SkeletonTable({
+  rows = 6,
+  cols = 5,
+}: {
+  rows?: number;
+  cols?: number;
+}) {
   return (
     <div className="overflow-hidden rounded-card border border-border">
       <div className="border-b border-border bg-surface-secondary/50 p-4">
-        <Skeleton className="h-3 w-40" />
+        <Skeleton className="w-40 h-3" />
       </div>
       <div className="divide-y divide-border">
         {Array.from({ length: rows }).map((_, r) => (
           <div key={r} className="flex items-center gap-4 p-4">
             {Array.from({ length: cols }).map((__, c) => (
-              <Skeleton
-                key={c}
-                className={cn('h-3', c === 0 ? 'w-1/4' : 'flex-1')}
-              />
+              <Skeleton key={c} className={cn('h-3', c === 0 ? 'w-1/4' : 'flex-1')} />
             ))}
           </div>
         ))}

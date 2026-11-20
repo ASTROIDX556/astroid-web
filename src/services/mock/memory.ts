@@ -57,7 +57,8 @@ export const memoryRecords: MemoryRecord[] = [
       {
         kind: 'blockchain',
         title: 'Confirmed on Stellar',
-        detail: 'Transaction submitted to the Stellar public network and confirmed in 4.1s.',
+        detail:
+          'Transaction submitted to the Stellar public network and confirmed in 4.1s.',
         actor: 'Stellar Network',
         timestamp: '2026-07-31T07:42:00.000Z',
         meta: {
@@ -89,7 +90,8 @@ export const memoryRecords: MemoryRecord[] = [
       {
         kind: 'conversation',
         title: 'Task assigned',
-        detail: 'Research plan requested a high-quality multilingual corpus for fine-tuning.',
+        detail:
+          'Research plan requested a high-quality multilingual corpus for fine-tuning.',
         actor: 'Ada Okonkwo → Kepler',
         timestamp: '2026-07-30T16:30:00.000Z',
       },
@@ -155,7 +157,8 @@ export const memoryRecords: MemoryRecord[] = [
       {
         kind: 'approval',
         title: 'Committee review — rejected',
-        detail: 'Marco Vitale rejected: "Unverified recipient. Do not proceed without KYC."',
+        detail:
+          'Marco Vitale rejected: "Unverified recipient. Do not proceed without KYC."',
         actor: 'Marco Vitale',
         timestamp: '2026-07-30T00:10:00.000Z',
       },

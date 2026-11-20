@@ -1,7 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Bot, Wallet as WalletIcon } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Bot,
+  Wallet as WalletIcon,
+} from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { KeyValue } from '@/components/dashboard/stat-card';
@@ -66,12 +72,20 @@ export default function TransactionDetailPage({ params }: { params: { id: string
                     <Icon className="h-5 w-5" aria-hidden />
                   </span>
                   <div>
-                    <p className="font-display text-2xl font-semibold leading-none tracking-tight tabular">
+                    <p className="tabular font-display text-2xl font-semibold leading-none tracking-tight">
                       {outbound ? '−' : '+'}
-                      <AnimatedNumber value={data.amount} formatter={(v) => formatCurrency(v, data.asset)} />
+                      <AnimatedNumber
+                        value={data.amount}
+                        formatter={(v) => formatCurrency(v, data.asset)}
+                      />
                     </p>
                     <p className="mt-1 text-2xs capitalize text-foreground-secondary">
-                      {data.direction} · <AnimatedNumber value={data.usdValue} formatter={(v) => formatCurrency(v, 'USDC')} /> USD value
+                      {data.direction} ·{' '}
+                      <AnimatedNumber
+                        value={data.usdValue}
+                        formatter={(v) => formatCurrency(v, 'USDC')}
+                      />{' '}
+                      USD value
                     </p>
                   </div>
                 </div>
@@ -85,10 +99,16 @@ export default function TransactionDetailPage({ params }: { params: { id: string
                   </KeyValue>
                   <KeyValue label="Asset">{data.asset}</KeyValue>
                   <KeyValue label="Amount">
-                    <AnimatedNumber value={data.amount} formatter={(v) => formatCurrency(v, data.asset)} />
+                    <AnimatedNumber
+                      value={data.amount}
+                      formatter={(v) => formatCurrency(v, data.asset)}
+                    />
                   </KeyValue>
                   <KeyValue label="USD value">
-                    <AnimatedNumber value={data.usdValue} formatter={(v) => formatCurrency(v, 'USDC')} />
+                    <AnimatedNumber
+                      value={data.usdValue}
+                      formatter={(v) => formatCurrency(v, 'USDC')}
+                    />
                   </KeyValue>
                   <KeyValue label="Direction">
                     <span className="capitalize">{data.direction}</span>

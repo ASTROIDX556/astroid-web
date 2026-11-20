@@ -52,7 +52,11 @@ function list<T>(items: T[], query?: ListQuery): { data: T[]; meta: ApiMeta } {
   return ok(page, meta);
 }
 
-function findOrThrow<T extends { id: string }>(items: T[], id: string, entity: string): T {
+function findOrThrow<T extends { id: string }>(
+  items: T[],
+  id: string,
+  entity: string,
+): T {
   const found = items.find((item) => item.id === decodeURIComponent(id));
   if (!found) {
     throw new AstroidApiError('NOT_FOUND', `${entity} "${id}" was not found.`);
@@ -87,7 +91,11 @@ function simulatePolicy(body: unknown): PolicySimulationResult {
   return {
     passed: !blocked,
     triggeredPolicies: [
-      { policyId: 'pol_max_txn', name: 'Maximum transaction ceiling', passed: !blocked },
+      {
+        policyId: 'pol_max_txn',
+        name: 'Maximum transaction ceiling',
+        passed: !blocked,
+      },
       {
         policyId: 'pol_approval_5k',
         name: 'Dual approval above 5,000',
@@ -101,7 +109,11 @@ function simulatePolicy(body: unknown): PolicySimulationResult {
       name: 'Engineering',
       remainingAfter: Math.max(0, 41_400 - amount),
     },
-    predictedOutcome: blocked ? 'blocked' : requiresApproval ? 'requires_approval' : 'auto_execute',
+    predictedOutcome: blocked
+      ? 'blocked'
+      : requiresApproval
+        ? 'requires_approval'
+        : 'auto_execute',
   };
 }
 
@@ -137,13 +149,17 @@ function dispatchNested(path: string): MockResult | null {
   if (proposalId) return ok(findOrThrow(proposals, proposalId, 'Proposal'));
 
   const memoryRecordId = matchId(path, '/memory');
-  if (memoryRecordId) return ok(findOrThrow(memoryRecords, memoryRecordId, 'Memory record'));
+  if (memoryRecordId)
+    return ok(findOrThrow(memoryRecords, memoryRecordId, 'Memory record'));
 
   const auditEventId = matchId(path, '/audit/logs');
   if (auditEventId) {
     const event = MOCK_AUDIT_EVENTS.find((item) => item.id === auditEventId);
     if (!event) {
-      throw new AstroidApiError('NOT_FOUND', `Audit event "${auditEventId}" was not found.`);
+      throw new AstroidApiError(
+        'NOT_FOUND',
+        `Audit event "${auditEventId}" was not found.`,
+      );
     }
     return ok(event);
   }
@@ -176,7 +192,12 @@ const GET_SINGLETONS: Record<string, unknown> = {
   '/ai/assistant/seed': assistantSeed,
 };
 
-function dispatch(method: string, path: string, query: ListQuery | undefined, body: unknown): MockResult {
+function dispatch(
+  method: string,
+  path: string,
+  query: ListQuery | undefined,
+  body: unknown,
+): MockResult {
   if (method === 'GET') {
     const singleton = GET_SINGLETONS[path];
     if (singleton !== undefined) return ok(singleton);
@@ -223,5 +244,8 @@ export async function resolveMockRequest<T>(
   const normalized = path.split('?')[0]?.replace(/\/+$/, '') ?? path;
   const cleanPath = normalized.length === 0 ? '/' : normalized;
 
-  return dispatch(method, cleanPath, init.query, parseBody(init.body)) as { data: T; meta: ApiMeta };
+  return dispatch(method, cleanPath, init.query, parseBody(init.body)) as {
+    data: T;
+    meta: ApiMeta;
+  };
 }

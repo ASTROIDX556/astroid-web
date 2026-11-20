@@ -72,7 +72,8 @@ export default function NotificationsPage() {
           return (
             <div className="space-y-6">
               <SectionLabel>
-                {unread > 0 ? `${unread} unread` : 'All caught up'} · {data.length} total
+                {unread > 0 ? `${unread} unread` : 'All caught up'} · {data.length}{' '}
+                total
               </SectionLabel>
               <Card className="divide-y divide-border p-0">
                 {data.map((n) => {
@@ -96,7 +97,9 @@ export default function NotificationsPage() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-medium text-foreground">{n.title}</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {n.title}
+                          </p>
                           {!n.read && (
                             <Badge variant="gold" size="sm">
                               New

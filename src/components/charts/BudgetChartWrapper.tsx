@@ -24,11 +24,7 @@ export function BudgetChartWrapper({
   return (
     <div
       className={cn('w-full min-w-0', className)}
-      style={
-        height !== undefined
-          ? { height }
-          : { aspectRatio, minHeight }
-      }
+      style={height !== undefined ? { height } : { aspectRatio, minHeight }}
     >
       <ResponsiveContainer
         width="100%"

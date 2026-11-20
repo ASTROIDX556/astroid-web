@@ -1,8 +1,18 @@
 'use client';
 
-import { ChevronDown, FileText, Landmark, ScrollText, Zap, type LucideIcon } from 'lucide-react';
+import {
+  ChevronDown,
+  FileText,
+  Landmark,
+  ScrollText,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
 import { Dropdown } from '@/components/ui/dropdown';
-import { FINANCIAL_BRIEFING_TEMPLATES, type FinancialBriefingTemplate } from './briefingTemplates';
+import {
+  FINANCIAL_BRIEFING_TEMPLATES,
+  type FinancialBriefingTemplate,
+} from './briefingTemplates';
 
 /** Lucide icon registry for template items (iconName comes from the catalogue). */
 const TEMPLATE_ICONS: Record<string, LucideIcon> = {

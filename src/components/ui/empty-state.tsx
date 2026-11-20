@@ -34,10 +34,12 @@ export function EmptyState({
           {illustration}
         </div>
       )}
-      <div className="flex max-w-sm flex-col gap-1.5">
+      <div className="gap-1.5 flex max-w-sm flex-col">
         <h3 className="font-display text-lg font-semibold tracking-tight">{title}</h3>
         {description && (
-          <p className="text-xs leading-relaxed text-foreground-secondary">{description}</p>
+          <p className="text-xs leading-relaxed text-foreground-secondary">
+            {description}
+          </p>
         )}
       </div>
       {action && <div className="mt-1">{action}</div>}

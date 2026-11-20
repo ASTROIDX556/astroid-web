@@ -116,7 +116,12 @@ void foldPayload;
  * the left column walks the proposed operations, the right column shows which
  * policy rules matched or failed, with semantic pass/fail badges throughout.
  */
-export function PolicySimulationDiff({ result, rules, transactionId, className }: PolicySimulationDiffProps) {
+export function PolicySimulationDiff({
+  result,
+  rules,
+  transactionId,
+  className,
+}: PolicySimulationDiffProps) {
   const outcome = OUTCOME_CONFIG[result.outcome];
 
   const blockedCount = useMemo(
@@ -147,17 +152,22 @@ export function PolicySimulationDiff({ result, rules, transactionId, className }
           outcome.border,
         )}
       >
-        <outcome.statusIcon className={cn('h-5 w-5 shrink-0', outcome.statusClass)} aria-hidden />
+        <outcome.statusIcon
+          className={cn('h-5 w-5 shrink-0', outcome.statusClass)}
+          aria-hidden
+        />
         <div className="min-w-0 flex-1">
           <p className={cn('text-sm font-semibold', outcome.statusClass)}>
             Simulation {result.passed ? 'passed' : 'failed'}
           </p>
           <p className="text-xs text-foreground-secondary">
-            {result.operations.length} operation{result.operations.length === 1 ? '' : 's'} ·{' '}
+            {result.operations.length} operation
+            {result.operations.length === 1 ? '' : 's'} ·{' '}
             {blockedCount > 0
               ? `${blockedCount} blocked path${blockedCount === 1 ? '' : 's'}`
               : 'no blocked paths'}{' '}
-            · {violatedRules.length} rule violation{violatedRules.length === 1 ? '' : 's'}
+            · {violatedRules.length} rule violation
+            {violatedRules.length === 1 ? '' : 's'}
             {transactionId ? ` · ${truncateHash(transactionId, 6, 6)}` : ''}
           </p>
         </div>
@@ -191,12 +201,20 @@ export function PolicySimulationDiff({ result, rules, transactionId, className }
               <li key={`${op.type}-${index}`} className="px-4 py-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-medium text-foreground">{op.type}</p>
-                    <p className="mt-0.5 truncate font-mono text-2xs text-foreground-muted" title={op.source}>
+                    <p className="truncate text-xs font-medium text-foreground">
+                      {op.type}
+                    </p>
+                    <p
+                      className="mt-0.5 truncate font-mono text-2xs text-foreground-muted"
+                      title={op.source}
+                    >
                       {truncateHash(op.source, 6, 8)}
                     </p>
                   </div>
-                  <Badge variant={op.status === 'allowed' ? 'success' : 'danger'} size="sm">
+                  <Badge
+                    variant={op.status === 'allowed' ? 'success' : 'danger'}
+                    size="sm"
+                  >
                     {op.status === 'allowed' ? 'Allowed' : 'Blocked'}
                   </Badge>
                 </div>
@@ -237,21 +255,36 @@ export function PolicySimulationDiff({ result, rules, transactionId, className }
               <li key={rule.ruleId} className="px-4 py-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-medium text-foreground" title={rule.ruleName}>
+                    <p
+                      className="truncate text-xs font-medium text-foreground"
+                      title={rule.ruleName}
+                    >
                       {rule.ruleName}
                     </p>
-                    <p className="mt-0.5 text-2xs text-foreground-secondary">{rule.constraint}</p>
+                    <p className="mt-0.5 text-2xs text-foreground-secondary">
+                      {rule.constraint}
+                    </p>
                   </div>
                   <Badge
                     variant={
-                      rule.status === 'matched' ? 'success' : rule.status === 'violated' ? 'danger' : 'neutral'
+                      rule.status === 'matched'
+                        ? 'success'
+                        : rule.status === 'violated'
+                          ? 'danger'
+                          : 'neutral'
                     }
                     size="sm"
                   >
-                    {rule.status === 'matched' ? 'Matched' : rule.status === 'violated' ? 'Violated' : 'Not triggered'}
+                    {rule.status === 'matched'
+                      ? 'Matched'
+                      : rule.status === 'violated'
+                        ? 'Violated'
+                        : 'Not triggered'}
                   </Badge>
                 </div>
-                <p className="mt-1 text-2xs leading-relaxed text-foreground-muted">{rule.detail}</p>
+                <p className="mt-1 text-2xs leading-relaxed text-foreground-muted">
+                  {rule.detail}
+                </p>
               </li>
             ))}
           </ul>
@@ -262,10 +295,14 @@ export function PolicySimulationDiff({ result, rules, transactionId, className }
       <div className="flex flex-wrap items-center gap-2 rounded-card border border-border bg-surface px-4 py-3 text-xs">
         <Shield className="h-4 w-4 shrink-0 text-gold" aria-hidden />
         <span className="text-foreground-secondary">
-          {result.passed ? 'All policy checks passed — the transaction may proceed.' : 'Policy violations must be resolved before this transaction can be authorized.'}
+          {result.passed
+            ? 'All policy checks passed — the transaction may proceed.'
+            : 'Policy violations must be resolved before this transaction can be authorized.'}
         </span>
         <ArrowRight className="h-3 w-3 shrink-0 text-foreground-muted" aria-hidden />
-        <span className={cn('font-semibold', outcome.statusClass)}>{outcome.label}</span>
+        <span className={cn('font-semibold', outcome.statusClass)}>
+          {outcome.label}
+        </span>
       </div>
     </div>
   );

@@ -11,7 +11,12 @@ import {
   useStellarAccount,
 } from '@/hooks/useStellarAccount';
 import { cn } from '@/lib/cn';
-import { formatCurrency, formatNumber, formatRelativeTime, truncateHash } from '@/lib/format';
+import {
+  formatCurrency,
+  formatNumber,
+  formatRelativeTime,
+  truncateHash,
+} from '@/lib/format';
 
 interface StellarAccountSyncPanelProps {
   /** Stellar account to poll (public key of the wallet being viewed). */
@@ -25,7 +30,11 @@ type SyncState = 'disconnected' | 'error' | 'stale' | 'syncing' | 'live';
 
 const syncBadge: Record<
   SyncState,
-  { label: string; variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral'; dot?: boolean }
+  {
+    label: string;
+    variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+    dot?: boolean;
+  }
 > = {
   live: { label: 'Live', variant: 'success', dot: true },
   syncing: { label: 'Syncing', variant: 'info', dot: true },
@@ -35,19 +44,13 @@ const syncBadge: Record<
 };
 
 /** One metric block; used by both the skeleton and the resolved grid so heights match. */
-function StatBlock({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function StatBlock({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
       <dt className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
         {label}
       </dt>
-      <dd className="mt-2 flex h-7 items-center font-display text-2xl font-semibold leading-none tracking-tight tabular">
+      <dd className="tabular mt-2 flex h-7 items-center font-display text-2xl font-semibold leading-none tracking-tight">
         {children}
       </dd>
     </div>
@@ -111,7 +114,9 @@ export function StellarAccountSyncPanel({
             </Badge>
           </div>
           <p className="mt-1 font-mono text-2xs text-foreground-muted">
-            {account.hasAccount ? truncateHash(account.publicKey, 6, 6) : 'No wallet address'}
+            {account.hasAccount
+              ? truncateHash(account.publicKey, 6, 6)
+              : 'No wallet address'}
           </p>
         </div>
 
@@ -136,7 +141,10 @@ export function StellarAccountSyncPanel({
             aria-label="Refresh wallet balances now"
             leftIcon={
               <RefreshCw
-                className={cn('h-3.5 w-3.5', account.isFetching && !account.isRefreshing && 'animate-spin')}
+                className={cn(
+                  'h-3.5 w-3.5',
+                  account.isFetching && !account.isRefreshing && 'animate-spin',
+                )}
                 aria-hidden
               />
             }
@@ -154,17 +162,17 @@ export function StellarAccountSyncPanel({
         <div aria-label="Loading account summary" role="status">
           <dl className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
             <StatBlock label="Total value">
-              <Skeleton className="h-6 w-24" />
+              <Skeleton className="w-24 h-6" />
             </StatBlock>
             <StatBlock label="Assets held">
               <Skeleton className="h-6 w-10" />
             </StatBlock>
             <StatBlock label="Transactions">
-              <Skeleton className="h-6 w-14" />
+              <Skeleton className="w-14 h-6" />
             </StatBlock>
           </dl>
           {/* Reserves the footer line so the card height matches the ready state. */}
-          <Skeleton className="mt-3 h-4 w-40" />
+          <Skeleton className="w-40 mt-3 h-4" />
         </div>
       ) : (
         <>
@@ -201,11 +209,14 @@ export function StellarAccountSyncPanel({
           <div
             role="status"
             aria-live="polite"
-            className="mt-3 flex h-4 items-center gap-1.5 overflow-hidden text-2xs text-foreground-muted"
+            className="gap-1.5 mt-3 flex h-4 items-center overflow-hidden text-2xs text-foreground-muted"
           >
             {account.isError && account.errorMessage ? (
               <>
-                <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
+                <AlertTriangle
+                  className="h-3.5 w-3.5 shrink-0 text-warning"
+                  aria-hidden
+                />
                 <span className="truncate" title={account.errorMessage}>
                   {account.errorMessage}
                 </span>

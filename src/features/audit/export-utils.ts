@@ -41,7 +41,8 @@ const CSV_HEADERS = [
  */
 export function escapeCsvField(value: unknown): string {
   if (value === null || value === undefined) return '';
-  const text = typeof value === 'string' ? value : JSON.stringify(value) ?? String(value);
+  const text =
+    typeof value === 'string' ? value : (JSON.stringify(value) ?? String(value));
   if (text.length === 0) return '';
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
@@ -72,7 +73,10 @@ export function buildAuditCsv(events: readonly AuditEvent[]): string {
 }
 
 /** Build the pretty-printed JSON document with export metadata. */
-export function buildAuditJson(events: readonly AuditEvent[], exportedAt: Date = new Date()): string {
+export function buildAuditJson(
+  events: readonly AuditEvent[],
+  exportedAt: Date = new Date(),
+): string {
   return JSON.stringify(
     {
       exportedAt: exportedAt.toISOString(),

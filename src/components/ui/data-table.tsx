@@ -173,7 +173,9 @@ export function DataTable<TData, TValue = unknown>({
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     globalFilterFn: (row, _columnId, filterValue) => {
-      const search = String(filterValue ?? '').trim().toLowerCase();
+      const search = String(filterValue ?? '')
+        .trim()
+        .toLowerCase();
       if (!search) return true;
       return row
         .getAllCells()
@@ -181,7 +183,9 @@ export function DataTable<TData, TValue = unknown>({
         .some((cell) => {
           const value = cell.getValue();
           return (
-            (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') &&
+            (typeof value === 'string' ||
+              typeof value === 'number' ||
+              typeof value === 'boolean') &&
             String(value).toLowerCase().includes(search)
           );
         });
@@ -192,7 +196,9 @@ export function DataTable<TData, TValue = unknown>({
   const onSelectionChangeRef = useRef(onSelectionChange);
   onSelectionChangeRef.current = onSelectionChange;
   useEffect(() => {
-    onSelectionChangeRef.current?.(table.getSelectedRowModel().flatRows.map((row) => row.original));
+    onSelectionChangeRef.current?.(
+      table.getSelectedRowModel().flatRows.map((row) => row.original),
+    );
   }, [rowSelection, table]);
 
   const { pageIndex, pageSize: currentPageSize } = table.getState().pagination;
@@ -207,7 +213,12 @@ export function DataTable<TData, TValue = unknown>({
   const interactive = typeof onRowClick === 'function';
 
   return (
-    <div className={cn('overflow-hidden rounded-card border border-border bg-surface', className)}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-card border border-border bg-surface',
+        className,
+      )}
+    >
       {(searchable || caption || onExportCSV) && (
         <div className="flex flex-col gap-3 border-b border-border bg-surface-secondary/40 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-1 sm:flex-row sm:items-center sm:justify-between">
@@ -222,7 +233,7 @@ export function DataTable<TData, TValue = unknown>({
             {searchable && (
               <div role="search" className="relative block w-full sm:max-w-xs">
                 <Search
-                  className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground-muted"
+                  className="h-3.5 w-3.5 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted"
                   aria-hidden
                 />
                 <input
@@ -263,7 +274,10 @@ export function DataTable<TData, TValue = unknown>({
           {caption && <caption className="sr-only">{caption}</caption>}
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="border-b border-border bg-surface-secondary/40">
+              <tr
+                key={headerGroup.id}
+                className="border-b border-border bg-surface-secondary/40"
+              >
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta as ColumnMeta | undefined;
                   const canSort = header.column.getCanSort();
@@ -294,7 +308,7 @@ export function DataTable<TData, TValue = unknown>({
                         <button
                           type="button"
                           onClick={header.column.getToggleSortingHandler()}
-                          className="inline-flex items-center gap-1.5 rounded-sm text-left font-medium uppercase tracking-[0.18em] transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="gap-1.5 inline-flex items-center rounded-sm text-left font-medium uppercase tracking-[0.18em] transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <span>{content}</span>
                           <span aria-hidden className="text-foreground-muted">
@@ -324,7 +338,7 @@ export function DataTable<TData, TValue = unknown>({
                   {emptyState ?? (
                     <div
                       role="status"
-                      className="flex min-h-24 items-center justify-center text-sm text-foreground-secondary"
+                      className="min-h-24 flex items-center justify-center text-sm text-foreground-secondary"
                     >
                       No records found.
                     </div>
@@ -340,7 +354,8 @@ export function DataTable<TData, TValue = unknown>({
                   onClick={
                     interactive
                       ? (event) => {
-                          if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
+                          if ((event.target as HTMLElement).closest(INTERACTIVE))
+                            return;
                           onRowClick?.(row.original);
                         }
                       : undefined
@@ -368,7 +383,8 @@ export function DataTable<TData, TValue = unknown>({
                       key={cell.id}
                       className={cn(
                         'px-4 py-3 align-middle text-foreground',
-                        (cell.column.columnDef.meta as ColumnMeta | undefined)?.className,
+                        (cell.column.columnDef.meta as ColumnMeta | undefined)
+                          ?.className,
                       )}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -390,7 +406,9 @@ export function DataTable<TData, TValue = unknown>({
             {filteredCount === 0
               ? '0 rows'
               : `${firstRow}-${lastRow} of ${filteredCount}`}
-            {enableRowSelection && selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
+            {enableRowSelection && selectedCount > 0
+              ? ` · ${selectedCount} selected`
+              : ''}
           </p>
 
           {showPagination && (

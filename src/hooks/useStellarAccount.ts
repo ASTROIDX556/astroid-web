@@ -118,7 +118,9 @@ export function useStellarAccount(
 
   const hasExplicitKey =
     typeof explicitPublicKey === 'string' && explicitPublicKey.trim().length > 0;
-  const publicKey = (hasExplicitKey ? explicitPublicKey : connectedPublicKey ?? '').trim();
+  const publicKey = (
+    hasExplicitKey ? explicitPublicKey : (connectedPublicKey ?? '')
+  ).trim();
   const hasAccount = publicKey.length > 0;
 
   // An explicit address is viewable on its own; the implicit address must
@@ -128,11 +130,14 @@ export function useStellarAccount(
 
   const query = useQuery<StellarAccountSnapshot, Error>({
     queryKey: queryKeys.walletAccount(publicKey),
-    queryFn: ({ signal }) => fetchStellarAccountSnapshot(publicKey, { signal, timeoutMs }),
+    queryFn: ({ signal }) =>
+      fetchStellarAccountSnapshot(publicKey, { signal, timeoutMs }),
     enabled: canQuery,
     staleTime: staleTimeMs,
     refetchInterval:
-      canQuery && pollIntervalMs !== false && pollIntervalMs > 0 ? pollIntervalMs : false,
+      canQuery && pollIntervalMs !== false && pollIntervalMs > 0
+        ? pollIntervalMs
+        : false,
     // Background polling would burn Horizon rate limits on a hidden tab.
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,

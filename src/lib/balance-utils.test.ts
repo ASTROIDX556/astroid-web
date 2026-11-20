@@ -51,7 +51,10 @@ test('formatFixedPointUnits renders exactly 8 decimal places', () => {
 
 test('getAssetKey normalises code case and includes issuer when present', () => {
   assert.equal(getAssetKey({ code: 'xlm' }), 'XLM');
-  assert.equal(getAssetKey({ code: 'usdc', issuer: USDC_ISSUER }), `USDC:${USDC_ISSUER}`);
+  assert.equal(
+    getAssetKey({ code: 'usdc', issuer: USDC_ISSUER }),
+    `USDC:${USDC_ISSUER}`,
+  );
   assert.equal(getAssetKey({ code: 'XLM', issuer: '  ' }), 'XLM');
 });
 
@@ -81,7 +84,13 @@ test('aggregateBalancesByAsset sums the same asset exactly across wallets', () =
   ]);
 
   assert.deepEqual(result, [
-    { code: 'XLM', assetKey: 'XLM', amount: '0.30000000', amountValue: 0.3, entryCount: 2 },
+    {
+      code: 'XLM',
+      assetKey: 'XLM',
+      amount: '0.30000000',
+      amountValue: 0.3,
+      entryCount: 2,
+    },
     {
       code: 'USDC',
       issuer: USDC_ISSUER,
@@ -115,7 +124,11 @@ test('aggregateBalancesByAsset treats invalid amounts as zero and skips blank co
   ]);
 
   assert.deepEqual(
-    result.map(({ assetKey, amount, entryCount }) => ({ assetKey, amount, entryCount })),
+    result.map(({ assetKey, amount, entryCount }) => ({
+      assetKey,
+      amount,
+      entryCount,
+    })),
     [{ assetKey: 'XLM', amount: '5.00000000', entryCount: 3 }],
   );
 });
@@ -135,8 +148,14 @@ test('aggregateBalancesByAsset preserves extreme token decimals', () => {
 test('resolveRateUnits prefers issuer-qualified rates, then falls back to code', () => {
   const rates = { usdc: 1, [`USDC:${OTHER_ISSUER}`]: 0.98 };
 
-  assert.equal(resolveRateUnits({ code: 'USDC', issuer: OTHER_ISSUER }, rates), 98000000n);
-  assert.equal(resolveRateUnits({ code: 'USDC', issuer: USDC_ISSUER }, rates), 100000000n);
+  assert.equal(
+    resolveRateUnits({ code: 'USDC', issuer: OTHER_ISSUER }, rates),
+    98000000n,
+  );
+  assert.equal(
+    resolveRateUnits({ code: 'USDC', issuer: USDC_ISSUER }, rates),
+    100000000n,
+  );
   assert.equal(resolveRateUnits({ code: 'XLM' }, rates), null);
 });
 
@@ -161,7 +180,12 @@ test('calculatePortfolioValue values a multi-asset portfolio', () => {
       usdValue,
     })),
     [
-      { assetKey: 'XLM', amount: '1250.50000000', rateUsd: 0.11, usdValue: '137.55500000' },
+      {
+        assetKey: 'XLM',
+        amount: '1250.50000000',
+        rateUsd: 0.11,
+        usdValue: '137.55500000',
+      },
       {
         assetKey: `USDC:${USDC_ISSUER}`,
         amount: '5000.12345678',

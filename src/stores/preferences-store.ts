@@ -66,7 +66,6 @@ interface PreferencesState {
   setHasHydrated: (value: boolean) => void;
 }
 
-
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set) => ({

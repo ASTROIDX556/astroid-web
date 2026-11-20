@@ -82,9 +82,14 @@ interface NotificationItemProps {
   onDismiss: (id: string) => void;
 }
 
-function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationItemProps) {
+function NotificationItem({
+  notification,
+  onMarkRead,
+  onDismiss,
+}: NotificationItemProps) {
   const Icon = NOTIFICATION_ICON[notification.type] ?? Bell;
-  const colorClass = NOTIFICATION_COLOR[notification.type] ?? 'text-foreground-secondary';
+  const colorClass =
+    NOTIFICATION_COLOR[notification.type] ?? 'text-foreground-secondary';
 
   return (
     <motion.div
@@ -103,7 +108,10 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
       >
         {/* Unread dot */}
         {!notification.read && (
-          <span className="absolute left-1.5 top-4 h-1.5 w-1.5 rounded-full bg-gold" aria-label="Unread" />
+          <span
+            className="left-1.5 h-1.5 w-1.5 absolute top-4 rounded-full bg-gold"
+            aria-label="Unread"
+          />
         )}
 
         {/* Icon */}
@@ -113,10 +121,15 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
 
         {/* Content */}
         <div className="min-w-0 flex-1">
-          <p className={cn('text-xs font-medium leading-snug', notification.read ? 'text-foreground-secondary' : 'text-foreground')}>
+          <p
+            className={cn(
+              'text-xs font-medium leading-snug',
+              notification.read ? 'text-foreground-secondary' : 'text-foreground',
+            )}
+          >
             {notification.title}
           </p>
-          <p className="mt-0.5 text-2xs leading-relaxed text-foreground-muted line-clamp-2">
+          <p className="mt-0.5 line-clamp-2 text-2xs leading-relaxed text-foreground-muted">
             {notification.body}
           </p>
           <span className="mt-1 inline-block text-2xs text-foreground-muted">
@@ -131,7 +144,7 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
               type="button"
               onClick={() => onMarkRead(notification.id)}
               className={cn(
-                'grid h-6 w-6 place-items-center rounded-xs text-foreground-muted transition-colors hover:bg-surface-secondary hover:text-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+                'grid h-6 w-6 place-items-center rounded-xs text-foreground-muted opacity-0 transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100',
                 FOCUS_RING,
               )}
               aria-label="Mark as read"
@@ -144,7 +157,7 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
             type="button"
             onClick={() => onDismiss(notification.id)}
             className={cn(
-              'grid h-6 w-6 place-items-center rounded-xs text-foreground-muted transition-colors hover:bg-danger-soft hover:text-danger opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+              'grid h-6 w-6 place-items-center rounded-xs text-foreground-muted opacity-0 transition-colors hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 group-hover:opacity-100',
               FOCUS_RING,
             )}
             aria-label="Dismiss notification"
@@ -237,7 +250,7 @@ export function NotificationCenter() {
             key={unread}
             initial={{ scale: 0.5 }}
             animate={{ scale: 1 }}
-            className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-xs bg-gold px-1 text-[10px] font-bold text-background-secondary"
+            className="right-1.5 top-1.5 absolute grid h-4 min-w-4 place-items-center rounded-xs bg-gold px-1 text-[10px] font-bold text-background-secondary"
           >
             {unread > 9 ? '9+' : unread}
           </motion.span>
@@ -255,12 +268,12 @@ export function NotificationCenter() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="glass absolute right-0 top-full z-50 mt-2 flex w-[380px] max-h-[480px] flex-col overflow-hidden rounded-md shadow-soft-2"
+            className="glass absolute right-0 top-full z-50 mt-2 flex max-h-[480px] w-[380px] flex-col overflow-hidden rounded-md shadow-soft-2"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
-              <div className="flex items-center gap-1.5">
+              <div className="gap-1.5 flex items-center">
                 {unread > 0 && (
                   <button
                     type="button"
@@ -290,16 +303,16 @@ export function NotificationCenter() {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-1 overflow-x-auto border-b border-border px-4 py-2 scrollbar-none">
+            <div className="scrollbar-none flex gap-1 overflow-x-auto border-b border-border px-4 py-2">
               {FILTER_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setFilter(opt.value)}
                   className={cn(
-                    'shrink-0 rounded-full px-2.5 py-1 text-2xs font-medium transition-colors',
+                    'px-2.5 shrink-0 rounded-full py-1 text-2xs font-medium transition-colors',
                     filter.type === opt.value
-                      ? 'bg-gold text-gold-foreground'
+                      ? 'text-gold-foreground bg-gold'
                       : 'bg-surface-secondary text-foreground-secondary hover:bg-surface-secondary/80',
                     FOCUS_RING,
                   )}
@@ -315,9 +328,13 @@ export function NotificationCenter() {
               {visible.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <Bell className="mb-2 h-8 w-8 text-foreground-muted" aria-hidden />
-                  <p className="text-xs font-medium text-foreground-secondary">No notifications</p>
+                  <p className="text-xs font-medium text-foreground-secondary">
+                    No notifications
+                  </p>
                   <p className="mt-0.5 text-2xs text-foreground-muted">
-                    {filter.type === 'all' ? "You're all caught up." : 'No notifications in this category.'}
+                    {filter.type === 'all'
+                      ? "You're all caught up."
+                      : 'No notifications in this category.'}
                   </p>
                 </div>
               ) : (
@@ -335,7 +352,7 @@ export function NotificationCenter() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-border px-4 py-2.5">
+            <div className="py-2.5 border-t border-border px-4">
               <Link
                 href="/notifications"
                 onClick={() => setOpen(false)}

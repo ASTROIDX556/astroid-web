@@ -21,7 +21,10 @@ export const env = {
   horizonUrl: process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon.stellar.org',
   mockLatencyMs: readNumber(process.env.NEXT_PUBLIC_MOCK_LATENCY_MS, 320),
   mockLatencyJitterMs: readNumber(process.env.NEXT_PUBLIC_MOCK_LATENCY_JITTER_MS, 80),
-  mockFailureRate: Math.min(1, readNumber(process.env.NEXT_PUBLIC_MOCK_FAILURE_RATE, 0)),
+  mockFailureRate: Math.min(
+    1,
+    readNumber(process.env.NEXT_PUBLIC_MOCK_FAILURE_RATE, 0),
+  ),
 } as const;
 
 /** True when no API base is configured — the app serves mock data. */

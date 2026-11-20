@@ -42,7 +42,8 @@ export function generateMockTransactions(count = 20): Transaction[] {
       purpose: Math.random() < 0.5 ? 'Subscription' : 'Payout',
       status,
       riskScore: randomInt(0, 100),
-      stellarHash: Math.random() < 0.6 ? Math.random().toString(36).slice(2, 18) : undefined,
+      stellarHash:
+        Math.random() < 0.6 ? Math.random().toString(36).slice(2, 18) : undefined,
       createdAt: new Date(now - i * 1000 * 60 * randomInt(10, 500)).toISOString(),
     };
 

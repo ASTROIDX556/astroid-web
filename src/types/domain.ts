@@ -73,7 +73,14 @@ export interface Agent {
   role: AgentRole;
   status: AgentStatus;
   mode: AgentMode;
-  provider: 'OpenAI' | 'Anthropic' | 'Gemini' | 'Ollama' | 'OpenRouter' | 'Nvidia' | 'Custom';
+  provider:
+    | 'OpenAI'
+    | 'Anthropic'
+    | 'Gemini'
+    | 'Ollama'
+    | 'OpenRouter'
+    | 'Nvidia'
+    | 'Custom';
   model: string;
   capabilities: AgentCapability[];
   monthlyBudget: number;

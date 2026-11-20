@@ -2,7 +2,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/cn';
 
 const badgeVariants = cva(
-  'inline-flex items-center gap-1.5 rounded-full font-sans font-medium whitespace-nowrap px-2.5 py-0.5',
+  'gap-1.5 px-2.5 py-0.5 inline-flex items-center whitespace-nowrap rounded-full font-sans font-medium',
   {
     variants: {
       variant: {
@@ -15,7 +15,7 @@ const badgeVariants = cva(
         outline: 'border border-border text-foreground-secondary',
       },
       size: {
-        sm: 'px-2 py-0.5 text-2xs',
+        sm: 'py-0.5 px-2 text-2xs',
         md: 'px-2.5 py-1 text-xs',
       },
     },
@@ -29,7 +29,14 @@ export interface BadgeProps
   dot?: boolean;
 }
 
-export function Badge({ className, variant, size, dot, children, ...props }: BadgeProps) {
+export function Badge({
+  className,
+  variant,
+  size,
+  dot,
+  children,
+  ...props
+}: BadgeProps) {
   return (
     <span className={cn(badgeVariants({ variant, size }), className)} {...props}>
       {children}

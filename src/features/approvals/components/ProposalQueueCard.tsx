@@ -22,11 +22,7 @@ import { ProposalActionBar } from './ProposalActionBar';
 export function ProposalCard({ proposal }: { proposal: Proposal }) {
   const status = proposalStatus(proposal.status);
   const isPending = proposal.status === 'pending';
-  const {
-    approvedWeight,
-    requiredApprovals,
-    decision,
-  } = useProposalApproval(proposal);
+  const { approvedWeight, requiredApprovals, decision } = useProposalApproval(proposal);
 
   return (
     <Card>
@@ -90,7 +86,10 @@ export function ProposalCard({ proposal }: { proposal: Proposal }) {
                 />
               ))}
             </div>
-            <SignatureStatusBadge approved={approvedWeight} required={requiredApprovals} />
+            <SignatureStatusBadge
+              approved={approvedWeight}
+              required={requiredApprovals}
+            />
           </div>
           <Link
             href={`/transactions/${proposal.transactionId}`}

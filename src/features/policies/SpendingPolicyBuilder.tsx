@@ -30,7 +30,8 @@ export function SpendingPolicyBuilder() {
       maxSingleTransactionLimit: 2000,
       rollingBudgetLimit: 20000,
       rollingBudgetInterval: 'weekly',
-      whitelistAddresses: 'GCGN7K2J2L5V4D7C7Y3M4KXH2Q5TK5A4P3W6QJDS4J2W5M5WQ4R5M, GDR5A5W4M7Z3H5Q7Q2J4W7C6QX3A9Y5K7D3V2L7S5Y5M3F4Q7B7',
+      whitelistAddresses:
+        'GCGN7K2J2L5V4D7C7Y3M4KXH2Q5TK5A4P3W6QJDS4J2W5M5WQ4R5M, GDR5A5W4M7Z3H5Q7Q2J4W7C6QX3A9Y5K7D3V2L7S5Y5M3F4Q7B7',
       allowedAssets: 'XLM, USDC',
     },
   });
@@ -55,7 +56,9 @@ export function SpendingPolicyBuilder() {
         limit: Number(values.rollingBudgetLimit),
         interval: values.rollingBudgetInterval,
       },
-      whitelistAddresses: validAddressList(values.whitelistAddresses ?? '').filter(Boolean),
+      whitelistAddresses: validAddressList(values.whitelistAddresses ?? '').filter(
+        Boolean,
+      ),
       allowedAssets: validAddressList(values.allowedAssets ?? ''),
     };
   }, [watchedValues]);
@@ -79,8 +82,12 @@ export function SpendingPolicyBuilder() {
       <div className="border-b border-border bg-surface-secondary/40 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-2xs font-medium uppercase tracking-[0.18em] text-foreground-secondary">Policy builder</p>
-            <h3 className="mt-1 font-display text-xl font-semibold tracking-tight">Spending guardrail configuration</h3>
+            <p className="text-2xs font-medium uppercase tracking-[0.18em] text-foreground-secondary">
+              Policy builder
+            </p>
+            <h3 className="mt-1 font-display text-xl font-semibold tracking-tight">
+              Spending guardrail configuration
+            </h3>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span role="status" aria-live="polite" className="contents">
@@ -101,7 +108,11 @@ export function SpendingPolicyBuilder() {
             >
               Rule templates
             </Button>
-            <Badge variant="gold" size="sm" className="inline-flex items-center gap-1.5">
+            <Badge
+              variant="gold"
+              size="sm"
+              className="gap-1.5 inline-flex items-center"
+            >
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
               Live validation
             </Badge>
@@ -112,7 +123,11 @@ export function SpendingPolicyBuilder() {
       <div className="grid gap-6 p-5 lg:grid-cols-[1.4fr_0.9fr]">
         <form className="space-y-5" onSubmit={form.handleSubmit(submitForm)} noValidate>
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Policy Name" required error={form.formState.errors.name?.message}>
+            <FormField
+              label="Policy Name"
+              required
+              error={form.formState.errors.name?.message}
+            >
               <Input {...form.register('name')} placeholder="Treasury burn guard" />
             </FormField>
 
@@ -144,7 +159,11 @@ export function SpendingPolicyBuilder() {
               />
             </FormField>
 
-            <FormField label="Budget Interval" required error={form.formState.errors.rollingBudgetInterval?.message}>
+            <FormField
+              label="Budget Interval"
+              required
+              error={form.formState.errors.rollingBudgetInterval?.message}
+            >
               <select
                 {...form.register('rollingBudgetInterval')}
                 className={cn(
@@ -159,11 +178,22 @@ export function SpendingPolicyBuilder() {
             </FormField>
           </div>
 
-          <FormField label="Whitelist Addresses" hint="Comma-separated Stellar G-addresses" error={form.formState.errors.whitelistAddresses?.message}>
-            <Input {...form.register('whitelistAddresses')} placeholder="GABC...XYZ, GDEF...LMN" />
+          <FormField
+            label="Whitelist Addresses"
+            hint="Comma-separated Stellar G-addresses"
+            error={form.formState.errors.whitelistAddresses?.message}
+          >
+            <Input
+              {...form.register('whitelistAddresses')}
+              placeholder="GABC...XYZ, GDEF...LMN"
+            />
           </FormField>
 
-          <FormField label="Allowed Assets" hint="Comma-separated asset codes" error={form.formState.errors.allowedAssets?.message}>
+          <FormField
+            label="Allowed Assets"
+            hint="Comma-separated asset codes"
+            error={form.formState.errors.allowedAssets?.message}
+          >
             <Input {...form.register('allowedAssets')} placeholder="XLM, USDC, EURC" />
           </FormField>
 
@@ -178,7 +208,11 @@ export function SpendingPolicyBuilder() {
             >
               Reset
             </Button>
-            <Button type="submit" variant="gold" leftIcon={<ShieldCheck className="h-4 w-4" aria-hidden />}>
+            <Button
+              type="submit"
+              variant="gold"
+              leftIcon={<ShieldCheck className="h-4 w-4" aria-hidden />}
+            >
               Validate policy
             </Button>
           </div>

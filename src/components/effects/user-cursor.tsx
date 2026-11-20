@@ -1,7 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useMemo, useRef, useState, useCallback, createContext, useContext } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  createContext,
+  useContext,
+} from 'react';
 import {
   motion,
   useMotionValue,
@@ -137,7 +145,8 @@ function CursorLayer({
             boxShadow: '0 4px 12px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
             opacity: visible ? 1 : 0,
             transformOrigin: '0% 50%',
-            transition: 'opacity 140ms ease, background 300ms ease, border-color 300ms ease',
+            transition:
+              'opacity 140ms ease, background 300ms ease, border-color 300ms ease',
             willChange: 'transform, opacity',
             userSelect: 'none',
             pointerEvents: 'none',
@@ -197,7 +206,11 @@ function parseRGB(colorStr: string): { r: number; g: number; b: number } | null 
   }
   if (colorStr.startsWith('#')) {
     let hex = colorStr.slice(1);
-    if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+    if (hex.length === 3)
+      hex = hex
+        .split('')
+        .map((c) => c + c)
+        .join('');
     const num = parseInt(hex, 16);
     return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
   }
@@ -213,21 +226,30 @@ function getContrastColor(bgColorStr: string): string {
 
 function isImportantElement(el: HTMLElement | null): boolean {
   if (!el) return false;
-  
+
   let current: HTMLElement | null = el;
   let depth = 0;
   while (current && depth < 5 && current !== document.documentElement) {
     const tagName = current.tagName.toUpperCase();
-    
-    if (tagName === 'BUTTON' || tagName === 'A' || tagName === 'INPUT' || tagName === 'SELECT' || tagName === 'TEXTAREA') {
+
+    if (
+      tagName === 'BUTTON' ||
+      tagName === 'A' ||
+      tagName === 'INPUT' ||
+      tagName === 'SELECT' ||
+      tagName === 'TEXTAREA'
+    ) {
       return true;
     }
-    
+
     if (tagName.startsWith('H') && tagName.length === 2 && !isNaN(Number(tagName[1]))) {
       return true;
     }
-    
-    if (current.getAttribute('role') === 'button' || current.getAttribute('data-cursor-target') === 'true') {
+
+    if (
+      current.getAttribute('role') === 'button' ||
+      current.getAttribute('data-cursor-target') === 'true'
+    ) {
       return true;
     }
 
@@ -247,7 +269,7 @@ function isImportantElement(el: HTMLElement | null): boolean {
         return true;
       }
     }
-    
+
     const style = window.getComputedStyle(current);
     if (style.cursor === 'pointer') {
       return true;
@@ -272,7 +294,12 @@ function getChameleonColors(el: HTMLElement | null) {
   if (!el || typeof window === 'undefined') return defaultColors;
 
   const isTransparent = (color: string) => {
-    return !color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)' || color === 'rgba(0,0,0,0)';
+    return (
+      !color ||
+      color === 'transparent' ||
+      color === 'rgba(0, 0, 0, 0)' ||
+      color === 'rgba(0,0,0,0)'
+    );
   };
 
   let bgColor = 'transparent';
@@ -374,12 +401,18 @@ function UserCursorInner({ name }: { name: string }) {
   const [hovering, setHovering] = useState(false);
   const [pressed, setPressed] = useState(false);
 
-  const arrowSpring = useMemo<SpringOptions>(() => ({ stiffness: 380, damping: 32, mass: 0.6 }), []);
-  const labelSpringCfg = useMemo<SpringOptions>(() => ({ stiffness: 220, damping: 26, mass: 0.7 }), []);
+  const arrowSpring = useMemo<SpringOptions>(
+    () => ({ stiffness: 380, damping: 32, mass: 0.6 }),
+    [],
+  );
+  const labelSpringCfg = useMemo<SpringOptions>(
+    () => ({ stiffness: 220, damping: 26, mass: 0.7 }),
+    [],
+  );
 
   const resolvedLabelOffset = useMemo(
     () => ({ x: size * 0.9, y: size * 0.2 + 6 }),
-    [size]
+    [size],
   );
 
   // --- motion values ---
@@ -402,7 +435,11 @@ function UserCursorInner({ name }: { name: string }) {
   }, [pressed, pressScale, scaleMV]);
 
   const labelTiltTarget = useMotionValue(0);
-  const labelRotation = useSpring(labelTiltTarget, { stiffness: 200, damping: 24, mass: 0.6 });
+  const labelRotation = useSpring(labelTiltTarget, {
+    stiffness: 200,
+    damping: 24,
+    mass: 0.6,
+  });
 
   // --- pointer listeners (full-page) ---
   const lastSampleRef = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -444,7 +481,10 @@ function UserCursorInner({ name }: { name: string }) {
 
           containerRef.current.style.setProperty('--cursor-color', colors.bg);
           containerRef.current.style.setProperty('--cursor-text-color', colors.text);
-          containerRef.current.style.setProperty('--cursor-border-color', colors.border);
+          containerRef.current.style.setProperty(
+            '--cursor-border-color',
+            colors.border,
+          );
         } else {
           if (isOverImportantRef.current) {
             isOverImportantRef.current = false;
@@ -503,7 +543,7 @@ function UserCursorInner({ name }: { name: string }) {
         />
       </svg>
     ),
-    [size]
+    [size],
   );
 
   const labelContent = useMemo(
@@ -524,7 +564,7 @@ function UserCursorInner({ name }: { name: string }) {
         {name}
       </div>
     ),
-    [name, size]
+    [name, size],
   );
 
   if (isTouchDevice) return null;
@@ -567,24 +607,34 @@ function UserCursorInner({ name }: { name: string }) {
 // CursorProvider — wraps the entire app, provides context + renders the cursor
 // ---------------------------------------------------------------------------
 
-export function CursorProvider({ children, defaultLabel = '' }: { children: React.ReactNode; defaultLabel?: string }) {
+export function CursorProvider({
+  children,
+  defaultLabel = '',
+}: {
+  children: React.ReactNode;
+  defaultLabel?: string;
+}) {
   const [label, setLabel] = useState(defaultLabel);
   const [color, setColor] = useState('#FFFFFF');
   const [textColor, setTextColor] = useState('#000000');
 
   const value = useMemo(
     () => ({ label, setLabel, color, setColor, textColor, setTextColor }),
-    [label, color, textColor]
+    [label, color, textColor],
   );
 
   return (
     <CursorContext.Provider value={value}>
       {/* Hide native cursor globally */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         *, *::before, *::after {
           cursor: none !important;
         }
-      ` }} />
+      `,
+        }}
+      />
       <UserCursorInner name={label} />
       {children}
     </CursorContext.Provider>

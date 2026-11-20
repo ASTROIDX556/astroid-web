@@ -31,7 +31,12 @@ import {
   Cell,
 } from 'recharts';
 import { ChartFrame } from '@/components/charts/chart-frame';
-import { AXIS_TICK, CHART_COLORS, chartToken, ChartTooltipShell } from '@/components/charts/theme';
+import {
+  AXIS_TICK,
+  CHART_COLORS,
+  chartToken,
+  ChartTooltipShell,
+} from '@/components/charts/theme';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
@@ -63,7 +68,9 @@ export function BudgetMatrix() {
   ]);
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [activeChartMode, setActiveChartMode] = useState<'bar' | 'distribution'>('bar');
-  const [ledgerFilters, setLedgerFilters] = useState<BudgetLedgerFilterState>(EMPTY_BUDGET_LEDGER_FILTERS);
+  const [ledgerFilters, setLedgerFilters] = useState<BudgetLedgerFilterState>(
+    EMPTY_BUDGET_LEDGER_FILTERS,
+  );
 
   // Filter department list
   const filteredData = useMemo(() => {
@@ -82,7 +89,10 @@ export function BudgetMatrix() {
     for (const dept of data) {
       for (const agent of dept.agents) {
         if (!seen.has(agent.agentId)) {
-          seen.set(agent.agentId, { agentId: agent.agentId, agentName: agent.agentName });
+          seen.set(agent.agentId, {
+            agentId: agent.agentId,
+            agentName: agent.agentName,
+          });
         }
       }
     }
@@ -92,7 +102,11 @@ export function BudgetMatrix() {
   const ledgerEntryCount = (departments: DepartmentBudget[]) =>
     departments.reduce(
       (sum, dept) =>
-        sum + dept.agents.reduce((acc, agent) => acc + Math.max(agent.ledger?.length ?? 0, 1), 0),
+        sum +
+        dept.agents.reduce(
+          (acc, agent) => acc + Math.max(agent.ledger?.length ?? 0, 1),
+          0,
+        ),
       0,
     );
 
@@ -104,7 +118,8 @@ export function BudgetMatrix() {
   // Chart data
   const chartData = useMemo(() => {
     return filteredData.map((dept) => {
-      const spendPercent = dept.totalLimit > 0 ? (dept.totalSpent / dept.totalLimit) * 100 : 0;
+      const spendPercent =
+        dept.totalLimit > 0 ? (dept.totalSpent / dept.totalLimit) * 100 : 0;
       return {
         name: dept.departmentCode,
         fullName: dept.departmentName,
@@ -128,7 +143,7 @@ export function BudgetMatrix() {
             <button
               type="button"
               onClick={row.getToggleExpandedHandler()}
-              className="grid h-6 w-6 place-items-center rounded-xs hover:bg-surface-secondary text-foreground-secondary transition-colors"
+              className="grid h-6 w-6 place-items-center rounded-xs text-foreground-secondary transition-colors hover:bg-surface-secondary"
               aria-label={row.getIsExpanded() ? 'Collapse agents' : 'Expand agents'}
             >
               {row.getIsExpanded() ? (
@@ -146,7 +161,7 @@ export function BudgetMatrix() {
           <button
             type="button"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="flex items-center gap-1.5 font-semibold text-foreground hover:text-gold transition-colors"
+            className="gap-1.5 flex items-center font-semibold text-foreground transition-colors hover:text-gold"
           >
             <span>Department</span>
             <ArrowUpDown className="h-3.5 w-3.5" />
@@ -163,8 +178,9 @@ export function BudgetMatrix() {
                 {row.original.departmentCode}
               </Badge>
             </div>
-            <p className="text-2xs text-foreground-muted pl-6">
-              Manager: {row.original.managerName} • {row.original.agents.length} Agent allocations
+            <p className="pl-6 text-2xs text-foreground-muted">
+              Manager: {row.original.managerName} • {row.original.agents.length} Agent
+              allocations
             </p>
           </div>
         ),
@@ -184,15 +200,17 @@ export function BudgetMatrix() {
           <button
             type="button"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="flex items-center justify-end gap-1.5 font-semibold text-foreground hover:text-gold transition-colors w-full text-right"
+            className="gap-1.5 flex w-full items-center justify-end text-right font-semibold text-foreground transition-colors hover:text-gold"
           >
             <span>Limit</span>
             <ArrowUpDown className="h-3.5 w-3.5" />
           </button>
         ),
         cell: ({ row }) => (
-          <div className="text-right font-medium text-foreground tabular">
-            {formatCurrency(row.original.totalLimit, row.original.asset, { compact: true })}
+          <div className="tabular text-right font-medium text-foreground">
+            {formatCurrency(row.original.totalLimit, row.original.asset, {
+              compact: true,
+            })}
           </div>
         ),
       },
@@ -202,15 +220,17 @@ export function BudgetMatrix() {
           <button
             type="button"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="flex items-center justify-end gap-1.5 font-semibold text-foreground hover:text-gold transition-colors w-full text-right"
+            className="gap-1.5 flex w-full items-center justify-end text-right font-semibold text-foreground transition-colors hover:text-gold"
           >
             <span>Spent</span>
             <ArrowUpDown className="h-3.5 w-3.5" />
           </button>
         ),
         cell: ({ row }) => (
-          <div className="text-right font-medium text-foreground tabular">
-            {formatCurrency(row.original.totalSpent, row.original.asset, { compact: true })}
+          <div className="tabular text-right font-medium text-foreground">
+            {formatCurrency(row.original.totalSpent, row.original.asset, {
+              compact: true,
+            })}
           </div>
         ),
       },
@@ -222,7 +242,7 @@ export function BudgetMatrix() {
           <button
             type="button"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="flex items-center justify-end gap-1.5 font-semibold text-foreground hover:text-gold transition-colors w-full text-right"
+            className="gap-1.5 flex w-full items-center justify-end text-right font-semibold text-foreground transition-colors hover:text-gold"
           >
             <span>Utilization</span>
             <ArrowUpDown className="h-3.5 w-3.5" />
@@ -232,16 +252,23 @@ export function BudgetMatrix() {
           const percent = Math.round(
             row.original.totalLimit > 0
               ? (row.original.totalSpent / row.original.totalLimit) * 100
-              : 0
+              : 0,
           );
           return (
-            <div className="space-y-1 w-32 ml-auto">
-              <div className="flex justify-between text-2xs font-semibold tabular">
-                <span className={percent > 85 ? 'text-red-500 font-bold' : 'text-foreground'}>
+            <div className="w-32 ml-auto space-y-1">
+              <div className="tabular flex justify-between text-2xs font-semibold">
+                <span
+                  className={
+                    percent > 85 ? 'font-bold text-red-500' : 'text-foreground'
+                  }
+                >
                   {percent}%
                 </span>
                 <span className="text-foreground-muted">
-                  Rem: {formatCurrency(row.original.totalRemaining, row.original.asset, { compact: true })}
+                  Rem:{' '}
+                  {formatCurrency(row.original.totalRemaining, row.original.asset, {
+                    compact: true,
+                  })}
                 </span>
               </div>
               <ProgressBar value={percent} />
@@ -250,7 +277,7 @@ export function BudgetMatrix() {
         },
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -275,11 +302,13 @@ export function BudgetMatrix() {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-foreground-muted" />
-          <span className="text-xs font-semibold text-foreground">Department Filter:</span>
+          <span className="text-xs font-semibold text-foreground">
+            Department Filter:
+          </span>
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="rounded-button border border-border bg-surface px-3 py-1.5 text-xs text-foreground font-medium focus:border-gold focus:outline-none"
+            className="py-1.5 rounded-button border border-border bg-surface px-3 text-xs font-medium text-foreground focus:border-gold focus:outline-none"
           >
             <option value="all">All Departments ({data.length})</option>
             {data.map((dept) => (
@@ -290,13 +319,13 @@ export function BudgetMatrix() {
           </select>
         </div>
 
-        <div className="flex items-center gap-1.5 rounded-button border border-border bg-surface p-1">
+        <div className="gap-1.5 flex items-center rounded-button border border-border bg-surface p-1">
           <button
             type="button"
             onClick={() => setActiveChartMode('bar')}
-            className={`flex items-center gap-1.5 rounded-xs px-2.5 py-1 text-xs font-medium transition-colors ${
+            className={`gap-1.5 px-2.5 flex items-center rounded-xs py-1 text-xs font-medium transition-colors ${
               activeChartMode === 'bar'
-                ? 'bg-gold text-surface-dark font-bold shadow-xs'
+                ? 'text-surface-dark shadow-xs bg-gold font-bold'
                 : 'text-foreground-secondary hover:text-foreground'
             }`}
           >
@@ -323,20 +352,27 @@ export function BudgetMatrix() {
               emptyTitle="No department spend yet"
               emptyDescription="Utilization per department appears here once budgets are in use."
             >
-              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+              <BarChart
+                data={chartData}
+                margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
+              >
                 <XAxis dataKey="name" tick={AXIS_TICK} />
                 <YAxis tick={AXIS_TICK} unit="%" domain={[0, 100]} />
                 <RechartsTooltip
                   cursor={{ fill: CHART_COLORS.grid, fillOpacity: 0.3 }}
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
-                    const d = payload[0]?.payload as typeof chartData[0] | undefined;
+                    const d = payload[0]?.payload as (typeof chartData)[0] | undefined;
                     if (!d) return null;
                     return (
                       <ChartTooltipShell label={label ? String(label) : d.fullName}>
                         <div className="flex items-center justify-between gap-4">
-                          <span className="text-foreground-secondary">Utilization:</span>
-                          <span className="tabular font-bold text-gold">{d.spendPercent}%</span>
+                          <span className="text-foreground-secondary">
+                            Utilization:
+                          </span>
+                          <span className="tabular font-bold text-gold">
+                            {d.spendPercent}%
+                          </span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-foreground-secondary">Spent:</span>
@@ -383,15 +419,18 @@ export function BudgetMatrix() {
       {/* TanStack Department Table with Expandable Agent Rows */}
       <Card className="overflow-hidden border border-border">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-surface-secondary border-b border-border text-foreground-muted uppercase tracking-wider font-semibold">
+          <table className="w-full border-collapse text-left text-xs">
+            <thead className="border-b border-border bg-surface-secondary font-semibold uppercase tracking-wider text-foreground-muted">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <th key={header.id} className="px-4 py-3">
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                     </th>
                   ))}
                 </tr>
@@ -404,9 +443,9 @@ export function BudgetMatrix() {
 
                 return (
                   <React.Fragment key={row.id}>
-                    <tr className="hover:bg-surface-secondary/50 transition-colors">
+                    <tr className="transition-colors hover:bg-surface-secondary/50">
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-4 py-3.5 align-middle">
+                        <td key={cell.id} className="py-3.5 px-4 align-middle">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
@@ -415,48 +454,79 @@ export function BudgetMatrix() {
                     {/* Sub-rows for Individual Agent Allocations */}
                     {isExpanded && dept.agents && dept.agents.length > 0 && (
                       <tr className="bg-surface-secondary/30">
-                        <td colSpan={columns.length} className="px-6 py-4 border-t border-b border-border/50">
+                        <td
+                          colSpan={columns.length}
+                          className="border-b border-t border-border/50 px-6 py-4"
+                        >
                           <div className="space-y-3 pl-6">
                             <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-wider text-foreground-muted">
                               <Bot className="h-3.5 w-3.5 text-gold" />
                               <span>Individual Agent Allocations & Spend Velocity</span>
                             </div>
 
-                            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="gap-2.5 grid sm:grid-cols-2 lg:grid-cols-3">
                               {dept.agents.map((agent: AgentAllocation) => {
                                 const agentUtil =
                                   agent.allocatedAmount > 0
-                                    ? Math.round((agent.spentAmount / agent.allocatedAmount) * 100)
+                                    ? Math.round(
+                                        (agent.spentAmount / agent.allocatedAmount) *
+                                          100,
+                                      )
                                     : 0;
 
                                 return (
                                   <div
                                     key={agent.id}
-                                    className="rounded-card border border-border bg-surface p-3.5 space-y-2 shadow-2xs hover:border-gold/50 transition-colors"
+                                    className="p-3.5 shadow-2xs space-y-2 rounded-card border border-border bg-surface transition-colors hover:border-gold/50"
                                   >
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="space-y-0.5">
-                                        <p className="font-semibold text-foreground text-xs">{agent.agentName}</p>
-                                        <p className="text-2xs text-foreground-muted">{agent.role}</p>
+                                        <p className="text-xs font-semibold text-foreground">
+                                          {agent.agentName}
+                                        </p>
+                                        <p className="text-2xs text-foreground-muted">
+                                          {agent.role}
+                                        </p>
                                       </div>
-                                      <Badge variant="outline" size="sm" className="font-mono">
+                                      <Badge
+                                        variant="outline"
+                                        size="sm"
+                                        className="font-mono"
+                                      >
                                         {agent.agentId}
                                       </Badge>
                                     </div>
 
                                     <div className="space-y-1">
-                                      <div className="flex justify-between text-2xs tabular">
+                                      <div className="tabular flex justify-between text-2xs">
                                         <span className="text-foreground-secondary">
-                                          Spent: {formatCurrency(agent.spentAmount, agent.asset, { compact: true })}
+                                          Spent:{' '}
+                                          {formatCurrency(
+                                            agent.spentAmount,
+                                            agent.asset,
+                                            { compact: true },
+                                          )}
                                         </span>
-                                        <span className="font-bold text-foreground">{agentUtil}%</span>
+                                        <span className="font-bold text-foreground">
+                                          {agentUtil}%
+                                        </span>
                                       </div>
                                       <ProgressBar value={agentUtil} />
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-1 border-t border-border/50 text-2xs text-foreground-muted">
-                                      <span>Velocity 24h: {formatCurrency(agent.velocity24h, agent.asset, { compact: true })}</span>
-                                      <span>Active {formatRelativeTime(agent.lastTransactionAt)}</span>
+                                    <div className="flex items-center justify-between border-t border-border/50 pt-1 text-2xs text-foreground-muted">
+                                      <span>
+                                        Velocity 24h:{' '}
+                                        {formatCurrency(
+                                          agent.velocity24h,
+                                          agent.asset,
+                                          { compact: true },
+                                        )}
+                                      </span>
+                                      <span>
+                                        Active{' '}
+                                        {formatRelativeTime(agent.lastTransactionAt)}
+                                      </span>
                                     </div>
                                   </div>
                                 );

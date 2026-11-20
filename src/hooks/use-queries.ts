@@ -39,7 +39,10 @@ export const useCurrentUser = (): UseQueryResult<User> =>
   useQuery({ queryKey: queryKeys.session, queryFn: resources.getCurrentUser });
 
 export const useOrganizations = (): UseQueryResult<Organization[]> =>
-  useQuery({ queryKey: queryKeys.organizations, queryFn: () => resources.getOrganizations() });
+  useQuery({
+    queryKey: queryKeys.organizations,
+    queryFn: () => resources.getOrganizations(),
+  });
 
 export const useTeam = (): UseQueryResult<User[]> =>
   useQuery({ queryKey: queryKeys.team, queryFn: () => resources.getTeam() });
@@ -148,7 +151,10 @@ export const useBudget = (id: string): UseQueryResult<Budget> =>
 
 // -- transactions -----------------------------------------------------------
 export const useTransactions = (): UseQueryResult<Transaction[]> =>
-  useQuery({ queryKey: queryKeys.transactions, queryFn: () => resources.getTransactions() });
+  useQuery({
+    queryKey: queryKeys.transactions,
+    queryFn: () => resources.getTransactions(),
+  });
 
 export const useTransaction = (id: string): UseQueryResult<Transaction> =>
   useQuery({
@@ -181,7 +187,10 @@ export const useMemoryRecord = (id: string): UseQueryResult<MemoryRecord> =>
 
 // -- audit log ---------------------------------------------------------------
 export const useAuditEvents = (): UseQueryResult<AuditEvent[]> =>
-  useQuery({ queryKey: queryKeys.auditEvents, queryFn: () => resources.getAuditEvents() });
+  useQuery({
+    queryKey: queryKeys.auditEvents,
+    queryFn: () => resources.getAuditEvents(),
+  });
 
 // -- asset rates -------------------------------------------------------------
 export const useAssetRates = (): UseQueryResult<AssetRate[]> =>
@@ -193,7 +202,10 @@ export const useAssetRates = (): UseQueryResult<AssetRate[]> =>
 
 // -- notifications ----------------------------------------------------------
 export const useNotifications = (): UseQueryResult<AppNotification[]> =>
-  useQuery({ queryKey: queryKeys.notifications, queryFn: () => resources.getNotifications() });
+  useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: () => resources.getNotifications(),
+  });
 
 // -- developer --------------------------------------------------------------
 export const useApiKeys = (): UseQueryResult<ApiKey[]> =>

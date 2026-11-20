@@ -92,7 +92,10 @@ export function buildMockStellarAccountSnapshot(
   const baseTransactionCount = 420 + (seed % 900);
   // Activity ticks once per poll window and wraps every eight hours, keeping the
   // simulated counter plausible while still moving between refetches.
-  const pollWindowsSinceEpoch = Math.max(0, Math.floor((now - MOCK_EPOCH_MS) / DRIFT_BUCKET_MS));
+  const pollWindowsSinceEpoch = Math.max(
+    0,
+    Math.floor((now - MOCK_EPOCH_MS) / DRIFT_BUCKET_MS),
+  );
 
   return {
     publicKey,

@@ -212,15 +212,23 @@ function Gauge({
   return (
     <div
       className="rounded-card border border-border bg-surface-secondary/40 p-4"
-      onClick={onDrillDown ? () => onDrillDown({ label, allocated, spent, currency, history }) : undefined}
+      onClick={
+        onDrillDown
+          ? () => onDrillDown({ label, allocated, spent, currency, history })
+          : undefined
+      }
       role={onDrillDown ? 'button' : undefined}
       tabIndex={onDrillDown ? 0 : undefined}
-      onKeyDown={onDrillDown ? (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onDrillDown({ label, allocated, spent, currency, history });
-        }
-      } : undefined}
+      onKeyDown={
+        onDrillDown
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onDrillDown({ label, allocated, spent, currency, history });
+              }
+            }
+          : undefined
+      }
     >
       <div className="flex items-center gap-4 lg:flex-col lg:items-stretch">
         <div className="relative grid h-10 w-10 shrink-0 place-items-center">
@@ -242,12 +250,15 @@ function Gauge({
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
-              className={cn(STATE_STROKE[state], state === 'critical' && 'animate-pulse')}
+              className={cn(
+                STATE_STROKE[state],
+                state === 'critical' && 'animate-pulse',
+              )}
             />
           </svg>
           <div className="absolute inset-0 grid place-items-center text-center">
             <div>
-              <p className="text-2xs font-medium uppercase tabular text-foreground-secondary">
+              <p className="tabular text-2xs font-medium uppercase text-foreground-secondary">
                 {safePercent.toFixed(0)}%
               </p>
             </div>
@@ -291,7 +302,9 @@ function Gauge({
           </div>
 
           <div className="flex items-center gap-2 text-2xs text-foreground-muted">
-            <span className={cn('inline-flex rounded-full px-2 py-1', STATE_RING[state])}>
+            <span
+              className={cn('inline-flex rounded-full px-2 py-1', STATE_RING[state])}
+            >
               {state === 'critical'
                 ? 'Over-allocated'
                 : state === 'warning'

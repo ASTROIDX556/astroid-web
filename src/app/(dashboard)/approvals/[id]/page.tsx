@@ -44,12 +44,8 @@ const decisionMeta: Record<
 
 /** Approve/reject controls wired to the guarded approval state machine. */
 function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
-  const {
-    decision,
-    isProcessing,
-    approvedWeight,
-    requiredApprovals,
-  } = useProposalApproval(proposal);
+  const { decision, isProcessing, approvedWeight, requiredApprovals } =
+    useProposalApproval(proposal);
 
   const [pendingAction, setPendingAction] = useState<LocalApprovalDecision | null>(
     null,
@@ -93,8 +89,8 @@ function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
 
       {decision && (
         <span role="status" className="text-2xs text-foreground-secondary">
-          You {decision} this proposal
-          · {approvedWeight} of {requiredApprovals} signatures collected
+          You {decision} this proposal · {approvedWeight} of {requiredApprovals}{' '}
+          signatures collected
         </span>
       )}
       <ProposalApprovalConfirmDialog
@@ -109,7 +105,8 @@ function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
 
 /** Live "X of Y signatures collected" label for the approval chain. */
 function SignatureProgressLabel({ proposal }: { proposal: Proposal }) {
-  const { approvedWeight, requiredApprovals, isQuorumMet } = useProposalApproval(proposal);
+  const { approvedWeight, requiredApprovals, isQuorumMet } =
+    useProposalApproval(proposal);
 
   return (
     <SectionLabel>

@@ -6,7 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ShieldCheck, Play, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   policySimulationInputSchema,
@@ -98,7 +104,7 @@ export function PolicySimulationModal({
   if (!isOpen) return null;
 
   return (
-    <Card className="border-border bg-card shadow-lg">
+    <Card className="bg-card border-border shadow-lg">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -107,7 +113,8 @@ export function PolicySimulationModal({
               Spending Rule Simulation Modal
             </CardTitle>
             <CardDescription>
-              Test proposed transaction parameters against active spending policies before deploying.
+              Test proposed transaction parameters against active spending policies
+              before deploying.
             </CardDescription>
           </div>
           {onClose && (
@@ -121,7 +128,9 @@ export function PolicySimulationModal({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-xs font-medium text-foreground-secondary">Amount</label>
+              <label className="text-xs font-medium text-foreground-secondary">
+                Amount
+              </label>
               <Input type="number" step="any" {...register('amount')} />
               {errors.amount && (
                 <p className="text-xs text-warning">{errors.amount.message}</p>
@@ -129,7 +138,9 @@ export function PolicySimulationModal({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-foreground-secondary">Asset Type</label>
+              <label className="text-xs font-medium text-foreground-secondary">
+                Asset Type
+              </label>
               <Input type="text" {...register('assetType')} />
               {errors.assetType && (
                 <p className="text-xs text-warning">{errors.assetType.message}</p>
@@ -138,7 +149,9 @@ export function PolicySimulationModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-foreground-secondary">Recipient Address</label>
+            <label className="text-xs font-medium text-foreground-secondary">
+              Recipient Address
+            </label>
             <Input type="text" {...register('recipientAddress')} />
             {errors.recipientAddress && (
               <p className="text-xs text-warning">{errors.recipientAddress.message}</p>
@@ -146,7 +159,9 @@ export function PolicySimulationModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-foreground-secondary">Agent ID</label>
+            <label className="text-xs font-medium text-foreground-secondary">
+              Agent ID
+            </label>
             <Input type="text" {...register('agentId')} />
             {errors.agentId && (
               <p className="text-xs text-warning">{errors.agentId.message}</p>
@@ -199,18 +214,23 @@ export function PolicySimulationModal({
                 {result.logs.map((log) => (
                   <div
                     key={log.ruleId}
-                    className="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-card p-3 text-xs"
+                    className="bg-card flex items-start justify-between gap-3 rounded-lg border border-border/60 p-3 text-xs"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{log.ruleName}</span>
-                        <Badge variant={log.status === 'pass' ? 'success' : 'warning'} size="sm">
+                        <span className="font-medium text-foreground">
+                          {log.ruleName}
+                        </span>
+                        <Badge
+                          variant={log.status === 'pass' ? 'success' : 'warning'}
+                          size="sm"
+                        >
                           {log.status.toUpperCase()}
                         </Badge>
                       </div>
                       <p className="text-foreground-secondary">{log.message}</p>
                     </div>
-                    <span className="text-2xs text-foreground-muted whitespace-nowrap">
+                    <span className="whitespace-nowrap text-2xs text-foreground-muted">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
                   </div>

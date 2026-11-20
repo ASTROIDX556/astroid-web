@@ -23,7 +23,9 @@ export function formatBriefingContent(
     if (briefing.insights.length > 0) {
       lines.push('', 'KEY INSIGHTS');
       for (const insight of briefing.insights) {
-        lines.push(`- [${insight.severity.toUpperCase()}] ${insight.title}: ${insight.detail}`);
+        lines.push(
+          `- [${insight.severity.toUpperCase()}] ${insight.title}: ${insight.detail}`,
+        );
       }
     }
 
@@ -48,14 +50,18 @@ export function formatBriefingContent(
   if (briefing.insights.length > 0) {
     mdLines.push('', '## Key Insights');
     for (const insight of briefing.insights) {
-      mdLines.push(`- **[${insight.severity.toUpperCase()}] ${insight.title}**: ${insight.detail}`);
+      mdLines.push(
+        `- **[${insight.severity.toUpperCase()}] ${insight.title}**: ${insight.detail}`,
+      );
     }
   }
 
   if (messages.length > 0) {
     mdLines.push('', '## Assistant Transcript');
     for (const msg of messages) {
-      mdLines.push(`- **${msg.role === 'assistant' ? 'Astroid AI' : 'Operator'}**: ${msg.content}`);
+      mdLines.push(
+        `- **${msg.role === 'assistant' ? 'Astroid AI' : 'Operator'}**: ${msg.content}`,
+      );
     }
   }
 

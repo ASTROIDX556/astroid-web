@@ -75,7 +75,7 @@ export function AdvancedAgentSearchBar({
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-3 rounded-card border border-border bg-surface p-4 sm:flex-row sm:items-end">
-        <label className="flex min-w-0 flex-[2] flex-col gap-1.5 text-xs font-medium text-foreground">
+        <label className="gap-1.5 flex min-w-0 flex-[2] flex-col text-xs font-medium text-foreground">
           <span>Search agents (press / to focus)</span>
           <Input
             ref={searchInputRef}
@@ -90,7 +90,7 @@ export function AdvancedAgentSearchBar({
           />
         </label>
 
-        <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-foreground">
+        <label className="gap-1.5 flex min-w-0 flex-1 flex-col text-xs font-medium text-foreground">
           <span>LLM Provider</span>
           <Select
             aria-label="Filter agents by LLM provider"
@@ -108,7 +108,7 @@ export function AdvancedAgentSearchBar({
           </Select>
         </label>
 
-        <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-foreground">
+        <label className="gap-1.5 flex min-w-0 flex-1 flex-col text-xs font-medium text-foreground">
           <span>Operational Status</span>
           <Select
             aria-label="Filter agents by operational status"
@@ -131,7 +131,7 @@ export function AdvancedAgentSearchBar({
             type="button"
             variant="ghost"
             size="sm"
-            className="self-start sm:mb-0.5 sm:self-auto"
+            className="sm:mb-0.5 self-start sm:self-auto"
             leftIcon={<X className="h-3.5 w-3.5" aria-hidden />}
             onClick={() => onCriteriaChange(INITIAL_ADVANCED_AGENT_FILTERS)}
           >
@@ -142,7 +142,7 @@ export function AdvancedAgentSearchBar({
         <p
           role="status"
           aria-live="polite"
-          className="self-start text-2xs tabular text-foreground-secondary sm:mb-1 sm:ml-auto sm:self-auto"
+          className="tabular self-start text-2xs text-foreground-secondary sm:mb-1 sm:ml-auto sm:self-auto"
         >
           {filteredAgents.length} of {agents.length} agents
         </p>

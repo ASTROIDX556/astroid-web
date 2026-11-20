@@ -216,8 +216,8 @@ export function TransactionSigningModal({
           <div className="rounded-md border border-border bg-surface-primary p-3">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
-              <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-              Transaction summary
+                <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+                Transaction summary
               </div>
               <FeeBadge feeEstimate={feeEstimate} showDetails />
             </div>

@@ -35,7 +35,10 @@ test('slider values are clamped to the bounds', () => {
 });
 
 test('large step defaults to ten times the step', () => {
-  assert.equal(getNextSliderValue('PageUp', false, 0, { min: 0, max: 100, step: 5 }), 50);
+  assert.equal(
+    getNextSliderValue('PageUp', false, 0, { min: 0, max: 100, step: 5 }),
+    50,
+  );
 });
 
 test('non-slider keys are left to the browser', () => {

@@ -21,7 +21,8 @@ const SELECT_CLASS =
 
 const FILTER_LABEL_CLASS = 'text-2xs text-foreground-secondary';
 
-const tierLabel = (tier: RiskLevel): string => tier.charAt(0).toUpperCase() + tier.slice(1);
+const tierLabel = (tier: RiskLevel): string =>
+  tier.charAt(0).toUpperCase() + tier.slice(1);
 
 interface ApprovalQueueToolbarProps {
   filters: ApprovalQueueFilters;
@@ -63,10 +64,10 @@ export function ApprovalQueueToolbar({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="relative flex min-w-56 flex-1 flex-col gap-1">
+        <label className="min-w-56 relative flex flex-1 flex-col gap-1">
           <span className={FILTER_LABEL_CLASS}>Search proposals</span>
           <Search
-            className="pointer-events-none absolute bottom-2.5 left-3 h-4 w-4 text-foreground-muted"
+            className="bottom-2.5 pointer-events-none absolute left-3 h-4 w-4 text-foreground-muted"
             aria-hidden
           />
           <input
@@ -84,7 +85,10 @@ export function ApprovalQueueToolbar({
             aria-label="Filter proposals by status"
             value={filters.status}
             onChange={(event) =>
-              onFilterChange('status', event.target.value as ApprovalQueueFilters['status'])
+              onFilterChange(
+                'status',
+                event.target.value as ApprovalQueueFilters['status'],
+              )
             }
             className={SELECT_CLASS}
           >
@@ -120,7 +124,10 @@ export function ApprovalQueueToolbar({
             aria-label="Filter proposals by signature threshold state"
             value={filters.signature}
             onChange={(event) =>
-              onFilterChange('signature', event.target.value as ApprovalQueueFilters['signature'])
+              onFilterChange(
+                'signature',
+                event.target.value as ApprovalQueueFilters['signature'],
+              )
             }
             className={SELECT_CLASS}
           >
@@ -138,7 +145,10 @@ export function ApprovalQueueToolbar({
             aria-label="Filter proposals by risk tier"
             value={filters.riskTier}
             onChange={(event) =>
-              onFilterChange('riskTier', event.target.value as ApprovalQueueFilters['riskTier'])
+              onFilterChange(
+                'riskTier',
+                event.target.value as ApprovalQueueFilters['riskTier'],
+              )
             }
             className={SELECT_CLASS}
           >

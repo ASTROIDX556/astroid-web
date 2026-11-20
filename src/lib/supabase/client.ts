@@ -12,7 +12,9 @@ let browserClient: ReturnType<typeof createBrowserClient> | null = null;
  * This client handles token storage in cookies and automatic session refresh
  * via the `@supabase/ssr` package.
  */
-export function getSupabaseBrowserClient(): ReturnType<typeof createBrowserClient> | null {
+export function getSupabaseBrowserClient(): ReturnType<
+  typeof createBrowserClient
+> | null {
   if (!isSupabaseConfigured) {
     return null;
   }

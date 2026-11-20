@@ -13,7 +13,10 @@ import {
   type AgentWizardValues,
 } from '@/features/agents/schema';
 import { ProviderPresetSelector } from '@/features/agents/components/ProviderPresetSelector';
-import { getProviderPreset, type AgentProviderPreset } from '@/features/agents/providerPresets';
+import {
+  getProviderPreset,
+  type AgentProviderPreset,
+} from '@/features/agents/providerPresets';
 
 const steps = [
   { key: 'basic', label: 'Basic info' },
@@ -62,7 +65,9 @@ export function AgentWizard() {
     form.setValue('provider', preset.id, { shouldValidate: true });
     form.setValue('model', preset.defaultModel, { shouldValidate: true });
     form.setValue('endpointUrl', preset.endpointUrl, { shouldValidate: true });
-    form.setValue('contextWindowTokens', preset.contextWindowTokens, { shouldValidate: true });
+    form.setValue('contextWindowTokens', preset.contextWindowTokens, {
+      shouldValidate: true,
+    });
   };
 
   const currentStep = useMemo(() => steps[step] ?? steps[0], [step]);
@@ -98,7 +103,7 @@ export function AgentWizard() {
           {steps.map((item, index) => (
             <span
               key={item.key}
-              className={`rounded-full border px-2.5 py-1 text-2xs font-medium ${
+              className={`px-2.5 rounded-full border py-1 text-2xs font-medium ${
                 index === step
                   ? 'border-gold bg-gold-soft text-gold-strong'
                   : 'border-border bg-surface-secondary text-foreground-secondary'
@@ -112,7 +117,12 @@ export function AgentWizard() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           {step === 0 && (
             <div className="space-y-4">
-              <FormField label="Agent name" htmlFor="agent-name" error={form.formState.errors.name?.message} required>
+              <FormField
+                label="Agent name"
+                htmlFor="agent-name"
+                error={form.formState.errors.name?.message}
+                required
+              >
                 <Input
                   id="agent-name"
                   {...form.register('name')}
@@ -170,7 +180,11 @@ export function AgentWizard() {
                   />
                 </FormField>
 
-                <FormField label="Provider key" htmlFor="api-key" error={form.formState.errors.apiKey?.message}>
+                <FormField
+                  label="Provider key"
+                  htmlFor="api-key"
+                  error={form.formState.errors.apiKey?.message}
+                >
                   <Input
                     id="api-key"
                     type="password"
@@ -215,7 +229,9 @@ export function AgentWizard() {
                     step="1024"
                     min="1"
                     {...form.register('contextWindowTokens')}
-                    placeholder={contextWindowTokens ? String(contextWindowTokens) : '128000'}
+                    placeholder={
+                      contextWindowTokens ? String(contextWindowTokens) : '128000'
+                    }
                     invalid={Boolean(form.formState.errors.contextWindowTokens)}
                   />
                 </FormField>
@@ -225,7 +241,12 @@ export function AgentWizard() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <FormField label="Initial budget (XLM)" htmlFor="budget" error={form.formState.errors.budget?.message} required>
+              <FormField
+                label="Initial budget (XLM)"
+                htmlFor="budget"
+                error={form.formState.errors.budget?.message}
+                required
+              >
                 <Input
                   id="budget"
                   type="number"
@@ -254,43 +275,73 @@ export function AgentWizard() {
 
           {step === 3 && (
             <div className="space-y-4 rounded-card border border-border bg-surface-secondary p-4">
-              <h3 className="text-sm font-medium text-foreground">Review and confirm</h3>
+              <h3 className="text-sm font-medium text-foreground">
+                Review and confirm
+              </h3>
               <dl className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Name</dt>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">
+                    Name
+                  </dt>
                   <dd className="mt-1 text-sm text-foreground">{form.watch('name')}</dd>
                 </div>
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Department</dt>
-                  <dd className="mt-1 text-sm text-foreground">{form.watch('ownerDepartment')}</dd>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">
+                    Department
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground">
+                    {form.watch('ownerDepartment')}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Provider</dt>
-                  <dd className="mt-1 text-sm text-foreground">{form.watch('provider')}</dd>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">
+                    Provider
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground">
+                    {form.watch('provider')}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Model</dt>
-                  <dd className="mt-1 text-sm text-foreground">{form.watch('model')}</dd>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">
+                    Model
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground">
+                    {form.watch('model')}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Endpoint</dt>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">
+                    Endpoint
+                  </dt>
                   <dd className="mt-1 truncate font-mono text-sm text-foreground">
                     {form.watch('endpointUrl') || '—'}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Context window</dt>
-                  <dd className="mt-1 text-sm tabular text-foreground">
-                    {contextWindowTokens ? `${contextWindowTokens.toLocaleString()} tokens` : '—'}
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">
+                    Context window
+                  </dt>
+                  <dd className="tabular mt-1 text-sm text-foreground">
+                    {contextWindowTokens
+                      ? `${contextWindowTokens.toLocaleString()} tokens`
+                      : '—'}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Budget</dt>
-                  <dd className="mt-1 text-sm text-foreground">{form.watch('budget')} XLM</dd>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">
+                    Budget
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground">
+                    {form.watch('budget')} XLM
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">Cap</dt>
-                  <dd className="mt-1 text-sm text-foreground">{form.watch('singleTransactionCap')} XLM</dd>
+                  <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">
+                    Cap
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground">
+                    {form.watch('singleTransactionCap')} XLM
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -308,7 +359,12 @@ export function AgentWizard() {
             </Button>
 
             {step < steps.length - 1 ? (
-              <Button type="button" variant="gold" onClick={handleNext} rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}>
+              <Button
+                type="button"
+                variant="gold"
+                onClick={handleNext}
+                rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}
+              >
                 {currentStep.label === 'Confirmation' ? 'Review' : 'Next'}
               </Button>
             ) : (

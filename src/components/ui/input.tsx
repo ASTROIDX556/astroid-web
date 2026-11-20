@@ -56,7 +56,7 @@ export const Textarea = forwardRef<
     ref={ref}
     className={cn(
       fieldBase,
-      'min-h-[96px] py-2.5 leading-relaxed',
+      'py-2.5 min-h-[96px] leading-relaxed',
       invalid && 'border-danger focus-visible:ring-danger',
       className,
     )}
@@ -130,7 +130,10 @@ export function FormField({
   className,
 }: FormFieldProps) {
   const generatedId = useId();
-  const child = isValidElement<FieldControlProps>(children) && isFieldControl(children) ? children : null;
+  const child =
+    isValidElement<FieldControlProps>(children) && isFieldControl(children)
+      ? children
+      : null;
   const id = htmlFor ?? child?.props.id ?? generatedId;
   // The message id follows the control's id (`<id>-error` / `<id>-hint`), the
   // convention the forms already rely on when they point aria-describedby at it.
@@ -152,7 +155,7 @@ export function FormField({
   }
 
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('gap-1.5 flex flex-col', className)}>
       <label htmlFor={id} className="text-xs font-medium text-foreground">
         {label}
         {required && <span className="ml-0.5 text-danger">*</span>}
@@ -187,7 +190,7 @@ export function Switch({ checked, onCheckedChange, label, id, disabled }: Switch
     <label
       htmlFor={switchId}
       className={cn(
-        'inline-flex cursor-pointer items-center gap-2.5 text-sm text-foreground',
+        'gap-2.5 inline-flex cursor-pointer items-center text-sm text-foreground',
         disabled && 'cursor-not-allowed opacity-50',
       )}
     >
@@ -205,7 +208,7 @@ export function Switch({ checked, onCheckedChange, label, id, disabled }: Switch
       >
         <span
           className={cn(
-            'absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-surface shadow-soft-1 transition-transform duration-base ease-astroid',
+            'top-0.5 left-0.5 absolute h-5 w-5 rounded-full bg-surface shadow-soft-1 transition-transform duration-base ease-astroid',
             checked && 'translate-x-5',
           )}
         />

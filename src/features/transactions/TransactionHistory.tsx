@@ -107,14 +107,18 @@ export function TransactionHistory({
       [
         { header: 'ID', value: (transaction) => transaction.id },
         { header: 'Recipient', value: (transaction) => transaction.counterparty },
-        { header: 'Recipient address', value: (transaction) => transaction.counterpartyAddress },
+        {
+          header: 'Recipient address',
+          value: (transaction) => transaction.counterpartyAddress,
+        },
         { header: 'Purpose', value: (transaction) => transaction.purpose },
         { header: 'Agent', value: (transaction) => transaction.agentName ?? '' },
         {
           header: 'Amount',
-          value: (transaction) => transaction.direction === 'outbound'
-            ? -transaction.amount
-            : transaction.amount,
+          value: (transaction) =>
+            transaction.direction === 'outbound'
+              ? -transaction.amount
+              : transaction.amount,
         },
         { header: 'Asset', value: (transaction) => transaction.asset },
         { header: 'Status', value: (transaction) => transaction.status },
@@ -205,7 +209,9 @@ export function TransactionHistory({
             accessorKey: 'counterpartyAddress',
             header: 'Recipient',
             sortingFn: (rowA, rowB) =>
-              rowA.original.counterpartyAddress.localeCompare(rowB.original.counterpartyAddress),
+              rowA.original.counterpartyAddress.localeCompare(
+                rowB.original.counterpartyAddress,
+              ),
             cell: ({ row }) => {
               const tx = row.original;
               return (
@@ -274,7 +280,8 @@ export function TransactionHistory({
             accessorKey: 'createdAt',
             header: 'When',
             sortingFn: (rowA, rowB) =>
-              new Date(rowA.original.createdAt).getTime() - new Date(rowB.original.createdAt).getTime(),
+              new Date(rowA.original.createdAt).getTime() -
+              new Date(rowB.original.createdAt).getTime(),
             cell: ({ row }) => (
               <span className="text-2xs text-foreground-muted">
                 {formatRelativeTime(row.original.createdAt)}

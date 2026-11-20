@@ -8,7 +8,11 @@ import {
 } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useState } from 'react';
-import { formatQueryKey, getQueryErrorMessage, isRetryableQueryError } from '@/lib/query-error-handling';
+import {
+  formatQueryKey,
+  getQueryErrorMessage,
+  isRetryableQueryError,
+} from '@/lib/query-error-handling';
 
 /**
  * App-wide TanStack Query wiring (issue #244): cache lifetimes, a retry policy
@@ -47,7 +51,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 60_000,
             gcTime: 5 * 60_000,
-            retry: (failureCount, error) => isRetryableQueryError(error) && failureCount < 2,
+            retry: (failureCount, error) =>
+              isRetryableQueryError(error) && failureCount < 2,
             refetchOnWindowFocus: false,
             refetchOnReconnect: true,
           },

@@ -36,17 +36,22 @@ const spendExportColumns: ExportColumn<Transaction>[] = [
   { key: 'txId', header: 'Transaction ID', value: (t) => t.id },
 ];
 
-function buildSpendExportActions(spend: Transaction[], budgetId: string): ExportAction[] {
+function buildSpendExportActions(
+  spend: Transaction[],
+  budgetId: string,
+): ExportAction[] {
   return [
     {
       label: 'Spend ledger (CSV)',
       format: 'csv',
-      run: () => exportDataset(spend, spendExportColumns, 'csv', `budget-${budgetId}-spend`),
+      run: () =>
+        exportDataset(spend, spendExportColumns, 'csv', `budget-${budgetId}-spend`),
     },
     {
       label: 'Spend ledger (JSON)',
       format: 'json',
-      run: () => exportDataset(spend, spendExportColumns, 'json', `budget-${budgetId}-spend`),
+      run: () =>
+        exportDataset(spend, spendExportColumns, 'json', `budget-${budgetId}-spend`),
     },
   ];
 }
@@ -55,7 +60,9 @@ const spendColumns: Column<Transaction>[] = [
   {
     header: 'Date',
     cell: (t) => (
-      <span className="text-2xs text-foreground-muted">{formatRelativeTime(t.createdAt)}</span>
+      <span className="text-2xs text-foreground-muted">
+        {formatRelativeTime(t.createdAt)}
+      </span>
     ),
   },
   {
@@ -66,7 +73,9 @@ const spendColumns: Column<Transaction>[] = [
     header: 'Purpose',
     hideOnMobile: true,
     cell: (t) => (
-      <span className="max-w-prose truncate text-foreground-secondary">{t.purpose}</span>
+      <span className="max-w-prose truncate text-foreground-secondary">
+        {t.purpose}
+      </span>
     ),
   },
   {
@@ -117,7 +126,9 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
           const children = (allBudgets.data ?? []).filter(
             (b) => b.parentBudgetId === data.id,
           );
-          const parent = (allBudgets.data ?? []).find((b) => b.id === data.parentBudgetId);
+          const parent = (allBudgets.data ?? []).find(
+            (b) => b.id === data.parentBudgetId,
+          );
 
           // Budget-scoped ledger: outbound agent spend against this envelope.
           const spend = (allTransactions.data ?? []).filter(
@@ -143,7 +154,11 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                     />
                     <Badge
                       variant={
-                        utilization >= 90 ? 'danger' : utilization >= 75 ? 'warning' : 'success'
+                        utilization >= 90
+                          ? 'danger'
+                          : utilization >= 75
+                            ? 'warning'
+                            : 'success'
                       }
                       dot
                     >
@@ -155,26 +170,62 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
 
               {/* Utilization hero */}
               <Card className="relative overflow-hidden">
-                <div className="pointer-events-none absolute inset-0 bg-gold-sheen" aria-hidden />
+                <div
+                  className="pointer-events-none absolute inset-0 bg-gold-sheen"
+                  aria-hidden
+                />
                 <div className="relative p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                       <p className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
-                        <AnimatedNumber value={data.limit} formatter={(v) => formatCurrency(v, data.currency, { compact: true })} /> limit
+                        <AnimatedNumber
+                          value={data.limit}
+                          formatter={(v) =>
+                            formatCurrency(v, data.currency, { compact: true })
+                          }
+                        />{' '}
+                        limit
                       </p>
-                      <p className="mt-2 font-display text-4xl font-semibold leading-none tracking-tight tabular">
-                        <AnimatedNumber value={data.spent} formatter={(v) => formatCurrency(v, data.currency, { compact: true })} />
+                      <p className="tabular mt-2 font-display text-4xl font-semibold leading-none tracking-tight">
+                        <AnimatedNumber
+                          value={data.spent}
+                          formatter={(v) =>
+                            formatCurrency(v, data.currency, { compact: true })
+                          }
+                        />
                       </p>
                       <p className="mt-2 text-2xs text-foreground-secondary">
-                        <AnimatedNumber value={data.remaining} formatter={(v) => formatCurrency(v, data.currency)} /> remaining of{' '}
-                        <AnimatedNumber value={data.limit} formatter={(v) => formatCurrency(v, data.currency)} /> this {data.period}
+                        <AnimatedNumber
+                          value={data.remaining}
+                          formatter={(v) => formatCurrency(v, data.currency)}
+                        />{' '}
+                        remaining of{' '}
+                        <AnimatedNumber
+                          value={data.limit}
+                          formatter={(v) => formatCurrency(v, data.currency)}
+                        />{' '}
+                        this {data.period}
                       </p>
                     </div>
                     <span className="tabular text-3xl font-semibold text-foreground">
-                      <AnimatedNumber value={utilization} formatter={(v) => formatPercent(v)} />
+                      <AnimatedNumber
+                        value={utilization}
+                        formatter={(v) => formatPercent(v)}
+                      />
                     </span>
                   </div>
-                  <ProgressBar value={utilization} label="Budget utilization" className="mt-4" tone={utilization >= 90 ? 'danger' : utilization >= 75 ? 'warning' : 'gold'} />
+                  <ProgressBar
+                    value={utilization}
+                    label="Budget utilization"
+                    className="mt-4"
+                    tone={
+                      utilization >= 90
+                        ? 'danger'
+                        : utilization >= 75
+                          ? 'warning'
+                          : 'gold'
+                    }
+                  />
                 </div>
               </Card>
 
@@ -211,8 +262,12 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                       <KeyValue label="Scope">
                         <span className="capitalize">{data.scope}</span>
                       </KeyValue>
-                      <KeyValue label="Resets">{formatDateTime(data.resetsAt)}</KeyValue>
-                      <KeyValue label="Created">{formatDateTime(data.createdAt)}</KeyValue>
+                      <KeyValue label="Resets">
+                        {formatDateTime(data.resetsAt)}
+                      </KeyValue>
+                      <KeyValue label="Created">
+                        {formatDateTime(data.createdAt)}
+                      </KeyValue>
                       {parent && (
                         <KeyValue label="Parent budget">
                           <Link
@@ -233,16 +288,24 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                     </p>
                     <div className="mt-3 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1.5 text-xs text-foreground-secondary">
-                          <ArrowDownLeft className="h-3.5 w-3.5 text-success" aria-hidden /> In
+                        <span className="gap-1.5 inline-flex items-center text-xs text-foreground-secondary">
+                          <ArrowDownLeft
+                            className="h-3.5 w-3.5 text-success"
+                            aria-hidden
+                          />{' '}
+                          In
                         </span>
                         <span className="tabular text-sm font-medium text-foreground">
                           {formatCurrency(totalIn, data.currency, { compact: true })}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1.5 text-xs text-foreground-secondary">
-                          <ArrowUpRight className="h-3.5 w-3.5 text-warning" aria-hidden /> Out
+                        <span className="gap-1.5 inline-flex items-center text-xs text-foreground-secondary">
+                          <ArrowUpRight
+                            className="h-3.5 w-3.5 text-warning"
+                            aria-hidden
+                          />{' '}
+                          Out
                         </span>
                         <span className="tabular text-sm font-medium text-foreground">
                           −{formatCurrency(totalOut, data.currency, { compact: true })}
@@ -259,7 +322,8 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                   <SectionLabel>{children.length} sub-budgets</SectionLabel>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {children.map((child) => {
-                      const childUtil = child.limit > 0 ? (child.spent / child.limit) * 100 : 0;
+                      const childUtil =
+                        child.limit > 0 ? (child.spent / child.limit) * 100 : 0;
                       return (
                         <Card key={child.id} interactive>
                           <Link
@@ -267,20 +331,36 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                             className="block space-y-3 p-5 focus-visible:outline-none"
                           >
                             <div className="flex items-center justify-between gap-3">
-                              <p className="text-sm font-medium text-foreground">{child.name}</p>
+                              <p className="text-sm font-medium text-foreground">
+                                {child.name}
+                              </p>
                               <span className="tabular text-2xs text-foreground-secondary">
                                 {formatPercent(childUtil)}
                               </span>
                             </div>
                             <div className="flex items-baseline gap-2">
                               <span className="tabular font-display text-xl font-semibold text-foreground">
-                                <AnimatedNumber value={child.spent} formatter={(v) => formatCurrency(v, child.currency, { compact: true })} />
+                                <AnimatedNumber
+                                  value={child.spent}
+                                  formatter={(v) =>
+                                    formatCurrency(v, child.currency, { compact: true })
+                                  }
+                                />
                               </span>
                               <span className="text-2xs text-foreground-muted">
-                                / <AnimatedNumber value={child.limit} formatter={(v) => formatCurrency(v, child.currency, { compact: true })} />
+                                /{' '}
+                                <AnimatedNumber
+                                  value={child.limit}
+                                  formatter={(v) =>
+                                    formatCurrency(v, child.currency, { compact: true })
+                                  }
+                                />
                               </span>
                             </div>
-                            <ProgressBar value={childUtil} label="Sub-budget utilization" />
+                            <ProgressBar
+                              value={childUtil}
+                              label="Sub-budget utilization"
+                            />
                           </Link>
                         </Card>
                       );

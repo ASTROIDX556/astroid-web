@@ -30,7 +30,9 @@ export function getMockConfig(): MockProviderConfig {
 }
 
 /** Draw a delay for a single request: base latency plus uniform random jitter. */
-export function nextMockLatencyMs(config: MockProviderConfig = getMockConfig()): number {
+export function nextMockLatencyMs(
+  config: MockProviderConfig = getMockConfig(),
+): number {
   if (config.latencyMs <= 0) return 0;
   const jitter = config.jitterMs > 0 ? Math.random() * config.jitterMs : 0;
   return Math.round(config.latencyMs + jitter);
@@ -44,7 +46,9 @@ export function simulateMockLatency(config?: MockProviderConfig): Promise<void> 
 }
 
 /** True when this request should fail like a flaky network. */
-export function shouldSimulateMockFailure(config: MockProviderConfig = getMockConfig()): boolean {
+export function shouldSimulateMockFailure(
+  config: MockProviderConfig = getMockConfig(),
+): boolean {
   if (config.failureRate <= 0) return false;
   return Math.random() < config.failureRate;
 }

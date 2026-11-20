@@ -2,7 +2,15 @@
 
 import { useReducer, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Gauge, Play, ShieldAlert, ShieldCheck, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  Gauge,
+  Play,
+  ShieldAlert,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
@@ -87,7 +95,10 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                       Simulate before commit
                     </Button>
                     {simPreview.lastResult && !simPreview.isOpen && (
-                      <Badge variant={simPreview.lastResult.success ? 'success' : 'warning'} dot>
+                      <Badge
+                        variant={simPreview.lastResult.success ? 'success' : 'warning'}
+                        dot
+                      >
                         Preview: {simPreview.lastResult.success ? 'Pass' : 'Blocked'}
                       </Badge>
                     )}
@@ -120,7 +131,9 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                         formatNumber(data.violations30d)
                       )}
                     </KeyValue>
-                    <KeyValue label="Created">{formatDateTime(data.createdAt)}</KeyValue>
+                    <KeyValue label="Created">
+                      {formatDateTime(data.createdAt)}
+                    </KeyValue>
                   </dl>
                 </Card>
               </ErrorBoundary>
@@ -146,7 +159,10 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                 <SectionLabel>Policy simulator</SectionLabel>
                 <ErrorBoundary section="Policy simulator">
                   <Card elevation="soft" className="relative overflow-hidden">
-                    <div className="pointer-events-none absolute inset-0 bg-gold-sheen" aria-hidden />
+                    <div
+                      className="pointer-events-none absolute inset-0 bg-gold-sheen"
+                      aria-hidden
+                    />
                     <CardHeader className="relative">
                       <CardTitle className="flex items-center gap-2 text-sm">
                         <Gauge className="h-4 w-4 text-gold" aria-hidden />
@@ -177,9 +193,7 @@ export default function PolicyDetailPage({ params }: { params: { id: string } })
                         </Button>
                       </div>
 
-                      {sim.data && (
-                        <SimulationResult result={sim.data} />
-                      )}
+                      {sim.data && <SimulationResult result={sim.data} />}
                     </CardContent>
                   </Card>
                 </ErrorBoundary>
@@ -233,11 +247,17 @@ function SimulationResult({ result }: { result: PolicySimulationResult }) {
           <RiskBadge score={result.estimatedRisk} showScore />
         </KeyValue>
         <KeyValue label="Required approvals">
-          <AnimatedNumber value={result.requiredApprovals} formatter={(v) => formatNumber(v)} />
+          <AnimatedNumber
+            value={result.requiredApprovals}
+            formatter={(v) => formatNumber(v)}
+          />
         </KeyValue>
         <KeyValue label="Budget">{result.budgetImpact.name}</KeyValue>
         <KeyValue label="Remaining after">
-          <AnimatedNumber value={result.budgetImpact.remainingAfter} formatter={(v) => formatCurrency(v, 'USDC')} />
+          <AnimatedNumber
+            value={result.budgetImpact.remainingAfter}
+            formatter={(v) => formatCurrency(v, 'USDC')}
+          />
         </KeyValue>
       </dl>
 

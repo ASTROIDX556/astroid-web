@@ -87,7 +87,10 @@ export function buildExpenseSeries(
   maxBuckets = 12,
 ): ExpenseSeriesPoint[] {
   const events = inputs
-    .filter((input) => Number.isFinite(input.amount) && !Number.isNaN(new Date(input.date).getTime()))
+    .filter(
+      (input) =>
+        Number.isFinite(input.amount) && !Number.isNaN(new Date(input.date).getTime()),
+    )
     .map((input) => ({ time: new Date(input.date).getTime(), amount: input.amount }))
     .sort((a, b) => a.time - b.time);
 

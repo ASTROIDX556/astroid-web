@@ -58,7 +58,8 @@ export function useWalletConnection() {
   }, []);
 
   const expectedPassphrase = resolveExpectedPassphrase(targetNetwork);
-  const mismatch = status === 'connected' && isNetworkMismatch(networkPassphrase, expectedPassphrase);
+  const mismatch =
+    status === 'connected' && isNetworkMismatch(networkPassphrase, expectedPassphrase);
   const walletNetworkId = networkIdForPassphrase(networkPassphrase);
 
   return {
@@ -84,7 +85,8 @@ export function useWalletConnection() {
     error,
     connect: () => useFreighterStore.getState().connect(),
     disconnect: () => useFreighterStore.getState().disconnect(),
-    switchNetwork: (target: StellarNetworkId) => useFreighterStore.getState().switchNetwork(target),
+    switchNetwork: (target: StellarNetworkId) =>
+      useFreighterStore.getState().switchNetwork(target),
     refreshNetwork: () => useFreighterStore.getState().refreshNetwork(),
   };
 }

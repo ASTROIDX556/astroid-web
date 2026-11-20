@@ -16,8 +16,12 @@ export const validAddressList = (value: string): string[] =>
  */
 export const spendingPolicySchema = z.object({
   name: z.string().trim().min(3, 'Policy name must be at least 3 characters.'),
-  maxSingleTransactionLimit: z.coerce.number().positive('Maximum single transaction must be greater than zero.'),
-  rollingBudgetLimit: z.coerce.number().positive('Rolling budget must be greater than zero.'),
+  maxSingleTransactionLimit: z.coerce
+    .number()
+    .positive('Maximum single transaction must be greater than zero.'),
+  rollingBudgetLimit: z.coerce
+    .number()
+    .positive('Rolling budget must be greater than zero.'),
   rollingBudgetInterval: z.enum(['daily', 'weekly', 'monthly']),
   whitelistAddresses: z
     .string()
@@ -27,10 +31,13 @@ export const spendingPolicySchema = z.object({
       if (addresses.length === 0) return true;
       return addresses.every((address) => isValidStellarPublicKey(address));
     }, 'Whitelist addresses must be valid Stellar public keys.'),
-  allowedAssets: z.string().trim().refine((value) => {
-    const assets = validAddressList(value);
-    return assets.length > 0 && assets.every((asset) => asset.length > 1);
-  }, 'At least one asset is required.'),
+  allowedAssets: z
+    .string()
+    .trim()
+    .refine((value) => {
+      const assets = validAddressList(value);
+      return assets.length > 0 && assets.every((asset) => asset.length > 1);
+    }, 'At least one asset is required.'),
 });
 
 export type SpendingPolicyFormValues = z.infer<typeof spendingPolicySchema>;
@@ -43,7 +50,10 @@ export const policySimulationInputSchema = z.object({
   recipientAddress: z
     .string()
     .trim()
-    .refine((val) => isValidStellarPublicKey(val), 'Recipient address must be a valid Stellar public key.'),
+    .refine(
+      (val) => isValidStellarPublicKey(val),
+      'Recipient address must be a valid Stellar public key.',
+    ),
   assetType: z.string().trim().min(1, 'Asset type is required.'),
   agentId: z.string().trim().min(1, 'Agent ID is required.'),
 });

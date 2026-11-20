@@ -65,10 +65,17 @@ function adoptSharedConnection(publicKey: string | null): void {
 const wait = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-const withTimeout = async <T>(promise: Promise<T>, ms = FREIGHTER_TIMEOUT_MS): Promise<T> => {
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  ms = FREIGHTER_TIMEOUT_MS,
+): Promise<T> => {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error('Freighter timed out. Install the extension or unlock it before continuing.'));
+      reject(
+        new Error(
+          'Freighter timed out. Install the extension or unlock it before continuing.',
+        ),
+      );
     }, ms);
 
     promise.then(
@@ -100,7 +107,10 @@ async function loadFreighter(): Promise<FreighterModule | null> {
  * Freighter surfaces failures as plain `Error`s with inconsistent wording
  * (and sometimes non-Error values), so classification is pattern-based.
  */
-export function normalizeFreighterError(err: unknown, fallbackMessage = 'Freighter connection failed.'): FreighterWalletError {
+export function normalizeFreighterError(
+  err: unknown,
+  fallbackMessage = 'Freighter connection failed.',
+): FreighterWalletError {
   const raw =
     err instanceof Error
       ? err.message
@@ -145,7 +155,11 @@ export function normalizeFreighterError(err: unknown, fallbackMessage = 'Freight
     };
   }
 
-  if (/extension not connected|reconnect|transport|port|chrome-extension|moz-extension|network/.test(text)) {
+  if (
+    /extension not connected|reconnect|transport|port|chrome-extension|moz-extension|network/.test(
+      text,
+    )
+  ) {
     return {
       kind: 'transport',
       message: 'Could not reach the Freighter extension.',
@@ -214,7 +228,9 @@ export function useStellarWallet() {
 
       for (let attempt = 0; attempt <= MAX_AUTOMATIC_RETRIES; attempt += 1) {
         if (activeRun.current !== runId) {
-          throw new Error('Freighter attempt superseded by a newer connection request.');
+          throw new Error(
+            'Freighter attempt superseded by a newer connection request.',
+          );
         }
 
         try {
@@ -269,14 +285,23 @@ export function useStellarWallet() {
     }
 
     try {
-      const connected = await withRetry(() => withTimeout(api.isConnected()), () => {}, runId);
+      const connected = await withRetry(
+        () => withTimeout(api.isConnected()),
+        () => {},
+        runId,
+      );
       if (activeRun.current !== runId) return Boolean(connected);
 
       setStatus(connected ? 'connected' : 'idle');
       if (connected) {
-        const address = await withRetry(() => withTimeout(api.getAddress()), () => {}, runId);
+        const address = await withRetry(
+          () => withTimeout(api.getAddress()),
+          () => {},
+          runId,
+        );
         if (activeRun.current !== runId) return Boolean(connected);
-        const nextKey = typeof address === 'string' ? address : address?.address ?? null;
+        const nextKey =
+          typeof address === 'string' ? address : (address?.address ?? null);
         adoptSharedConnection(nextKey);
         setFailure(null);
       } else {
@@ -284,11 +309,19 @@ export function useStellarWallet() {
         adoptSharedConnection(null);
         setFailure(null);
       }
-      setRetryState((prev) => ({ ...prev, attempt: 0, isRetrying: false, canRetry: false }));
+      setRetryState((prev) => ({
+        ...prev,
+        attempt: 0,
+        isRetrying: false,
+        canRetry: false,
+      }));
       return Boolean(connected);
     } catch (err) {
       if (activeRun.current !== runId) return false;
-      const normalized = normalizeFreighterError(err, 'Could not connect to the Freighter wallet.');
+      const normalized = normalizeFreighterError(
+        err,
+        'Could not connect to the Freighter wallet.',
+      );
       setStatus('error');
       setFailure(normalized);
       setRetryState((prev) => ({
@@ -327,7 +360,12 @@ export function useStellarWallet() {
 
     setIsLoading(true);
     setFailure(null);
-    setRetryState({ attempt: 0, maxAttempts: MAX_AUTOMATIC_RETRIES, isRetrying: false, canRetry: false });
+    setRetryState({
+      attempt: 0,
+      maxAttempts: MAX_AUTOMATIC_RETRIES,
+      isRetrying: false,
+      canRetry: false,
+    });
 
     try {
       const allowed = await withRetry(
@@ -338,10 +376,12 @@ export function useStellarWallet() {
       const isAllowed =
         typeof allowed === 'boolean'
           ? allowed
-          : (allowed as { isAllowed?: boolean } | null)?.isAllowed ?? false;
+          : ((allowed as { isAllowed?: boolean } | null)?.isAllowed ?? false);
 
       if (!isAllowed) {
-        throw new Error('Freighter approval was rejected. Please approve the connection in the browser extension.');
+        throw new Error(
+          'Freighter approval was rejected. Please approve the connection in the browser extension.',
+        );
       }
 
       const address = await withRetry(
@@ -350,12 +390,18 @@ export function useStellarWallet() {
         runId,
       );
       if (activeRun.current !== runId) return null;
-      const nextKey = typeof address === 'string' ? address : address?.address ?? null;
+      const nextKey =
+        typeof address === 'string' ? address : (address?.address ?? null);
 
       adoptSharedConnection(nextKey);
       setStatus(nextKey ? 'connected' : 'idle');
       setFailure(null);
-      setRetryState({ attempt: 0, maxAttempts: MAX_AUTOMATIC_RETRIES, isRetrying: false, canRetry: false });
+      setRetryState({
+        attempt: 0,
+        maxAttempts: MAX_AUTOMATIC_RETRIES,
+        isRetrying: false,
+        canRetry: false,
+      });
       return nextKey;
     } catch (err) {
       if (activeRun.current !== runId) return null;
@@ -378,55 +424,58 @@ export function useStellarWallet() {
     return connect();
   }, [connect]);
 
-  const signTransaction = useCallback(async (xdr: string): Promise<string | null> => {
-    const runId = claimRun();
-    const api = await loadFreighter();
+  const signTransaction = useCallback(
+    async (xdr: string): Promise<string | null> => {
+      const runId = claimRun();
+      const api = await loadFreighter();
 
-    if (!api) {
-      setStatus('missing');
-      setFailure({
-        kind: 'missing',
-        message: MISSING_EXTENSION_MESSAGE,
-        hint: 'Add Freighter from your browser extension store, unlock it, then reconnect.',
-        retryable: false,
-      });
-      setRetryState((prev) => ({ ...prev, isRetrying: false, canRetry: false }));
-      return null;
-    }
+      if (!api) {
+        setStatus('missing');
+        setFailure({
+          kind: 'missing',
+          message: MISSING_EXTENSION_MESSAGE,
+          hint: 'Add Freighter from your browser extension store, unlock it, then reconnect.',
+          retryable: false,
+        });
+        setRetryState((prev) => ({ ...prev, isRetrying: false, canRetry: false }));
+        return null;
+      }
 
-    setIsLoading(true);
-    setFailure(null);
-
-    try {
-      const response = await withRetry(
-        () => withTimeout(api.signTransaction(xdr)),
-        () => {},
-        runId,
-      );
-      if (activeRun.current !== runId) return null;
-      const signature =
-        typeof response === 'string'
-          ? response
-          : (response as { signedTxXdr?: string } | null)?.signedTxXdr ?? null;
-
-      setStatus(signature ? 'connected' : 'idle');
+      setIsLoading(true);
       setFailure(null);
-      return signature;
-    } catch (err) {
-      if (activeRun.current !== runId) return null;
-      const normalized = normalizeFreighterError(err, 'Transaction signing failed.');
-      setStatus('error');
-      setFailure(normalized);
-      setRetryState((prev) => ({
-        ...prev,
-        isRetrying: false,
-        canRetry: normalized.retryable,
-      }));
-      return null;
-    } finally {
-      if (activeRun.current === runId) setIsLoading(false);
-    }
-  }, [claimRun, setFailure, withRetry]);
+
+      try {
+        const response = await withRetry(
+          () => withTimeout(api.signTransaction(xdr)),
+          () => {},
+          runId,
+        );
+        if (activeRun.current !== runId) return null;
+        const signature =
+          typeof response === 'string'
+            ? response
+            : ((response as { signedTxXdr?: string } | null)?.signedTxXdr ?? null);
+
+        setStatus(signature ? 'connected' : 'idle');
+        setFailure(null);
+        return signature;
+      } catch (err) {
+        if (activeRun.current !== runId) return null;
+        const normalized = normalizeFreighterError(err, 'Transaction signing failed.');
+        setStatus('error');
+        setFailure(normalized);
+        setRetryState((prev) => ({
+          ...prev,
+          isRetrying: false,
+          canRetry: normalized.retryable,
+        }));
+        return null;
+      } finally {
+        if (activeRun.current === runId) setIsLoading(false);
+      }
+    },
+    [claimRun, setFailure, withRetry],
+  );
 
   return {
     status,

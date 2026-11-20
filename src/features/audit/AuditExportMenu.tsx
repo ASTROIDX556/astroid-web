@@ -21,7 +21,11 @@ export interface AuditExportMenuProps {
  * range applied) as a CSV download with proper escaping or a pretty-printed
  * JSON file, both stamped with a timestamped filename.
  */
-export function AuditExportMenu({ events, className, label = 'Export audit log' }: AuditExportMenuProps) {
+export function AuditExportMenu({
+  events,
+  className,
+  label = 'Export audit log',
+}: AuditExportMenuProps) {
   const disabled = events.length === 0;
   const countLabel = `${events.length} ${events.length === 1 ? 'event' : 'events'}`;
 
@@ -47,7 +51,7 @@ export function AuditExportMenu({ events, className, label = 'Export audit log' 
       className={cn('min-w-[220px]', className)}
       triggerClassName={buttonVariants({ variant: 'outline', size: 'sm' })}
       trigger={
-        <span className="inline-flex items-center gap-1.5">
+        <span className="gap-1.5 inline-flex items-center">
           <Download className="h-3.5 w-3.5" aria-hidden />
           Export
         </span>

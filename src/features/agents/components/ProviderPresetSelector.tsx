@@ -28,14 +28,18 @@ export interface ProviderPresetSelectorProps {
  * card hands the chosen preset to the caller so the wizard can pre-fill the
  * provider, default model, API endpoint, and context window fields.
  */
-export function ProviderPresetSelector({ value, onSelect, className }: ProviderPresetSelectorProps) {
+export function ProviderPresetSelector({
+  value,
+  onSelect,
+  className,
+}: ProviderPresetSelectorProps) {
   return (
     <div className={cn('space-y-3', className)}>
       <p className="text-xs text-foreground-secondary">
-        Choose an inference provider to pre-fill its recommended endpoint, default model, and
-        context window. You can customize every value below. The budget and cap lines on each card
-        are suggestions for the wizard&apos;s budget fields — selecting a preset does not change
-        them.
+        Choose an inference provider to pre-fill its recommended endpoint, default
+        model, and context window. You can customize every value below. The budget and
+        cap lines on each card are suggestions for the wizard&apos;s budget fields —
+        selecting a preset does not change them.
       </p>
 
       <div
@@ -80,35 +84,57 @@ function ProviderPresetCard({
           : 'border-border bg-surface hover:border-border-strong hover:bg-surface-secondary',
       )}
     >
-      <div className="flex w-full min-w-0 items-center gap-2.5">
+      <div className="gap-2.5 flex w-full min-w-0 items-center">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-button bg-gold-soft text-gold-strong">
           <Icon className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">{preset.label}</p>
+          <p className="truncate text-sm font-semibold text-foreground">
+            {preset.label}
+          </p>
           <p className="text-2xs text-foreground-secondary">{preset.tagline}</p>
         </div>
       </div>
 
       <dl className="flex w-full min-w-0 flex-col gap-1 text-2xs text-foreground-muted">
         <div className="flex min-w-0 items-baseline gap-2">
-          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">Model</dt>
-          <dd className={cn('min-w-0 truncate font-mono', !preset.defaultModel && 'italic')}>
+          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">
+            Model
+          </dt>
+          <dd
+            className={cn(
+              'min-w-0 truncate font-mono',
+              !preset.defaultModel && 'italic',
+            )}
+          >
             {preset.defaultModel || 'your own'}
           </dd>
         </div>
         <div className="flex min-w-0 items-baseline gap-2">
-          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">Endpoint</dt>
-          <dd className={cn('min-w-0 truncate font-mono', !preset.endpointUrl && 'italic')}>
+          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">
+            Endpoint
+          </dt>
+          <dd
+            className={cn(
+              'min-w-0 truncate font-mono',
+              !preset.endpointUrl && 'italic',
+            )}
+          >
             {preset.endpointUrl || 'you provide it'}
           </dd>
         </div>
         <div className="flex items-baseline gap-2">
-          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">Context</dt>
-          <dd className="tabular">{preset.contextWindowTokens.toLocaleString()} tokens</dd>
+          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">
+            Context
+          </dt>
+          <dd className="tabular">
+            {preset.contextWindowTokens.toLocaleString()} tokens
+          </dd>
         </div>
         <div className="flex items-baseline gap-2">
-          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">Budget</dt>
+          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">
+            Budget
+          </dt>
           <dd className="tabular">
             {preset.monthlyBudgetGuideUsdc === 0
               ? 'no metered API spend'
@@ -116,7 +142,9 @@ function ProviderPresetCard({
           </dd>
         </div>
         <div className="flex items-baseline gap-2">
-          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">Txn cap</dt>
+          <dt className="shrink-0 uppercase tracking-wide text-foreground-secondary">
+            Txn cap
+          </dt>
           <dd className="tabular">
             {preset.singleTxnCapGuideUsdc === 0
               ? 'no suggestion (set your own)'

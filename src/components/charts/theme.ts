@@ -62,7 +62,8 @@ export const BUDGET_STATUS_COLOR: Record<BudgetStatus, string> = {
 
 /** Share of `allocated` that is `consumed`, as a percentage. Zero when nothing is allocated. */
 export function utilizationPercent(consumed: number, allocated: number): number {
-  if (!Number.isFinite(consumed) || !Number.isFinite(allocated) || allocated <= 0) return 0;
+  if (!Number.isFinite(consumed) || !Number.isFinite(allocated) || allocated <= 0)
+    return 0;
   return (consumed / allocated) * 100;
 }
 
@@ -105,43 +106,69 @@ export function useMounted(): boolean {
   return mounted;
 }
 
-export function ChartTooltipShell({ label, children }: { label?: ReactNode; children: ReactNode }) {
+export function ChartTooltipShell({
+  label,
+  children,
+}: {
+  label?: ReactNode;
+  children: ReactNode;
+}) {
   return createElement(
     'div',
     { className: 'glass min-w-[160px] rounded-md px-3 py-2 text-xs shadow-soft-2' },
-    label == null ? null : createElement('p', { className: 'mb-1.5 font-medium text-foreground' }, label),
+    label == null
+      ? null
+      : createElement('p', { className: 'mb-1.5 font-medium text-foreground' }, label),
     createElement('div', { className: 'flex flex-col gap-1' }, children),
   );
 }
 
 export function ChartSkeleton({ height = 260 }: { height?: number }) {
-  return createElement('div', { className: 'skeleton w-full rounded-md', style: { height } });
+  return createElement('div', {
+    className: 'skeleton w-full rounded-md',
+    style: { height },
+  });
 }
 
 export function ChartEmptyState({
   height = 260,
   title = 'No data available',
   description = 'Data will appear here once available.',
-}: { height?: number; title?: string; description?: string }) {
+}: {
+  height?: number;
+  title?: string;
+  description?: string;
+}) {
   return createElement(
     'div',
     {
-      className: 'flex flex-col items-center justify-center gap-2 rounded-md border border-border/50 bg-surface-secondary/30 text-center',
+      className:
+        'flex flex-col items-center justify-center gap-2 rounded-md border border-border/50 bg-surface-secondary/30 text-center',
       style: { height },
       role: 'status',
       'aria-label': title,
     },
     createElement('div', { className: 'text-foreground-muted' }, title),
-    createElement('p', { className: 'max-w-xs text-2xs text-foreground-secondary' }, description),
+    createElement(
+      'p',
+      { className: 'max-w-xs text-2xs text-foreground-secondary' },
+      description,
+    ),
   );
 }
 
 export function shortDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(
+    date,
+  );
 }
 
-export function formatChartCurrency(value: number, currency = 'USDC', compact = true): string {
+export function formatChartCurrency(
+  value: number,
+  currency = 'USDC',
+  compact = true,
+): string {
   return formatCurrency(value, currency, { compact });
 }

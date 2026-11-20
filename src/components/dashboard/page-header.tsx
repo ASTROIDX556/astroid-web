@@ -26,7 +26,7 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="flex flex-col gap-1.5">
+      <div className="gap-1.5 flex flex-col">
         {eyebrow && (
           <span className="text-2xs font-medium uppercase tracking-[0.14em] text-gold-strong">
             {eyebrow}

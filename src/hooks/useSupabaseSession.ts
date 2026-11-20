@@ -16,7 +16,7 @@ export interface UseSupabaseSessionResult {
 /**
  * Custom React hook to synchronize Supabase user authentication sessions
  * with application state across dashboard pages.
- * 
+ *
  * Handles auth state change events (`SIGNED_IN`, `SIGNED_OUT`, `TOKEN_REFRESHED`)
  * securely, and gracefully falls back to mock user data when Supabase
  * environment variables are unset.
@@ -81,7 +81,11 @@ export function useSupabaseSession(): UseSupabaseSessionResult {
         }
       } catch (err) {
         if (isMounted) {
-          setError(err instanceof Error ? err : new Error('Failed to retrieve Supabase session'));
+          setError(
+            err instanceof Error
+              ? err
+              : new Error('Failed to retrieve Supabase session'),
+          );
         }
       } finally {
         if (isMounted) {
@@ -94,19 +98,21 @@ export function useSupabaseSession(): UseSupabaseSessionResult {
 
     const {
       data: { subscription },
-    } = client.auth.onAuthStateChange((event: AuthChangeEvent, updatedSession: Session | null) => {
-      if (!isMounted) return;
+    } = client.auth.onAuthStateChange(
+      (event: AuthChangeEvent, updatedSession: Session | null) => {
+        if (!isMounted) return;
 
-      // Handles SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED and other auth state changes
-      setSession(updatedSession);
-      setUser(updatedSession?.user ?? null);
-      setIsLoading(false);
+        // Handles SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED and other auth state changes
+        setSession(updatedSession);
+        setUser(updatedSession?.user ?? null);
+        setIsLoading(false);
 
-      if (event === 'TOKEN_REFRESHED') {
-        // Session token successfully refreshed securely
-        setError(null);
-      }
-    });
+        if (event === 'TOKEN_REFRESHED') {
+          // Session token successfully refreshed securely
+          setError(null);
+        }
+      },
+    );
 
     return () => {
       isMounted = false;

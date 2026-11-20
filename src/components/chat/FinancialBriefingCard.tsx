@@ -46,19 +46,28 @@ const VARIANT_STYLES = {
   danger: 'text-destructive',
 } as const;
 
-function MetricCard({ icon: Icon, label, value, variant = 'default', className }: MetricCardProps) {
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  variant = 'default',
+  className,
+}: MetricCardProps) {
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      <span className="text-2xs text-foreground-muted flex items-center gap-1">
+      <span className="flex items-center gap-1 text-2xs text-foreground-muted">
         <Icon className="h-3 w-3" aria-hidden />
         {label}
       </span>
-      <p className={cn('font-semibold text-xs', VARIANT_STYLES[variant])}>{value}</p>
+      <p className={cn('text-xs font-semibold', VARIANT_STYLES[variant])}>{value}</p>
     </div>
   );
 }
 
-export function FinancialBriefingCard({ briefing, className }: FinancialBriefingCardProps) {
+export function FinancialBriefingCard({
+  briefing,
+  className,
+}: FinancialBriefingCardProps) {
   const {
     totalDailySpend,
     currency,
@@ -79,7 +88,10 @@ export function FinancialBriefingCard({ briefing, className }: FinancialBriefing
 
   const SpendRateIcon = spendRateIcon[spendRate];
 
-  const budgetStatusBadge: Record<typeof budgetStatus, { label: string; variant: 'gold' | 'outline' | 'danger' }> = {
+  const budgetStatusBadge: Record<
+    typeof budgetStatus,
+    { label: string; variant: 'gold' | 'outline' | 'danger' }
+  > = {
     healthy: { label: 'On Track', variant: 'gold' },
     warning: { label: 'Attention', variant: 'outline' },
     critical: { label: 'Critical', variant: 'danger' },
@@ -88,11 +100,18 @@ export function FinancialBriefingCard({ briefing, className }: FinancialBriefing
   const statusInfo = budgetStatusBadge[budgetStatus];
 
   return (
-    <div className={cn('space-y-2.5 rounded-button border border-border bg-surface p-3 text-2xs text-foreground', className)}>
+    <div
+      className={cn(
+        'space-y-2.5 rounded-button border border-border bg-surface p-3 text-2xs text-foreground',
+        className,
+      )}
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/50 pb-2">
         <div className="flex items-center gap-2">
-          <span className="font-bold uppercase tracking-wider text-gold">Executive Summary</span>
+          <span className="font-bold uppercase tracking-wider text-gold">
+            Executive Summary
+          </span>
           {anomalyDetected && (
             <Badge variant="danger" size="sm" className="flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" aria-hidden />
@@ -133,17 +152,25 @@ export function FinancialBriefingCard({ briefing, className }: FinancialBriefing
           icon={SpendRateIcon}
           label="Spend Rate"
           value={spendRate.charAt(0).toUpperCase() + spendRate.slice(1)}
-          variant={spendRate === 'increasing' ? 'warning' : spendRate === 'decreasing' ? 'success' : 'default'}
+          variant={
+            spendRate === 'increasing'
+              ? 'warning'
+              : spendRate === 'decreasing'
+                ? 'success'
+                : 'default'
+          }
         />
       </div>
 
       {/* Recommendation */}
-      <div className="pt-2 border-t border-border/50">
-        <span className="text-foreground-muted flex items-center gap-1 font-medium">
+      <div className="border-t border-border/50 pt-2">
+        <span className="flex items-center gap-1 font-medium text-foreground-muted">
           <Activity className="h-3 w-3" aria-hidden />
           AI Recommendation:
         </span>
-        <p className="text-foreground font-medium italic mt-1 leading-relaxed">{recommendation}</p>
+        <p className="mt-1 font-medium italic leading-relaxed text-foreground">
+          {recommendation}
+        </p>
       </div>
     </div>
   );

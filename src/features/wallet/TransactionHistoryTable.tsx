@@ -48,15 +48,17 @@ const CONTROL_FOCUS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 const SELECT_CLASS = cn(
-  'h-9 rounded-md border border-border bg-surface py-2 px-3 text-sm text-foreground transition-colors hover:border-border-strong',
+  'h-9 rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:border-border-strong',
   CONTROL_FOCUS,
 );
 
-export function TransactionHistoryTable({ transactions, className }: TransactionHistoryTableProps) {
+export function TransactionHistoryTable({
+  transactions,
+  className,
+}: TransactionHistoryTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [statusFilter, setStatusFilter] =
-    useState<TransactionStatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<TransactionStatusFilter>('all');
   const [assetFilter, setAssetFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<TransactionDateRange>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
@@ -92,8 +94,12 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
         header: 'Counterparty',
         cell: ({ row }) => (
           <div className="min-w-0">
-            <p className="truncate font-medium text-foreground">{row.original.counterparty}</p>
-            <p className="tabular text-2xs text-foreground-muted">{truncateHash(row.original.counterpartyAddress)}</p>
+            <p className="truncate font-medium text-foreground">
+              {row.original.counterparty}
+            </p>
+            <p className="tabular text-2xs text-foreground-muted">
+              {truncateHash(row.original.counterpartyAddress)}
+            </p>
           </div>
         ),
       },
@@ -101,7 +107,11 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
         accessorKey: 'agentName',
         enableSorting: false,
         header: 'Agent',
-        cell: ({ row }) => <span className="text-foreground-secondary">{row.original.agentName ?? '—'}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground-secondary">
+            {row.original.agentName ?? '—'}
+          </span>
+        ),
       },
       {
         accessorKey: 'amount',
@@ -112,7 +122,9 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
           const tx = row.original;
           const outbound = tx.direction === 'outbound';
           return (
-            <span className={`inline-flex items-center justify-end gap-1 font-medium tabular ${outbound ? 'text-foreground' : 'text-success'}`}>
+            <span
+              className={`tabular inline-flex items-center justify-end gap-1 font-medium ${outbound ? 'text-foreground' : 'text-success'}`}
+            >
               {outbound ? '−' : '+'}
               {formatCurrency(tx.amount, tx.asset)}
             </span>
@@ -137,7 +149,8 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
         accessorKey: 'createdAt',
         enableSorting: true,
         sortingFn: (a, b) =>
-          new Date(a.original.createdAt).getTime() - new Date(b.original.createdAt).getTime(),
+          new Date(a.original.createdAt).getTime() -
+          new Date(b.original.createdAt).getTime(),
         header: 'When',
         cell: ({ row }) => (
           <span
@@ -168,7 +181,10 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
       const search = (filterValue ?? '').toString().trim().toLowerCase();
       if (!search) return true;
 
-      const candidates = [row.original, row.getVisibleCells().map((cell) => cell.getValue())]
+      const candidates = [
+        row.original,
+        row.getVisibleCells().map((cell) => cell.getValue()),
+      ]
         .flat()
         .filter(Boolean)
         .map((v) => String(v).toLowerCase());
@@ -184,15 +200,16 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
     () =>
       table
         .getFilteredRowModel()
-        .rows.filter((row) =>
-          matchesTransactionFilters(row.original, filters),
-        ),
+        .rows.filter((row) => matchesTransactionFilters(row.original, filters)),
     [table, filters],
   );
 
   // Keep the current page in bounds whenever the filter set shrinks the rows.
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(filteredRows.length / pagination.pageSize) - 1);
+    const maxPage = Math.max(
+      0,
+      Math.ceil(filteredRows.length / pagination.pageSize) - 1,
+    );
     if (pagination.pageIndex > maxPage) {
       setPagination((p) => ({ ...p, pageIndex: maxPage }));
     }
@@ -214,7 +231,10 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
         return String(key ? r.getValue(key) : '');
       }),
     );
-    const csv = [headers.join(','), ...rows.map((r) => r.map((cell) => JSON.stringify(cell)).join(','))].join('\n');
+    const csv = [
+      headers.join(','),
+      ...rows.map((r) => r.map((cell) => JSON.stringify(cell)).join(',')),
+    ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -226,7 +246,9 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
 
   function exportJSON() {
     const data = filteredRows.map((r) => r.original);
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -238,7 +260,12 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / pagination.pageSize));
 
   return (
-    <div className={cn('overflow-hidden rounded-card border border-border bg-surface', className)}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-card border border-border bg-surface',
+        className,
+      )}
+    >
       {/* Filter toolbar --------------------------------------------------- */}
       <div className="space-y-3 border-b border-border bg-surface-secondary/40 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -333,17 +360,29 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
                 onChange={(e) => setGlobalFilter(e.target.value)}
                 placeholder="Search counterparty, purpose, or asset"
                 className={cn(
-                  'h-9 w-full min-w-[200px] rounded-md border border-border bg-surface py-2 px-3 text-sm text-foreground placeholder:text-foreground-muted',
+                  'h-9 w-full min-w-[200px] rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted',
                   CONTROL_FOCUS,
                 )}
               />
             </label>
 
-            <Button type="button" variant="secondary" size="sm" onClick={exportCSV} leftIcon={<FileText className="h-4 w-4" />}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={exportCSV}
+              leftIcon={<FileText className="h-4 w-4" />}
+            >
               CSV
             </Button>
 
-            <Button type="button" variant="secondary" size="sm" onClick={exportJSON} leftIcon={<Download className="h-4 w-4" />}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={exportJSON}
+              leftIcon={<Download className="h-4 w-4" />}
+            >
               JSON
             </Button>
           </div>
@@ -352,7 +391,10 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
         {/* Active filter summary + reset */}
         {activeFilterCount > 0 && (
           <div className="flex flex-wrap items-center gap-2 text-2xs text-foreground-secondary">
-            <SlidersHorizontal className="h-3.5 w-3.5 text-foreground-muted" aria-hidden />
+            <SlidersHorizontal
+              className="h-3.5 w-3.5 text-foreground-muted"
+              aria-hidden
+            />
             <span>
               {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'} active ·{' '}
               {filteredRows.length} of {transactions.length} transactions
@@ -361,7 +403,7 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
               type="button"
               onClick={resetFilters}
               className={cn(
-                'inline-flex items-center gap-1 rounded-xs px-2 py-0.5 font-medium text-gold-strong transition-colors hover:bg-gold-soft',
+                'py-0.5 inline-flex items-center gap-1 rounded-xs px-2 font-medium text-gold-strong transition-colors hover:bg-gold-soft',
                 CONTROL_FOCUS,
               )}
             >
@@ -377,7 +419,10 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
         <table className="w-full min-w-full border-collapse text-left text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b border-border bg-surface-secondary/40">
+              <tr
+                key={hg.id}
+                className="border-b border-border bg-surface-secondary/40"
+              >
                 {hg.headers.map((header) => {
                   const canSort = header.column.getCanSort();
                   const sortDirection = header.column.getIsSorted();
@@ -394,31 +439,52 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
                               ? 'none'
                               : undefined
                       }
-                      className={cn('px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary',
-                        canSort && 'cursor-pointer select-none')}
+                      className={cn(
+                        'px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary',
+                        canSort && 'cursor-pointer select-none',
+                      )}
                     >
                       {header.isPlaceholder ? null : (
                         <button
                           type="button"
-                          onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                          onClick={
+                            canSort
+                              ? header.column.getToggleSortingHandler()
+                              : undefined
+                          }
                           disabled={!canSort}
                           aria-label={
                             canSort
                               ? `Sort by ${typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : header.id}${
-                                  sortDirection === 'asc' ? ', currently sorted ascending' : sortDirection === 'desc' ? ', currently sorted descending' : ''
+                                  sortDirection === 'asc'
+                                    ? ', currently sorted ascending'
+                                    : sortDirection === 'desc'
+                                      ? ', currently sorted descending'
+                                      : ''
                                 }`
                               : undefined
                           }
                           className={cn(
-                            'inline-flex items-center gap-1.5 text-left font-medium transition-colors hover:text-foreground rounded-xs',
+                            'gap-1.5 inline-flex items-center rounded-xs text-left font-medium transition-colors hover:text-foreground',
                             canSort && CONTROL_FOCUS,
                             !canSort && 'cursor-default',
                           )}
                         >
-                          <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                          <span>
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </span>
                           {canSort && (
                             <span className="text-foreground-muted" aria-hidden>
-                              {sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : sortDirection === 'desc' ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5 opacity-50" />}
+                              {sortDirection === 'asc' ? (
+                                <ArrowUp className="h-3.5 w-3.5" />
+                              ) : sortDirection === 'desc' ? (
+                                <ArrowDown className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowDown className="h-3.5 w-3.5 opacity-50" />
+                              )}
                             </span>
                           )}
                         </button>
@@ -444,7 +510,12 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
                     }
                     action={
                       activeFilterCount > 0 ? (
-                        <Button type="button" variant="secondary" size="sm" onClick={resetFilters}>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={resetFilters}
+                        >
                           Clear all filters
                         </Button>
                       ) : undefined
@@ -453,20 +524,35 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
                 </td>
               </tr>
             ) : (
-              filteredRows.slice(pagination.pageIndex * pagination.pageSize, (pagination.pageIndex + 1) * pagination.pageSize).map((row) => (
-                <tr
-                  key={row.id}
-                  role="row"
-                  tabIndex={0}
-                  className="transition-colors duration-fast hover:bg-surface-secondary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={cn('px-4 py-3 align-middle text-foreground', (cell.column.columnDef.meta as { className?: string } | undefined)?.className)}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              filteredRows
+                .slice(
+                  pagination.pageIndex * pagination.pageSize,
+                  (pagination.pageIndex + 1) * pagination.pageSize,
+                )
+                .map((row) => (
+                  <tr
+                    key={row.id}
+                    role="row"
+                    tabIndex={0}
+                    className="transition-colors duration-fast hover:bg-surface-secondary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className={cn(
+                          'px-4 py-3 align-middle text-foreground',
+                          (
+                            cell.column.columnDef.meta as
+                              | { className?: string }
+                              | undefined
+                          )?.className,
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))
             )}
           </tbody>
         </table>
@@ -475,15 +561,38 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
       {/* Pagination ------------------------------------------------------- */}
       <div className="flex flex-col gap-3 border-t border-border bg-surface-secondary/20 px-4 py-3 text-xs text-foreground-secondary sm:flex-row sm:items-center sm:justify-between">
         <p className="tabular-nums">
-          {filteredRows.length === 0 ? '0 rows' : `${pagination.pageIndex * pagination.pageSize + 1}-${Math.min((pagination.pageIndex + 1) * pagination.pageSize, filteredRows.length)} of ${filteredRows.length}`}
+          {filteredRows.length === 0
+            ? '0 rows'
+            : `${pagination.pageIndex * pagination.pageSize + 1}-${Math.min((pagination.pageIndex + 1) * pagination.pageSize, filteredRows.length)} of ${filteredRows.length}`}
         </p>
 
         <div className="flex items-center gap-2">
-          <Button type="button" variant="secondary" size="sm" disabled={pagination.pageIndex === 0} onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.max(p.pageIndex - 1, 0) }))}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={pagination.pageIndex === 0}
+            onClick={() =>
+              setPagination((p) => ({ ...p, pageIndex: Math.max(p.pageIndex - 1, 0) }))
+            }
+          >
             Prev
           </Button>
-          <span className="tabular-nums">{pagination.pageIndex + 1} / {pageCount}</span>
-          <Button type="button" variant="secondary" size="sm" disabled={pagination.pageIndex >= pageCount - 1} onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.min(p.pageIndex + 1, pageCount - 1) }))}>
+          <span className="tabular-nums">
+            {pagination.pageIndex + 1} / {pageCount}
+          </span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={pagination.pageIndex >= pageCount - 1}
+            onClick={() =>
+              setPagination((p) => ({
+                ...p,
+                pageIndex: Math.min(p.pageIndex + 1, pageCount - 1),
+              }))
+            }
+          >
             Next
           </Button>
         </div>

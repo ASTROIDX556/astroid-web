@@ -69,7 +69,9 @@ export function ExportMenu({
     } catch (error) {
       toast.error('Export failed', {
         description:
-          error instanceof Error ? error.message : 'Unexpected error while generating the file.',
+          error instanceof Error
+            ? error.message
+            : 'Unexpected error while generating the file.',
       });
     }
   };
@@ -98,7 +100,11 @@ export function ExportMenu({
           {triggerLabel}
         </>
       }
-      triggerClassName={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'gap-2', className)}
+      triggerClassName={cn(
+        buttonVariants({ variant: 'secondary', size: 'sm' }),
+        'gap-2',
+        className,
+      )}
       items={items}
     />
   );
@@ -127,22 +133,46 @@ export function BudgetExportMenu({
       {
         label: 'Department audit (CSV)',
         format: 'csv',
-        run: () => exportDataset(toBudgetAuditRows(departments), BUDGET_AUDIT_COLUMNS, 'csv', 'department-audit'),
+        run: () =>
+          exportDataset(
+            toBudgetAuditRows(departments),
+            BUDGET_AUDIT_COLUMNS,
+            'csv',
+            'department-audit',
+          ),
       },
       {
         label: 'Department audit (JSON)',
         format: 'json',
-        run: () => exportDataset(toBudgetAuditRows(departments), BUDGET_AUDIT_COLUMNS, 'json', 'department-audit'),
+        run: () =>
+          exportDataset(
+            toBudgetAuditRows(departments),
+            BUDGET_AUDIT_COLUMNS,
+            'json',
+            'department-audit',
+          ),
       },
       {
         label: 'Consumption log (CSV)',
         format: 'csv',
-        run: () => exportDataset(toBudgetLedgerRows(departments), BUDGET_LEDGER_COLUMNS, 'csv', 'consumption-log'),
+        run: () =>
+          exportDataset(
+            toBudgetLedgerRows(departments),
+            BUDGET_LEDGER_COLUMNS,
+            'csv',
+            'consumption-log',
+          ),
       },
       {
         label: 'Consumption log (JSON)',
         format: 'json',
-        run: () => exportDataset(toBudgetLedgerRows(departments), BUDGET_LEDGER_COLUMNS, 'json', 'consumption-log'),
+        run: () =>
+          exportDataset(
+            toBudgetLedgerRows(departments),
+            BUDGET_LEDGER_COLUMNS,
+            'json',
+            'consumption-log',
+          ),
       },
     ],
     [departments],

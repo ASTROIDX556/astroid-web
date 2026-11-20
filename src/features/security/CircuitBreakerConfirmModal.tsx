@@ -69,10 +69,7 @@ export function CircuitBreakerConfirmModal({
             <Button variant="ghost" onClick={handleClose}>
               Cancel
             </Button>
-            <Button
-              variant={isTrip ? 'danger' : 'primary'}
-              onClick={handleProceed}
-            >
+            <Button variant={isTrip ? 'danger' : 'primary'} onClick={handleProceed}>
               {isTrip ? (
                 <>
                   <Lock className="h-4 w-4" /> I Understand, Proceed
@@ -125,7 +122,8 @@ export function CircuitBreakerConfirmModal({
             </div>
           </div>
           <p className="text-xs text-foreground-muted">
-            Initiator: <span className="font-medium text-foreground">{currentUser}</span>
+            Initiator:{' '}
+            <span className="font-medium text-foreground">{currentUser}</span>
           </p>
         </div>
       ) : (
@@ -161,9 +159,11 @@ export function CircuitBreakerConfirmModal({
           {/* Confirmation phrase */}
           <div className="space-y-2">
             <label className="text-xs font-medium text-foreground">
-              Type <code className="rounded-xs bg-surface-secondary px-1.5 py-0.5 font-mono text-2xs font-bold text-foreground">
+              Type{' '}
+              <code className="px-1.5 py-0.5 rounded-xs bg-surface-secondary font-mono text-2xs font-bold text-foreground">
                 {requiredPhrase}
-              </code> to confirm
+              </code>{' '}
+              to confirm
             </label>
             <Input
               placeholder={requiredPhrase}
@@ -174,7 +174,8 @@ export function CircuitBreakerConfirmModal({
             />
             {typedPhrase.length > 0 && !phraseValid && (
               <p className="text-2xs text-danger">
-                Phrase does not match. You must type exactly &ldquo;{requiredPhrase}&rdquo;.
+                Phrase does not match. You must type exactly &ldquo;{requiredPhrase}
+                &rdquo;.
               </p>
             )}
           </div>

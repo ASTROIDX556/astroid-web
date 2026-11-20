@@ -65,7 +65,8 @@ export default function BlackHole(rawProps: BlackHoleProps) {
   const { voidRadius: rawVoidRadius, voidX, voidY } = { ...DEFAULT_CENTRE, ...centre };
   const voidColor = BG;
   const perspective = PERSPECTIVE;
-  const particleSize = 0.5 + (Math.max(1, Math.min(50, particleSizeRaw ?? 20)) - 1) * (4 / 49);
+  const particleSize =
+    0.5 + (Math.max(1, Math.min(50, particleSizeRaw ?? 20)) - 1) * (4 / 49);
   const pullSpeed = Math.max(0, pullSpeedRaw ?? 1) / 2;
   const trailAlpha = Math.max(0.02, 1 - (Math.max(0, trailRaw ?? 40) / 50) * 0.98);
   const voidRadius = showCenter !== false ? rawVoidRadius : 1;
@@ -76,7 +77,7 @@ export default function BlackHole(rawProps: BlackHoleProps) {
       const pct = Math.max(0, Math.min(100, outerRadius)) / 100;
       return (voidRadius ?? 40) + pct * (maxR - (voidRadius ?? 40));
     },
-    [voidRadius, outerRadius]
+    [voidRadius, outerRadius],
   );
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -91,7 +92,8 @@ export default function BlackHole(rawProps: BlackHoleProps) {
     (count: number, horizonRad: number, outerRad: number, colorsLength: number) => {
       const pts: Particle[] = [];
       for (let i = 0; i < count; i++) {
-        const radius = horizonRad + Math.pow(Math.random(), 2) * (outerRad - horizonRad);
+        const radius =
+          horizonRad + Math.pow(Math.random(), 2) * (outerRad - horizonRad);
         pts.push({
           angle: Math.random() * Math.PI * 2,
           radius,
@@ -102,13 +104,25 @@ export default function BlackHole(rawProps: BlackHoleProps) {
       }
       particlesRef.current = pts;
     },
-    []
+    [],
   );
 
   useEffect(() => {
     const { w, h } = sizeRef.current;
-    initParticles(particleCount, voidRadius ?? 40, outerRadFromSize(w, h), colors.length);
-  }, [particleCount, voidRadius, colors.length, initParticles, outerRadFromSize, sizeVersion]);
+    initParticles(
+      particleCount,
+      voidRadius ?? 40,
+      outerRadFromSize(w, h),
+      colors.length,
+    );
+  }, [
+    particleCount,
+    voidRadius,
+    colors.length,
+    initParticles,
+    outerRadFromSize,
+    sizeVersion,
+  ]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -171,7 +185,14 @@ export default function BlackHole(rawProps: BlackHoleProps) {
       const tiltRad = ((tilt ?? 20) * Math.PI) / 180;
       const tiltSidewayRad = ((tiltSideway ?? 160) * Math.PI) / 180;
 
-      type ProjectedPt = { x: number; y: number; size: number; alpha: number; z: number; color: string };
+      type ProjectedPt = {
+        x: number;
+        y: number;
+        size: number;
+        alpha: number;
+        z: number;
+        color: string;
+      };
       const backgroundParticles: ProjectedPt[] = [];
       const foregroundParticles: ProjectedPt[] = [];
 
@@ -184,13 +205,19 @@ export default function BlackHole(rawProps: BlackHoleProps) {
         pt.angle += localOrbitSpeed * 0.012 * dt;
         pt.radius -= localPullSpeed * dt;
         if (pt.radius < (voidRadius ?? 40)) {
-          pt.radius = (voidRadius ?? 40) + 0.7 * (outerRad - (voidRadius ?? 40)) + Math.random() * 0.3 * (outerRad - (voidRadius ?? 40));
+          pt.radius =
+            (voidRadius ?? 40) +
+            0.7 * (outerRad - (voidRadius ?? 40)) +
+            Math.random() * 0.3 * (outerRad - (voidRadius ?? 40));
           pt.angle = Math.random() * Math.PI * 2;
           pt.height = (Math.random() - 0.5) * 16;
           continue;
         }
-        const cosA = Math.cos(pt.angle), sinA = Math.sin(pt.angle);
-        const x_base = pt.radius * cosA, y_base = pt.height, z_base = pt.radius * sinA;
+        const cosA = Math.cos(pt.angle),
+          sinA = Math.sin(pt.angle);
+        const x_base = pt.radius * cosA,
+          y_base = pt.height,
+          z_base = pt.radius * sinA;
         const x1 = x_base;
         const y1 = y_base * Math.cos(tiltRad) + z_base * Math.sin(tiltRad);
         const z1 = -y_base * Math.sin(tiltRad) + z_base * Math.cos(tiltRad);
@@ -223,21 +250,39 @@ export default function BlackHole(rawProps: BlackHoleProps) {
 
       if (showCenter !== false) {
         const hexToRgb = (c: string) => {
-          let r = 0, g = 0, b = 0;
+          let r = 0,
+            g = 0,
+            b = 0;
           if (c.startsWith('#')) {
             const hex = c.replace('#', '');
-            if (hex.length >= 6) { r = parseInt(hex.substring(0, 2), 16); g = parseInt(hex.substring(2, 4), 16); b = parseInt(hex.substring(4, 6), 16); }
+            if (hex.length >= 6) {
+              r = parseInt(hex.substring(0, 2), 16);
+              g = parseInt(hex.substring(2, 4), 16);
+              b = parseInt(hex.substring(4, 6), 16);
+            }
           }
           return { r, g, b };
         };
         const voidRgb = hexToRgb(voidColor);
         const sphereGrad = ctx.createRadialGradient(
-          voidCx - (voidRadius ?? 40) * 0.25, voidCy - (voidRadius ?? 40) * 0.3, (voidRadius ?? 40) * 0.05,
-          voidCx, voidCy, voidRadius ?? 40
+          voidCx - (voidRadius ?? 40) * 0.25,
+          voidCy - (voidRadius ?? 40) * 0.3,
+          (voidRadius ?? 40) * 0.05,
+          voidCx,
+          voidCy,
+          voidRadius ?? 40,
         );
-        const edgeR = Math.min(255, voidRgb.r + 18), edgeG = Math.min(255, voidRgb.g + 18), edgeB = Math.min(255, voidRgb.b + 18);
-        sphereGrad.addColorStop(0, `rgba(${Math.min(255, voidRgb.r + 8)}, ${Math.min(255, voidRgb.g + 8)}, ${Math.min(255, voidRgb.b + 8)}, 1)`);
-        sphereGrad.addColorStop(0.65, `rgba(${voidRgb.r}, ${voidRgb.g}, ${voidRgb.b}, 1)`);
+        const edgeR = Math.min(255, voidRgb.r + 18),
+          edgeG = Math.min(255, voidRgb.g + 18),
+          edgeB = Math.min(255, voidRgb.b + 18);
+        sphereGrad.addColorStop(
+          0,
+          `rgba(${Math.min(255, voidRgb.r + 8)}, ${Math.min(255, voidRgb.g + 8)}, ${Math.min(255, voidRgb.b + 8)}, 1)`,
+        );
+        sphereGrad.addColorStop(
+          0.65,
+          `rgba(${voidRgb.r}, ${voidRgb.g}, ${voidRgb.b}, 1)`,
+        );
         sphereGrad.addColorStop(0.92, `rgba(${edgeR}, ${edgeG}, ${edgeB}, 1)`);
         sphereGrad.addColorStop(1, `rgba(${edgeR}, ${edgeG}, ${edgeB}, 0.9)`);
         ctx.globalAlpha = 1.0;
@@ -246,7 +291,14 @@ export default function BlackHole(rawProps: BlackHoleProps) {
         ctx.arc(voidCx, voidCy, voidRadius ?? 40, 0, Math.PI * 2);
         ctx.fill();
 
-        const rimGrad = ctx.createRadialGradient(voidCx, voidCy, (voidRadius ?? 40) * 0.88, voidCx, voidCy, (voidRadius ?? 40) * 1.02);
+        const rimGrad = ctx.createRadialGradient(
+          voidCx,
+          voidCy,
+          (voidRadius ?? 40) * 0.88,
+          voidCx,
+          voidCy,
+          (voidRadius ?? 40) * 1.02,
+        );
         rimGrad.addColorStop(0, 'rgba(255,255,255,0)');
         rimGrad.addColorStop(0.6, 'rgba(180,180,200,0.06)');
         rimGrad.addColorStop(0.85, 'rgba(180,180,200,0.12)');
@@ -272,16 +324,50 @@ export default function BlackHole(rawProps: BlackHoleProps) {
     animRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voidX, voidY, voidRadius, showCenter, particleCount, particleSize, JSON.stringify(colors), outerRadFromSize, tilt, tiltSideway, trailAlpha, orbitSpeed, pullSpeed]);
+  }, [
+    voidX,
+    voidY,
+    voidRadius,
+    showCenter,
+    particleCount,
+    particleSize,
+    JSON.stringify(colors),
+    outerRadFromSize,
+    tilt,
+    tiltSideway,
+    trailAlpha,
+    orbitSpeed,
+    pullSpeed,
+  ]);
 
   return (
     <div
       ref={containerRef}
       className={rawProps.className}
-      style={{ width: '100%', height: '100%', background: '#000000', ...rawProps.style, position: 'relative', overflow: 'hidden' }}
+      style={{
+        width: '100%',
+        height: '100%',
+        background: '#000000',
+        ...rawProps.style,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
     >
-      <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} />
-      <canvas ref={fgCanvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />
+      <canvas
+        ref={canvasRef}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+      />
+      <canvas
+        ref={fgCanvasRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+        }}
+      />
     </div>
   );
 }

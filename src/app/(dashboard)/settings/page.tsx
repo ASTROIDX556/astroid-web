@@ -49,7 +49,7 @@ const teamColumns: Column<User>[] = [
   {
     header: 'Member',
     cell: (u) => (
-      <div className="flex items-center gap-2.5">
+      <div className="gap-2.5 flex items-center">
         <Avatar name={u.name} src={u.avatar} size="sm" />
         <span className="font-medium text-foreground">{u.name}</span>
       </div>
@@ -117,7 +117,7 @@ export default function SettingsPage() {
                   <div className="space-y-1">
                     <p className="text-base font-medium text-foreground">{data.name}</p>
                     <p className="text-xs text-foreground-secondary">{data.email}</p>
-                    <div className="flex items-center gap-1.5 pt-1">
+                    <div className="gap-1.5 flex items-center pt-1">
                       <Badge variant={roleVariant[data.role]} size="sm">
                         {titleCase(data.role)}
                       </Badge>
@@ -166,9 +166,13 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-4">
                     <Avatar name={org.name} src={org.logo} size="lg" shape="squircle" />
                     <div className="space-y-1">
-                      <p className="text-base font-medium text-foreground">{org.name}</p>
-                      <p className="font-mono text-xs text-foreground-muted">{org.slug}</p>
-                      <div className="flex items-center gap-1.5 pt-1">
+                      <p className="text-base font-medium text-foreground">
+                        {org.name}
+                      </p>
+                      <p className="font-mono text-xs text-foreground-muted">
+                        {org.slug}
+                      </p>
+                      <div className="gap-1.5 flex items-center pt-1">
                         <Badge variant={planVariant[org.plan]} size="sm">
                           {titleCase(org.plan)}
                         </Badge>
@@ -223,20 +227,23 @@ export default function SettingsPage() {
         </QueryBoundary>
       </div>
 
-      <div className="pt-6 border-t border-border space-y-4">
+      <div className="space-y-4 border-t border-border pt-6">
         <SectionLabel>Preferences</SectionLabel>
         <PreferencesPanel />
       </div>
 
-      <div className="pt-6 border-t border-border space-y-4">
+      <div className="space-y-4 border-t border-border pt-6">
         <RBACManagementView />
       </div>
 
-      <div className="pt-6 border-t border-border space-y-4">
-        <CircuitBreakerControl variant="settings" currentUser={user.data?.name ?? 'operator'} />
+      <div className="space-y-4 border-t border-border pt-6">
+        <CircuitBreakerControl
+          variant="settings"
+          currentUser={user.data?.name ?? 'operator'}
+        />
       </div>
 
-      <div className="pt-6 border-t border-border space-y-4">
+      <div className="space-y-4 border-t border-border pt-6">
         <CredentialVault />
       </div>
     </PageTransition>

@@ -1,7 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/cn';
 import type { AgentCorrelationPoint } from '@/services/mock/analytics';
@@ -30,7 +36,9 @@ export function SpendingCorrelationMatrix({
       <Card className={cn('border-border bg-surface-primary', className)}>
         <CardHeader>
           <CardTitle className="text-foreground-primary">{title}</CardTitle>
-          <CardDescription className="text-foreground-muted">{description}</CardDescription>
+          <CardDescription className="text-foreground-muted">
+            {description}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-foreground-muted" role="status">
@@ -41,7 +49,11 @@ export function SpendingCorrelationMatrix({
     );
   }
 
-  const agents = data.map((d) => ({ agentId: d.agentId, agentName: d.agentName, role: d.role }));
+  const agents = data.map((d) => ({
+    agentId: d.agentId,
+    agentName: d.agentName,
+    role: d.role,
+  }));
 
   function getCorrelationColor(val: number): string {
     if (val === 1.0) return 'bg-gold text-surface-primary font-semibold';
@@ -57,11 +69,17 @@ export function SpendingCorrelationMatrix({
         <div className="flex flex-col gap-space-8 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-foreground-primary">{title}</CardTitle>
-            <CardDescription className="text-foreground-muted">{description}</CardDescription>
+            <CardDescription className="text-foreground-muted">
+              {description}
+            </CardDescription>
           </div>
           {selectedCell && (
-            <Badge variant="outline" className="self-start sm:self-auto border-border-strong text-foreground-primary">
-              {selectedCell.rowAgent} ↔ {selectedCell.colAgent}: {selectedCell.value.toFixed(2)}
+            <Badge
+              variant="outline"
+              className="self-start border-border-strong text-foreground-primary sm:self-auto"
+            >
+              {selectedCell.rowAgent} ↔ {selectedCell.colAgent}:{' '}
+              {selectedCell.value.toFixed(2)}
             </Badge>
           )}
         </div>
@@ -77,7 +95,7 @@ export function SpendingCorrelationMatrix({
               <tr>
                 <th
                   scope="col"
-                  className="p-space-12 text-xs font-mono font-medium text-foreground-muted border-b border-border"
+                  className="border-b border-border p-space-12 font-mono text-xs font-medium text-foreground-muted"
                 >
                   Agent / Peer
                 </th>
@@ -85,9 +103,12 @@ export function SpendingCorrelationMatrix({
                   <th
                     key={colAgent.agentId}
                     scope="col"
-                    className="p-space-12 text-center text-xs font-mono font-medium text-foreground-muted border-b border-border"
+                    className="border-b border-border p-space-12 text-center font-mono text-xs font-medium text-foreground-muted"
                   >
-                    <span className="block truncate max-w-[100px]" title={colAgent.agentName}>
+                    <span
+                      className="block max-w-[100px] truncate"
+                      title={colAgent.agentName}
+                    >
                       {colAgent.agentName}
                     </span>
                   </th>
@@ -96,14 +117,19 @@ export function SpendingCorrelationMatrix({
             </thead>
             <tbody>
               {data.map((row) => (
-                <tr key={row.agentId} className="border-b border-border/50 hover:bg-surface-secondary/40 transition-colors">
+                <tr
+                  key={row.agentId}
+                  className="border-b border-border/50 transition-colors hover:bg-surface-secondary/40"
+                >
                   <th
                     scope="row"
-                    className="p-space-12 font-medium text-foreground-primary text-xs whitespace-nowrap border-r border-border"
+                    className="whitespace-nowrap border-r border-border p-space-12 text-xs font-medium text-foreground-primary"
                   >
                     <div className="flex flex-col">
                       <span>{row.agentName}</span>
-                      <span className="text-[10px] text-foreground-muted uppercase tracking-wider">{row.role}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
+                        {row.role}
+                      </span>
                     </div>
                   </th>
                   {agents.map((colAgent) => {
@@ -129,9 +155,9 @@ export function SpendingCorrelationMatrix({
                             })
                           }
                           className={cn(
-                            'w-full py-2 px-3 rounded-md text-xs font-mono transition-all focus:outline-none focus:ring-2 focus:ring-gold',
+                            'w-full rounded-md px-3 py-2 font-mono text-xs transition-all focus:outline-none focus:ring-2 focus:ring-gold',
                             getCorrelationColor(val),
-                            isSelected && 'ring-2 ring-gold shadow-sm'
+                            isSelected && 'shadow-sm ring-2 ring-gold',
                           )}
                         >
                           {val.toFixed(2)}
@@ -147,19 +173,24 @@ export function SpendingCorrelationMatrix({
         <div className="mt-space-16 flex flex-wrap items-center justify-between gap-space-12 text-xs text-foreground-muted">
           <div className="flex items-center gap-space-12">
             <span className="flex items-center gap-space-4">
-              <span className="inline-block w-3 h-3 rounded bg-gold" /> Self (1.0)
+              <span className="inline-block h-3 w-3 rounded bg-gold" /> Self (1.0)
             </span>
             <span className="flex items-center gap-space-4">
-              <span className="inline-block w-3 h-3 rounded bg-success-soft border border-success/30" /> High (&gt;=0.7)
+              <span className="inline-block h-3 w-3 rounded border border-success/30 bg-success-soft" />{' '}
+              High (&gt;=0.7)
             </span>
             <span className="flex items-center gap-space-4">
-              <span className="inline-block w-3 h-3 rounded bg-warning-soft border border-warning/30" /> Moderate (&gt;=0.4)
+              <span className="inline-block h-3 w-3 rounded border border-warning/30 bg-warning-soft" />{' '}
+              Moderate (&gt;=0.4)
             </span>
             <span className="flex items-center gap-space-4">
-              <span className="inline-block w-3 h-3 rounded bg-surface-secondary border border-border" /> Low
+              <span className="inline-block h-3 w-3 rounded border border-border bg-surface-secondary" />{' '}
+              Low
             </span>
           </div>
-          <span className="italic font-mono">Coefficients derived from rolling window spend activity</span>
+          <span className="font-mono italic">
+            Coefficients derived from rolling window spend activity
+          </span>
         </div>
       </CardContent>
     </Card>

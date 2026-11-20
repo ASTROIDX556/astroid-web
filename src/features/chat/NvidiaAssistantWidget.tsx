@@ -468,7 +468,10 @@ export function NvidiaAssistantWidget() {
               </button>
             );
           })}
-          <BriefingTemplateSelector disabled={isStreaming} onSelectTemplate={handleTemplateSelect} />
+          <BriefingTemplateSelector
+            disabled={isStreaming}
+            onSelectTemplate={handleTemplateSelect}
+          />
         </div>
       </div>
 

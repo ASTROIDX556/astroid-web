@@ -89,7 +89,12 @@ export interface FetchStellarAccountOptions {
 function isAbortError(error: unknown): boolean {
   // Fetch throws a DOMException (not an Error subclass in browsers/Node), so
   // detect cancellation by name instead of relying on `instanceof`.
-  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'AbortError'
+  );
 }
 
 function abortError(): DOMException {
@@ -153,7 +158,9 @@ async function requestJson<T>(
         isMissing
           ? 'The Stellar account does not exist on this network yet.'
           : `The Stellar network responded with HTTP ${response.status}.`,
-        { retryable: !isMissing && (response.status >= 500 || response.status === 429) },
+        {
+          retryable: !isMissing && (response.status >= 500 || response.status === 429),
+        },
       );
     }
 
@@ -197,7 +204,7 @@ function toAccountBalances(
 
     balances.push({
       asset,
-      issuer: isNative ? null : record.asset_issuer ?? null,
+      issuer: isNative ? null : (record.asset_issuer ?? null),
       balance: amount,
     });
   }
@@ -326,7 +333,12 @@ export async function fetchStellarAccountSnapshot(
   // Share one timeout budget across both reads so a slow node cannot double
   // the worst-case wait before the UI sees an error.
   const remainingMs = Math.max(1, timeoutMs - (Date.now() - startedAt));
-  const activity = await fetchRecentTransactionCount(key, horizonUrl, remainingMs, signal);
+  const activity = await fetchRecentTransactionCount(
+    key,
+    horizonUrl,
+    remainingMs,
+    signal,
+  );
 
   return {
     publicKey: key,

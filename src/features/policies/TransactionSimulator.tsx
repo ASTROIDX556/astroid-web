@@ -1,7 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, GitCompareArrows, UploadCloud } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  GitCompareArrows,
+  UploadCloud,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +29,10 @@ import {
  * Derive the side-by-side diff (proposed vs permitted paths) from the real
  * policy evaluation across every rule, so the view always mirrors the engine.
  */
-function buildSimulationDiff(payload: string, rules: PolicyRule[]): PolicySimulationDiffResult {
+function buildSimulationDiff(
+  payload: string,
+  rules: PolicyRule[],
+): PolicySimulationDiffResult {
   const perRule = rules.map((rule) => ({
     rule,
     evaluation: evaluatePolicySimulation(payload, rule),
@@ -64,8 +72,8 @@ function buildSimulationDiff(payload: string, rules: PolicyRule[]): PolicySimula
   });
 
   const passed = violatedRuleIds.length === 0;
-  const hasDanger = perRule.some(
-    (entry) => entry.evaluation.violations.some((v) => v.severity === 'danger'),
+  const hasDanger = perRule.some((entry) =>
+    entry.evaluation.violations.some((v) => v.severity === 'danger'),
   );
 
   return {
@@ -77,8 +85,15 @@ function buildSimulationDiff(payload: string, rules: PolicyRule[]): PolicySimula
 }
 
 export function TransactionSimulator() {
-  const { rules, activeRuleId, setActiveRuleId, xdr, setXdr, result, parsedOperations } =
-    usePolicySimulation();
+  const {
+    rules,
+    activeRuleId,
+    setActiveRuleId,
+    xdr,
+    setXdr,
+    result,
+    parsedOperations,
+  } = usePolicySimulation();
 
   // Full diff across every rule — recomputed only when the payload changes.
   const [diff, setDiff] = useState<PolicySimulationDiffResult | null>(null);
@@ -132,7 +147,7 @@ export function TransactionSimulator() {
               value={xdr}
               onChange={(event) => setXdr(event.target.value)}
               aria-label="Transaction XDR payload"
-              className="min-h-[120px] w-full rounded-sm border border-border bg-surface px-3 py-2.5 text-xs text-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+              className="py-2.5 min-h-[120px] w-full rounded-sm border border-border bg-surface px-3 text-xs text-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="Paste a Stellar XDR payload here"
             />
           </FormField>
@@ -146,7 +161,12 @@ export function TransactionSimulator() {
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary">
             <UploadCloud className="h-3.5 w-3.5" aria-hidden />
             Upload XDR
-            <input type="file" accept=".xdr,.txt,.base64" className="sr-only" onChange={onUpload} />
+            <input
+              type="file"
+              accept=".xdr,.txt,.base64"
+              className="sr-only"
+              onChange={onUpload}
+            />
           </label>
         </div>
 
@@ -172,8 +192,12 @@ export function TransactionSimulator() {
                     aria-hidden
                   />
                   <div>
-                    <p className="text-xs font-medium text-foreground">{violation.name}</p>
-                    <p className="text-2xs text-foreground-secondary">{violation.message}</p>
+                    <p className="text-xs font-medium text-foreground">
+                      {violation.name}
+                    </p>
+                    <p className="text-2xs text-foreground-secondary">
+                      {violation.message}
+                    </p>
                   </div>
                 </div>
               ))
@@ -195,11 +219,15 @@ export function TransactionSimulator() {
                   key={`${operation.type}-${index}`}
                   className="rounded-sm border border-border bg-surface-secondary p-3"
                 >
-                  <p className="text-xs font-medium text-foreground">{operation.type}</p>
+                  <p className="text-xs font-medium text-foreground">
+                    {operation.type}
+                  </p>
                   <p className="mt-1 text-2xs text-foreground-secondary">
                     {operation.asset} · {operation.amount}
                   </p>
-                  <p className="mt-1 text-[10px] text-foreground-muted">{operation.source}</p>
+                  <p className="mt-1 text-[10px] text-foreground-muted">
+                    {operation.source}
+                  </p>
                 </div>
               ))}
             </div>
@@ -215,7 +243,9 @@ export function TransactionSimulator() {
               <GitCompareArrows className="h-3.5 w-3.5 text-gold" aria-hidden />
               Simulation diff — proposed vs permitted
             </h2>
-            <PolicySimulationDiffAnimated resultKey={`${diff.outcome}-${diff.rules.length}-${diff.operations.length}`}>
+            <PolicySimulationDiffAnimated
+              resultKey={`${diff.outcome}-${diff.rules.length}-${diff.operations.length}`}
+            >
               <PolicySimulationDiff result={diff} rules={rules} />
             </PolicySimulationDiffAnimated>
           </section>

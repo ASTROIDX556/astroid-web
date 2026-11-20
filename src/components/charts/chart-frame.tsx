@@ -45,7 +45,8 @@ export interface ChartFrameProps {
   children: React.ReactElement;
 }
 
-const cssHeight = (height: number | string) => (typeof height === 'number' ? `${height}px` : height);
+const cssHeight = (height: number | string) =>
+  typeof height === 'number' ? `${height}px` : height;
 
 /**
  * The one wrapper every dashboard chart goes through: a responsive container
@@ -72,7 +73,11 @@ export function ChartFrame({
     return (
       <div
         className={cn('skeleton w-full rounded-md', className)}
-        style={{ height: boxHeight, minHeight, aspectRatio: aspect ? String(aspect) : undefined }}
+        style={{
+          height: boxHeight,
+          minHeight,
+          aspectRatio: aspect ? String(aspect) : undefined,
+        }}
         aria-hidden
       />
     );

@@ -39,9 +39,7 @@ export function AssetDirectory({
   const freighter = useFreighterStore();
 
   const allAssets = useMemo(() => {
-    const balanceSet = new Set(
-      existingBalances.map((a) => a.toUpperCase()),
-    );
+    const balanceSet = new Set(existingBalances.map((a) => a.toUpperCase()));
 
     const merged = [...presetAssets];
     for (const asset of localAssets) {
@@ -117,9 +115,7 @@ export function AssetDirectory({
           const existing = prev.find((a) => a.issuer === asset.issuer);
           if (existing) {
             return prev.map((a) =>
-              a.issuer === asset.issuer
-                ? { ...a, trustline: 'trusted' as const }
-                : a,
+              a.issuer === asset.issuer ? { ...a, trustline: 'trusted' as const } : a,
             );
           }
           return [...prev, { ...asset, trustline: 'trusted' as const }];
@@ -216,7 +212,7 @@ export function AssetDirectory({
                   </th>
                   <th
                     scope="col"
-                    className="px-5 py-3 text-left text-2xs font-medium uppercase tracking-wide text-foreground-secondary hidden sm:table-cell"
+                    className="hidden px-5 py-3 text-left text-2xs font-medium uppercase tracking-wide text-foreground-secondary sm:table-cell"
                   >
                     Status
                   </th>
@@ -236,7 +232,7 @@ export function AssetDirectory({
                   >
                     {/* Asset code + name */}
                     <td className="px-5 py-4">
-                      <div className="flex flex-col gap-0.5">
+                      <div className="gap-0.5 flex flex-col">
                         <span className="font-medium text-foreground">
                           {asset.code}
                         </span>
@@ -276,13 +272,11 @@ export function AssetDirectory({
                     </td>
 
                     {/* Verification + trustline status */}
-                    <td className="px-5 py-4 hidden sm:table-cell">
-                      <div className="flex flex-wrap items-center gap-1.5">
+                    <td className="hidden px-5 py-4 sm:table-cell">
+                      <div className="gap-1.5 flex flex-wrap items-center">
                         <Badge
                           variant={
-                            asset.verification === 'verified'
-                              ? 'success'
-                              : 'neutral'
+                            asset.verification === 'verified' ? 'success' : 'neutral'
                           }
                           size="sm"
                         >

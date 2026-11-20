@@ -78,8 +78,10 @@ export default function PoliciesPage() {
                     <CardContent className="space-y-3 pt-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">{policy.name}</p>
-                          <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="text-sm font-medium text-foreground">
+                            {policy.name}
+                          </p>
+                          <div className="gap-1.5 flex flex-wrap items-center">
                             <Badge variant="outline" size="sm">
                               {titleCase(policy.type)}
                             </Badge>
@@ -101,13 +103,13 @@ export default function PoliciesPage() {
                       </p>
                     </CardContent>
                     <CardFooter className="justify-between">
-                      <span className="inline-flex items-center gap-1.5 text-2xs text-foreground-secondary">
+                      <span className="gap-1.5 inline-flex items-center text-2xs text-foreground-secondary">
                         <ShieldCheck className="h-3.5 w-3.5 text-gold" aria-hidden />
                         Applies to {formatNumber(policy.appliesTo)}{' '}
                         {policy.appliesTo === 1 ? 'agent' : 'agents'}
                       </span>
                       {policy.violations30d > 0 ? (
-                        <span className="inline-flex items-center gap-1.5 text-2xs font-medium text-warning">
+                        <span className="gap-1.5 inline-flex items-center text-2xs font-medium text-warning">
                           <ShieldAlert className="h-3.5 w-3.5" aria-hidden />
                           {formatNumber(policy.violations30d)} violations · 30d
                         </span>

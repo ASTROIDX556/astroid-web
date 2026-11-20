@@ -27,8 +27,17 @@ import { CATEGORICAL } from '@/components/charts';
 import { useOverview, useBriefing, useBudgets } from '@/hooks/use-queries';
 import { useAssistantStore } from '@/stores/ui-store';
 import { useHydrated } from '@/hooks/use-hydrated';
-import { usePreferencesStore, type CashflowDisplay, type DashboardCurrency } from '@/stores';
-import { formatCurrency, formatDashboardCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
+import {
+  usePreferencesStore,
+  type CashflowDisplay,
+  type DashboardCurrency,
+} from '@/stores';
+import {
+  formatCurrency,
+  formatDashboardCurrency,
+  formatNumber,
+  formatRelativeTime,
+} from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 
@@ -90,7 +99,9 @@ export default function OverviewPage() {
               <StatCard
                 label="Total balance"
                 rawNumber={data?.totalBalance ?? 0}
-                formatter={(val) => formatDashboardCurrency(val, dashboardCurrency, { compact: true })}
+                formatter={(val) =>
+                  formatDashboardCurrency(val, dashboardCurrency, { compact: true })
+                }
                 icon={<WalletIcon className="h-4 w-4" />}
                 accent
                 href="/wallets"
@@ -100,7 +111,9 @@ export default function OverviewPage() {
               <StatCard
                 label="Monthly spend"
                 rawNumber={data?.monthlySpend ?? 0}
-                formatter={(val) => formatDashboardCurrency(val, dashboardCurrency, { compact: true })}
+                formatter={(val) =>
+                  formatDashboardCurrency(val, dashboardCurrency, { compact: true })
+                }
                 delta={data?.monthlySpendDelta}
                 deltaLabel="vs last month"
                 upIsGood={false}
@@ -142,7 +155,9 @@ export default function OverviewPage() {
                 <select
                   aria-label="Dashboard currency"
                   value={dashboardCurrency}
-                  onChange={(event) => setActiveCurrency(event.target.value as DashboardCurrency)}
+                  onChange={(event) =>
+                    setActiveCurrency(event.target.value as DashboardCurrency)
+                  }
                   className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="USD">USD</option>
@@ -151,22 +166,27 @@ export default function OverviewPage() {
                 <select
                   aria-label="Cashflow chart display"
                   value={dashboardCashflowDisplay}
-                  onChange={(event) => setCashflowDisplay(event.target.value as CashflowDisplay)}
+                  onChange={(event) =>
+                    setCashflowDisplay(event.target.value as CashflowDisplay)
+                  }
                   className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="area">Area chart</option>
                   <option value="line">Line chart</option>
                 </select>
-              <Link
-                href="/analytics"
-                className="inline-flex items-center gap-1 text-2xs font-medium text-foreground-secondary transition-colors hover:text-foreground"
-              >
-                Full analytics <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-              </Link>
+                <Link
+                  href="/analytics"
+                  className="inline-flex items-center gap-1 text-2xs font-medium text-foreground-secondary transition-colors hover:text-foreground"
+                >
+                  Full analytics <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                </Link>
               </div>
             </CardHeader>
             <CardContent>
-              <QueryBoundary query={overview} loading={<div className="skeleton h-[260px] w-full rounded-md" />}>
+              <QueryBoundary
+                query={overview}
+                loading={<div className="skeleton h-[260px] w-full rounded-md" />}
+              >
                 {(data) => (
                   <CashflowChart
                     data={data?.cashflow}

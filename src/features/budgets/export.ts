@@ -66,7 +66,9 @@ export function toCsv(
   ];
   for (const row of rows) {
     lines.push(
-      columns.map((column) => escapeCsvValue(row[column.key] ?? '')).join(CSV_DELIMITER),
+      columns
+        .map((column) => escapeCsvValue(row[column.key] ?? ''))
+        .join(CSV_DELIMITER),
     );
   }
   return lines.join(CSV_LINE_BREAK);
@@ -95,7 +97,10 @@ export function buildExportFileName(
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'export';
-  const suffix = stamp.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const suffix = stamp
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '');
   return `astroid-budgets-${slug}-${suffix}.${format}`;
 }
 

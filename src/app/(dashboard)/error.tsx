@@ -22,8 +22,8 @@ export default function DashboardError({
 
   return (
     <div className="flex min-h-[60vh] w-full items-center justify-center p-8">
-      <div className="flex flex-col items-center gap-6 rounded-xl border border-dashed border-danger/40 bg-danger-soft/20 p-10 text-center max-w-md w-full">
-        <span className="grid h-14 w-14 place-items-center rounded-full bg-danger-soft text-danger">
+      <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-xl border border-dashed border-danger/40 bg-danger-soft/20 p-10 text-center">
+        <span className="h-14 w-14 grid place-items-center rounded-full bg-danger-soft text-danger">
           <AlertTriangle className="h-7 w-7" aria-hidden />
         </span>
         <div className="space-y-2">
@@ -36,7 +36,7 @@ export default function DashboardError({
         </div>
         <button
           onClick={reset}
-          className="inline-flex items-center gap-2 rounded-md bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-80"
+          className="py-2.5 inline-flex items-center gap-2 rounded-md bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-80"
         >
           <RefreshCw className="h-4 w-4" aria-hidden />
           Try again

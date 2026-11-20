@@ -39,7 +39,9 @@ export function filterAgentsByCriteria(
 
     if (normalizedQuery !== '') {
       const matchesName = agent.name.toLowerCase().includes(normalizedQuery);
-      const matchesDescription = agent.description.toLowerCase().includes(normalizedQuery);
+      const matchesDescription = agent.description
+        .toLowerCase()
+        .includes(normalizedQuery);
       const matchesId = agent.id.toLowerCase().includes(normalizedQuery);
       if (!matchesName && !matchesDescription && !matchesId) {
         return false;

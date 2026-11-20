@@ -5,8 +5,17 @@ import * as z from 'zod';
 import '../../../styles/tokens.css';
 
 const simulationSchema = z.object({
-  amount: z.string().min(1, 'Amount is required').refine((val) => !isNaN(Number(val)) && Number(val) > 0, 'Must be a valid positive number'),
-  recipientAddress: z.string().min(56, 'Valid Stellar address required (min 56 chars)').max(56, 'Valid Stellar address required'),
+  amount: z
+    .string()
+    .min(1, 'Amount is required')
+    .refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      'Must be a valid positive number',
+    ),
+  recipientAddress: z
+    .string()
+    .min(56, 'Valid Stellar address required (min 56 chars)')
+    .max(56, 'Valid Stellar address required'),
   assetType: z.string().min(1, 'Asset type is required'),
   agentId: z.string().min(1, 'Agent ID is required'),
 });
@@ -81,9 +90,10 @@ export const PolicySimulationModal: React.FC<PolicySimulationModalProps> = ({
       simulatedLogs.push({
         ruleName: 'Single Transaction Limit',
         status: numAmount <= 1000 ? 'PASS' : 'BLOCK',
-        message: numAmount <= 1000
-          ? `Amount ${numAmount} is within the single transaction limit of 1000.`
-          : `Amount ${numAmount} exceeds the maximum allowed limit of 1000.`,
+        message:
+          numAmount <= 1000
+            ? `Amount ${numAmount} is within the single transaction limit of 1000.`
+            : `Amount ${numAmount} exceeds the maximum allowed limit of 1000.`,
       });
 
       setLogs(simulatedLogs);
@@ -106,20 +116,32 @@ export const PolicySimulationModal: React.FC<PolicySimulationModalProps> = ({
       <div className="policy-simulation-modal-content" style={modalStyle}>
         <div style={headerStyle}>
           <h2>Simulate Spending Rule {policyId ? `#${policyId}` : ''}</h2>
-          <button onClick={handleClose} style={closeButtonStyle}>&times;</button>
+          <button onClick={handleClose} style={closeButtonStyle}>
+            &times;
+          </button>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} style={formStyle}>
           <div style={fieldStyle}>
             <label style={labelStyle}>Agent ID</label>
-            <input {...register('agentId')} placeholder="e.g. GAGENT..." style={inputStyle} />
+            <input
+              {...register('agentId')}
+              placeholder="e.g. GAGENT..."
+              style={inputStyle}
+            />
             {errors.agentId && <span style={errorStyle}>{errors.agentId.message}</span>}
           </div>
 
           <div style={fieldStyle}>
             <label style={labelStyle}>Recipient Address</label>
-            <input {...register('recipientAddress')} placeholder="Stellar Public Key (56 chars)" style={inputStyle} />
-            {errors.recipientAddress && <span style={errorStyle}>{errors.recipientAddress.message}</span>}
+            <input
+              {...register('recipientAddress')}
+              placeholder="Stellar Public Key (56 chars)"
+              style={inputStyle}
+            />
+            {errors.recipientAddress && (
+              <span style={errorStyle}>{errors.recipientAddress.message}</span>
+            )}
           </div>
 
           <div style={fieldStyle}>
@@ -136,7 +158,9 @@ export const PolicySimulationModal: React.FC<PolicySimulationModalProps> = ({
               <option value="EURT">EURT</option>
               <option value="OTHER">OTHER</option>
             </select>
-            {errors.assetType && <span style={errorStyle}>{errors.assetType.message}</span>}
+            {errors.assetType && (
+              <span style={errorStyle}>{errors.assetType.message}</span>
+            )}
           </div>
 
           <div style={buttonGroupStyle}>
@@ -167,7 +191,13 @@ export const PolicySimulationModal: React.FC<PolicySimulationModalProps> = ({
                   backgroundColor: log.status === 'PASS' ? '#f0fdf4' : '#fef2f2',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: '4px',
+                  }}
+                >
                   <strong>{log.ruleName}</strong>
                   <span
                     style={{
@@ -178,7 +208,9 @@ export const PolicySimulationModal: React.FC<PolicySimulationModalProps> = ({
                     {log.status}
                   </span>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: '#374151' }}>{log.message}</p>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#374151' }}>
+                  {log.message}
+                </p>
               </div>
             ))}
           </div>

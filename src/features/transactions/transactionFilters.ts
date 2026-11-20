@@ -96,7 +96,9 @@ export function filterTransactions(
   filters: TransactionFilters,
   now: number = Date.now(),
 ): Transaction[] {
-  return transactions.filter((transaction) => matchesTransactionFilters(transaction, filters, now));
+  return transactions.filter((transaction) =>
+    matchesTransactionFilters(transaction, filters, now),
+  );
 }
 
 /**
@@ -125,7 +127,9 @@ export function buildTransactionSearchText(transaction: Transaction): string {
 // ---------------------------------------------------------------------------
 
 /** Distinct statuses present in the data, in first-seen order. */
-export function collectStatusOptions(transactions: Transaction[]): Transaction['status'][] {
+export function collectStatusOptions(
+  transactions: Transaction[],
+): Transaction['status'][] {
   return Array.from(new Set(transactions.map((transaction) => transaction.status)));
 }
 
@@ -142,7 +146,10 @@ export function collectAgentOptions(transactions: Transaction[]): [string, strin
         .filter((transaction) => transaction.agentId)
         .map(
           (transaction) =>
-            [transaction.agentId as string, transaction.agentName ?? (transaction.agentId as string)] as const,
+            [
+              transaction.agentId as string,
+              transaction.agentName ?? (transaction.agentId as string),
+            ] as const,
         ),
     ).entries(),
   );

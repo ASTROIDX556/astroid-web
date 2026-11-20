@@ -5,26 +5,50 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import {
-  ShieldCheck,
-  UserPlus,
-  Users,
-  Trash2,
-  Lock,
-} from 'lucide-react';
+import { ShieldCheck, UserPlus, Users, Trash2, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { Avatar } from '@/components/ui/avatar';
-import type { OrgMember, UserRole, PermissionKey, RolePermissionMatrix, PermissionDefinition } from './types';
+import type {
+  OrgMember,
+  UserRole,
+  PermissionKey,
+  RolePermissionMatrix,
+  PermissionDefinition,
+} from './types';
 
 const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
-  { key: 'policy_edit', label: 'Edit Policy Rules', description: 'Create and update automated spending policies and thresholds.' },
-  { key: 'budget_allocate', label: 'Department Budgeting', description: 'Allocate and cap budget envelopes across departments & agents.' },
-  { key: 'tx_sign', label: 'Multi-Sig Execution', description: 'Approve and co-sign high-value Stellar on-chain transactions.' },
-  { key: 'agent_configure', label: 'Manage AI Agents', description: 'Provision, configure, and rotate API keys for autonomous agents.' },
-  { key: 'audit_view', label: 'View Audit Logs', description: 'Access immutable audit trail and historical decision logs.' },
-  { key: 'member_manage', label: 'Manage Team & RBAC', description: 'Invite new organization members and edit role permissions.' },
+  {
+    key: 'policy_edit',
+    label: 'Edit Policy Rules',
+    description: 'Create and update automated spending policies and thresholds.',
+  },
+  {
+    key: 'budget_allocate',
+    label: 'Department Budgeting',
+    description: 'Allocate and cap budget envelopes across departments & agents.',
+  },
+  {
+    key: 'tx_sign',
+    label: 'Multi-Sig Execution',
+    description: 'Approve and co-sign high-value Stellar on-chain transactions.',
+  },
+  {
+    key: 'agent_configure',
+    label: 'Manage AI Agents',
+    description: 'Provision, configure, and rotate API keys for autonomous agents.',
+  },
+  {
+    key: 'audit_view',
+    label: 'View Audit Logs',
+    description: 'Access immutable audit trail and historical decision logs.',
+  },
+  {
+    key: 'member_manage',
+    label: 'Manage Team & RBAC',
+    description: 'Invite new organization members and edit role permissions.',
+  },
 ];
 
 const INITIAL_MATRIX: RolePermissionMatrix = {
@@ -63,10 +87,38 @@ const INITIAL_MATRIX: RolePermissionMatrix = {
 };
 
 const INITIAL_MEMBERS: OrgMember[] = [
-  { id: 'm-1', name: 'Alex Rivera', email: 'alex@astroid.fi', role: 'admin', status: 'active', lastActiveAt: new Date().toISOString() },
-  { id: 'm-2', name: 'Elena Rostova', email: 'elena@astroid.fi', role: 'approver', status: 'active', lastActiveAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
-  { id: 'm-3', name: 'Marcus Vance', email: 'marcus@astroid.fi', role: 'operator', status: 'active', lastActiveAt: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
-  { id: 'm-4', name: 'Sarah Chen', email: 'sarah@astroid.fi', role: 'viewer', status: 'invited', lastActiveAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+  {
+    id: 'm-1',
+    name: 'Alex Rivera',
+    email: 'alex@astroid.fi',
+    role: 'admin',
+    status: 'active',
+    lastActiveAt: new Date().toISOString(),
+  },
+  {
+    id: 'm-2',
+    name: 'Elena Rostova',
+    email: 'elena@astroid.fi',
+    role: 'approver',
+    status: 'active',
+    lastActiveAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+  },
+  {
+    id: 'm-3',
+    name: 'Marcus Vance',
+    email: 'marcus@astroid.fi',
+    role: 'operator',
+    status: 'active',
+    lastActiveAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+  },
+  {
+    id: 'm-4',
+    name: 'Sarah Chen',
+    email: 'sarah@astroid.fi',
+    role: 'viewer',
+    status: 'invited',
+    lastActiveAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+  },
 ];
 
 const inviteSchema = z.object({
@@ -116,15 +168,19 @@ export function RBACManagementView() {
 
     // Check last admin guard rule
     if (member.role === 'admin' && newRole !== 'admin') {
-      const adminCount = members.filter((m) => m.role === 'admin' && m.status === 'active').length;
+      const adminCount = members.filter(
+        (m) => m.role === 'admin' && m.status === 'active',
+      ).length;
       if (adminCount <= 1) {
-        toast.error('Operation rejected: Cannot demote the last remaining Organization Admin');
+        toast.error(
+          'Operation rejected: Cannot demote the last remaining Organization Admin',
+        );
         return;
       }
     }
 
     setMembers((prev) =>
-      prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m))
+      prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m)),
     );
     toast.success(`Updated ${member.name}'s role to ${newRole.toUpperCase()}`);
   };
@@ -135,9 +191,13 @@ export function RBACManagementView() {
     if (!member) return;
 
     if (member.role === 'admin') {
-      const adminCount = members.filter((m) => m.role === 'admin' && m.status === 'active').length;
+      const adminCount = members.filter(
+        (m) => m.role === 'admin' && m.status === 'active',
+      ).length;
       if (adminCount <= 1) {
-        toast.error('Operation rejected: Cannot remove the last remaining Organization Admin');
+        toast.error(
+          'Operation rejected: Cannot remove the last remaining Organization Admin',
+        );
         return;
       }
     }
@@ -168,19 +228,20 @@ export function RBACManagementView() {
       {/* Section Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h3 className="font-display text-lg font-semibold tracking-tight flex items-center gap-2">
+          <h3 className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight">
             <ShieldCheck className="h-5 w-5 text-gold" />
             <span>Role-Based Access Control & Member Management</span>
           </h3>
           <p className="text-xs text-foreground-secondary">
-            Configure permission matrices across roles and manage organization team members.
+            Configure permission matrices across roles and manage organization team
+            members.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setIsInviteOpen(true)}
-          className="flex items-center gap-1.5 rounded-button bg-gold px-3.5 py-2 text-xs font-bold text-surface-dark shadow-gold hover:bg-gold-light transition-colors"
+          className="gap-1.5 px-3.5 text-surface-dark hover:bg-gold-light flex items-center rounded-button bg-gold py-2 text-xs font-bold shadow-gold transition-colors"
         >
           <UserPlus className="h-4 w-4" />
           <span>Invite Member</span>
@@ -189,16 +250,16 @@ export function RBACManagementView() {
 
       {/* Member Management Table */}
       <Card className="overflow-hidden border border-border">
-        <div className="p-4 border-b border-border bg-surface-secondary/40 flex items-center justify-between">
-          <h4 className="font-semibold text-foreground text-sm flex items-center gap-2">
+        <div className="flex items-center justify-between border-b border-border bg-surface-secondary/40 p-4">
+          <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Users className="h-4 w-4 text-gold" />
             <span>Organization Members ({members.length})</span>
           </h4>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-surface-secondary border-b border-border text-foreground-muted uppercase tracking-wider font-semibold">
+          <table className="w-full border-collapse text-left text-xs">
+            <thead className="border-b border-border bg-surface-secondary font-semibold uppercase tracking-wider text-foreground-muted">
               <tr>
                 <th className="px-4 py-3">Member</th>
                 <th className="px-4 py-3">Email</th>
@@ -209,17 +270,22 @@ export function RBACManagementView() {
             </thead>
             <tbody className="divide-y divide-border">
               {members.map((member) => (
-                <tr key={member.id} className="hover:bg-surface-secondary/50 transition-colors">
-                  <td className="px-4 py-3.5 align-middle">
-                    <div className="flex items-center gap-2.5">
+                <tr
+                  key={member.id}
+                  className="transition-colors hover:bg-surface-secondary/50"
+                >
+                  <td className="py-3.5 px-4 align-middle">
+                    <div className="gap-2.5 flex items-center">
                       <Avatar name={member.name} size="sm" />
-                      <span className="font-semibold text-foreground">{member.name}</span>
+                      <span className="font-semibold text-foreground">
+                        {member.name}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 align-middle font-mono text-foreground-secondary">
+                  <td className="py-3.5 px-4 align-middle font-mono text-foreground-secondary">
                     {member.email}
                   </td>
-                  <td className="px-4 py-3.5 align-middle">
+                  <td className="py-3.5 px-4 align-middle">
                     <Badge
                       variant={member.status === 'active' ? 'success' : 'warning'}
                       size="sm"
@@ -229,11 +295,13 @@ export function RBACManagementView() {
                       {member.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3.5 align-middle">
+                  <td className="py-3.5 px-4 align-middle">
                     <select
                       value={member.role}
-                      onChange={(e) => handleRoleChange(member.id, e.target.value as UserRole)}
-                      className="rounded-button border border-border bg-surface px-2.5 py-1 text-xs text-foreground font-semibold focus:border-gold focus:outline-none"
+                      onChange={(e) =>
+                        handleRoleChange(member.id, e.target.value as UserRole)
+                      }
+                      className="px-2.5 rounded-button border border-border bg-surface py-1 text-xs font-semibold text-foreground focus:border-gold focus:outline-none"
                     >
                       <option value="admin">Admin</option>
                       <option value="approver">Approver</option>
@@ -241,11 +309,11 @@ export function RBACManagementView() {
                       <option value="viewer">Viewer</option>
                     </select>
                   </td>
-                  <td className="px-4 py-3.5 align-middle text-right">
+                  <td className="py-3.5 px-4 text-right align-middle">
                     <button
                       type="button"
                       onClick={() => handleRemoveMember(member.id)}
-                      className="text-foreground-muted hover:text-rose-400 transition-colors p-1"
+                      className="p-1 text-foreground-muted transition-colors hover:text-rose-400"
                       title="Remove member"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -259,9 +327,9 @@ export function RBACManagementView() {
       </Card>
 
       {/* Editable Permission Matrix Grid */}
-      <Card className="overflow-hidden border border-border p-5 space-y-4">
+      <Card className="space-y-4 overflow-hidden border border-border p-5">
         <div>
-          <h4 className="font-semibold text-foreground text-sm flex items-center gap-2">
+          <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Lock className="h-4 w-4 text-gold" />
             <span>Role Permission Matrix</span>
           </h4>
@@ -271,10 +339,10 @@ export function RBACManagementView() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-surface-secondary border-b border-border text-foreground-muted uppercase tracking-wider font-semibold">
+          <table className="w-full border-collapse text-left text-xs">
+            <thead className="border-b border-border bg-surface-secondary font-semibold uppercase tracking-wider text-foreground-muted">
               <tr>
-                <th className="px-4 py-3 w-1/3">Permission Capability</th>
+                <th className="w-1/3 px-4 py-3">Permission Capability</th>
                 <th className="px-4 py-3 text-center">Admin</th>
                 <th className="px-4 py-3 text-center">Approver</th>
                 <th className="px-4 py-3 text-center">Operator</th>
@@ -283,25 +351,33 @@ export function RBACManagementView() {
             </thead>
             <tbody className="divide-y divide-border">
               {PERMISSION_DEFINITIONS.map((perm) => (
-                <tr key={perm.key} className="hover:bg-surface-secondary/40 transition-colors">
-                  <td className="px-4 py-3 align-middle space-y-0.5">
+                <tr
+                  key={perm.key}
+                  className="transition-colors hover:bg-surface-secondary/40"
+                >
+                  <td className="space-y-0.5 px-4 py-3 align-middle">
                     <p className="font-semibold text-foreground">{perm.label}</p>
                     <p className="text-2xs text-foreground-muted">{perm.description}</p>
                   </td>
-                  {(['admin', 'approver', 'operator', 'viewer'] as UserRole[]).map((role) => {
-                    const isChecked = matrix[role][perm.key];
+                  {(['admin', 'approver', 'operator', 'viewer'] as UserRole[]).map(
+                    (role) => {
+                      const isChecked = matrix[role][perm.key];
 
-                    return (
-                      <td key={`${role}-${perm.key}`} className="px-4 py-3 align-middle text-center">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => togglePermission(role, perm.key)}
-                          className="h-4 w-4 rounded border-border text-gold focus:ring-gold cursor-pointer"
-                        />
-                      </td>
-                    );
-                  })}
+                      return (
+                        <td
+                          key={`${role}-${perm.key}`}
+                          className="px-4 py-3 text-center align-middle"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => togglePermission(role, perm.key)}
+                            className="h-4 w-4 cursor-pointer rounded border-border text-gold focus:ring-gold"
+                          />
+                        </td>
+                      );
+                    },
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -311,8 +387,16 @@ export function RBACManagementView() {
 
       {/* Modal: Invite Member */}
       {isInviteOpen && (
-        <Dialog open={isInviteOpen} onClose={() => setIsInviteOpen(false)} title="Invite Team Member" size="sm">
-          <form onSubmit={inviteForm.handleSubmit(handleInviteSubmit)} className="space-y-4 pt-2">
+        <Dialog
+          open={isInviteOpen}
+          onClose={() => setIsInviteOpen(false)}
+          title="Invite Team Member"
+          size="sm"
+        >
+          <form
+            onSubmit={inviteForm.handleSubmit(handleInviteSubmit)}
+            className="space-y-4 pt-2"
+          >
             <div className="space-y-1">
               <label className="text-xs font-semibold text-foreground">Full Name</label>
               <input
@@ -322,28 +406,36 @@ export function RBACManagementView() {
                 className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs text-foreground focus:border-gold focus:outline-none"
               />
               {inviteForm.formState.errors.name && (
-                <p className="text-2xs text-rose-400">{inviteForm.formState.errors.name.message}</p>
+                <p className="text-2xs text-rose-400">
+                  {inviteForm.formState.errors.name.message}
+                </p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Email Address</label>
+              <label className="text-xs font-semibold text-foreground">
+                Email Address
+              </label>
               <input
                 type="email"
                 placeholder="sarah@astroid.fi"
                 {...inviteForm.register('email')}
-                className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs font-mono text-foreground focus:border-gold focus:outline-none"
+                className="w-full rounded-button border border-border bg-surface px-3 py-2 font-mono text-xs text-foreground focus:border-gold focus:outline-none"
               />
               {inviteForm.formState.errors.email && (
-                <p className="text-2xs text-rose-400">{inviteForm.formState.errors.email.message}</p>
+                <p className="text-2xs text-rose-400">
+                  {inviteForm.formState.errors.email.message}
+                </p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Initial Role</label>
+              <label className="text-xs font-semibold text-foreground">
+                Initial Role
+              </label>
               <select
                 {...inviteForm.register('role')}
-                className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs text-foreground focus:border-gold focus:outline-none font-medium"
+                className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground focus:border-gold focus:outline-none"
               >
                 <option value="operator">Operator (Agent & Policy Manager)</option>
                 <option value="approver">Approver (Multi-Sig Co-Signer)</option>
@@ -352,17 +444,17 @@ export function RBACManagementView() {
               </select>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <div className="flex justify-end gap-2 border-t border-border pt-3">
               <button
                 type="button"
                 onClick={() => setIsInviteOpen(false)}
-                className="rounded-button border border-border bg-surface px-3 py-1.5 text-xs text-foreground-secondary hover:text-foreground"
+                className="py-1.5 rounded-button border border-border bg-surface px-3 text-xs text-foreground-secondary hover:text-foreground"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="rounded-button bg-gold px-4 py-1.5 text-xs font-bold text-surface-dark shadow-gold hover:bg-gold-light"
+                className="py-1.5 text-surface-dark hover:bg-gold-light rounded-button bg-gold px-4 text-xs font-bold shadow-gold"
               >
                 Send Invitation
               </button>

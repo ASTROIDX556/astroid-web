@@ -43,19 +43,22 @@ const COLUMNS: ColumnDef<Proposal>[] = [
     id: 'amount',
     accessorFn: (proposal) => proposal.amount,
     header: 'Amount',
-    sortingFn: (rowA, rowB) => compareApprovalQueueRows(rowA.original, rowB.original, 'amount'),
+    sortingFn: (rowA, rowB) =>
+      compareApprovalQueueRows(rowA.original, rowB.original, 'amount'),
   },
   {
     id: 'date',
     accessorFn: (proposal) => proposal.createdAt,
     header: 'Date',
-    sortingFn: (rowA, rowB) => compareApprovalQueueRows(rowA.original, rowB.original, 'date'),
+    sortingFn: (rowA, rowB) =>
+      compareApprovalQueueRows(rowA.original, rowB.original, 'date'),
   },
   {
     id: 'risk',
     accessorFn: (proposal) => proposal.riskScore,
     header: 'Risk level',
-    sortingFn: (rowA, rowB) => compareApprovalQueueRows(rowA.original, rowB.original, 'risk'),
+    sortingFn: (rowA, rowB) =>
+      compareApprovalQueueRows(rowA.original, rowB.original, 'risk'),
   },
 ];
 
@@ -87,9 +90,18 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
     [proposals, filters],
   );
 
-  const statusOptions = useMemo(() => collectApprovalStatusOptions(proposals), [proposals]);
-  const agentOptions = useMemo(() => collectApprovalAgentOptions(proposals), [proposals]);
-  const riskTierOptions = useMemo(() => collectApprovalRiskTierOptions(proposals), [proposals]);
+  const statusOptions = useMemo(
+    () => collectApprovalStatusOptions(proposals),
+    [proposals],
+  );
+  const agentOptions = useMemo(
+    () => collectApprovalAgentOptions(proposals),
+    [proposals],
+  );
+  const riskTierOptions = useMemo(
+    () => collectApprovalRiskTierOptions(proposals),
+    [proposals],
+  );
   const activeFilterCount = countActiveApprovalQueueFilters(filters);
   const pending = useMemo(
     () => proposals.filter((proposal) => proposal.status === 'pending').length,
@@ -107,7 +119,10 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
       const next = typeof update === 'function' ? update([]) : update;
       const [first] = next;
       if (first) {
-        applyQuery({ filters, sort: { id: first.id as ApprovalQueueSortId, desc: !!first.desc } });
+        applyQuery({
+          filters,
+          sort: { id: first.id as ApprovalQueueSortId, desc: !!first.desc },
+        });
       }
     },
     getCoreRowModel: getCoreRowModel(),
@@ -136,7 +151,9 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
       <ApprovalQueueToolbar
         filters={filters}
         onFilterChange={setFilter}
-        onClearFilters={() => applyQuery({ filters: DEFAULT_APPROVAL_QUEUE_FILTERS, sort })}
+        onClearFilters={() =>
+          applyQuery({ filters: DEFAULT_APPROVAL_QUEUE_FILTERS, sort })
+        }
         activeFilterCount={activeFilterCount}
         statusOptions={statusOptions}
         agentOptions={agentOptions}
@@ -155,7 +172,9 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
           action={
             <button
               type="button"
-              onClick={() => applyQuery({ filters: DEFAULT_APPROVAL_QUEUE_FILTERS, sort })}
+              onClick={() =>
+                applyQuery({ filters: DEFAULT_APPROVAL_QUEUE_FILTERS, sort })
+              }
               className="rounded-md border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Clear all filters

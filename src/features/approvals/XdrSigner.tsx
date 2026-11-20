@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, CheckCircle2, RotateCcw, ShieldCheck, Wallet2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  RotateCcw,
+  ShieldCheck,
+  Wallet2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useStellarWallet } from '@/hooks/useStellarWallet';
@@ -84,7 +90,10 @@ export function XdrSigner({ xdr, label = 'Review pending XDR' }: XdrSignerProps)
           </div>
         </CardHeader>
         <CardContent className="space-y-3 pt-0 text-sm text-foreground-secondary">
-          <p>Install the official Stellar Freighter wallet extension to inspect and sign pending transaction payloads.</p>
+          <p>
+            Install the official Stellar Freighter wallet extension to inspect and sign
+            pending transaction payloads.
+          </p>
           <ol className="list-decimal space-y-1 pl-5">
             <li>Install Freighter in your browser.</li>
             <li>Create or unlock your account.</li>
@@ -113,7 +122,7 @@ export function XdrSigner({ xdr, label = 'Review pending XDR' }: XdrSignerProps)
       <CardContent className="space-y-4 pt-0">
         <div className="rounded-card border border-border bg-surface-secondary/40 p-3 text-xs text-foreground-secondary">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1.5">
+            <span className="gap-1.5 inline-flex items-center">
               <Wallet2 className="h-3.5 w-3.5" aria-hidden />
               Wallet status
             </span>
@@ -121,11 +130,20 @@ export function XdrSigner({ xdr, label = 'Review pending XDR' }: XdrSignerProps)
               {isConnected ? 'Connected' : 'Not connected'}
             </span>
           </div>
-          {publicKey && <p className="font-mono text-[10px] break-all text-foreground">{publicKey}</p>}
+          {publicKey && (
+            <p className="break-all font-mono text-[10px] text-foreground">
+              {publicKey}
+            </p>
+          )}
         </div>
 
         {!isConnected ? (
-          <Button type="button" variant="gold" onClick={() => void handleConnect()} loading={isLoading}>
+          <Button
+            type="button"
+            variant="gold"
+            onClick={() => void handleConnect()}
+            loading={isLoading}
+          >
             Connect Freighter wallet
           </Button>
         ) : (
@@ -136,7 +154,7 @@ export function XdrSigner({ xdr, label = 'Review pending XDR' }: XdrSignerProps)
 
         {signedTx && (
           <div className="rounded-card border border-success/30 bg-success-soft/10 p-3 text-xs text-success">
-            <div className="inline-flex items-center gap-1.5 font-medium">
+            <div className="gap-1.5 inline-flex items-center font-medium">
               <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
               Signature generated successfully
             </div>

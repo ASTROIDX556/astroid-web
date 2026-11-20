@@ -44,7 +44,9 @@ function useWalletTransactionColumns(): ColumnDef<Transaction, unknown>[] {
         enableSorting: false,
         cell: ({ row }) => (
           <div className="min-w-0">
-            <p className="truncate font-medium text-foreground">{row.original.counterparty}</p>
+            <p className="truncate font-medium text-foreground">
+              {row.original.counterparty}
+            </p>
             <p className="tabular text-2xs text-foreground-muted">
               {truncateHash(row.original.counterpartyAddress)}
             </p>
@@ -57,7 +59,7 @@ function useWalletTransactionColumns(): ColumnDef<Transaction, unknown>[] {
         enableSorting: false,
         cell: ({ row }) =>
           row.original.agentName ? (
-            <span className="inline-flex items-center gap-1.5 text-foreground-secondary">
+            <span className="gap-1.5 inline-flex items-center text-foreground-secondary">
               <Bot className="h-3.5 w-3.5 text-foreground-muted" aria-hidden />
               {row.original.agentName}
             </span>
@@ -75,7 +77,7 @@ function useWalletTransactionColumns(): ColumnDef<Transaction, unknown>[] {
           return (
             <span
               className={cn(
-                'inline-flex items-center justify-end gap-1.5 font-medium tabular',
+                'gap-1.5 tabular inline-flex items-center justify-end font-medium',
                 inbound ? 'text-success' : 'text-foreground',
               )}
             >
@@ -107,7 +109,8 @@ function useWalletTransactionColumns(): ColumnDef<Transaction, unknown>[] {
         accessorKey: 'createdAt',
         header: 'When',
         sortingFn: (a, b) =>
-          new Date(a.original.createdAt).getTime() - new Date(b.original.createdAt).getTime(),
+          new Date(a.original.createdAt).getTime() -
+          new Date(b.original.createdAt).getTime(),
         cell: ({ row }) => (
           <span
             className="text-2xs text-foreground-muted"
@@ -132,7 +135,10 @@ function useWalletTransactionColumns(): ColumnDef<Transaction, unknown>[] {
  * amounts and per-status badges. Loading, error and empty states are handled
  * by the shared `QueryBoundary` + `EmptyState` primitives.
  */
-export function WalletTransactionHistory({ walletId, className }: WalletTransactionHistoryProps) {
+export function WalletTransactionHistory({
+  walletId,
+  className,
+}: WalletTransactionHistoryProps) {
   const transactionsQuery = useTransactions();
   const columns = useWalletTransactionColumns();
 
@@ -180,11 +186,11 @@ export function WalletTransactionHistory({ walletId, className }: WalletTransact
             return (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2 text-2xs">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 font-medium text-success">
+                  <span className="gap-1.5 px-2.5 inline-flex items-center rounded-full bg-success-soft py-1 font-medium text-success">
                     <ArrowDownLeft className="h-3.5 w-3.5" aria-hidden />
                     Incoming {formatCurrency(inbound, 'USDC', { compact: true })}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-secondary px-2.5 py-1 font-medium text-foreground-secondary">
+                  <span className="gap-1.5 px-2.5 inline-flex items-center rounded-full bg-surface-secondary py-1 font-medium text-foreground-secondary">
                     <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
                     Outgoing {formatCurrency(outbound, 'USDC', { compact: true })}
                   </span>
