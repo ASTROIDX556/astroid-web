@@ -585,14 +585,20 @@ export type AgentConfigPanelValues = z.infer<typeof agentConfigPanelSchema>;
  * Extracts the first non-empty error message from a react-hook-form FieldErrors
  * map so validation error toasts can display actionable guidance.
  */
-export function getFirstValidationMessage(errors: Record<string, unknown>): string | undefined {
-  for (const value of Object.values(errors)) {
-    if (!value || typeof value !== 'object') continue;
+export function getFirstValidationMessage(
+  errors: Record<string, unknown>,
+  visited: Set<object> = new Set(),
+): string | undefined {
+  if (visited.has(errors)) return undefined;
+  visited.add(errors);
+
+  for (const [key, value] of Object.entries(errors)) {
+    if (key === 'ref' || !value || typeof value !== 'object') continue;
     if ('message' in value && typeof (value as { message?: unknown }).message === 'string') {
       const message = (value as { message: string }).message.trim();
       if (message.length > 0) return message;
     }
-    const nested = getFirstValidationMessage(value as Record<string, unknown>);
+    const nested = getFirstValidationMessage(value as Record<string, unknown>, visited);
     if (nested) return nested;
   }
   return undefined;

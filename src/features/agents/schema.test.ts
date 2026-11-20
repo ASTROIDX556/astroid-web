@@ -317,5 +317,23 @@ describe('agentConfigurationSchema & getFirstValidationMessage', () => {
       },
     });
     assert.equal(extracted, 'Budget must be greater than 0');
+
+    // Cyclic DOM `ref` objects attached by react-hook-form must never cause recursion errors
+    const cyclicError: Record<string, unknown> = { message: '' };
+    cyclicError.ref = cyclicError;
+    cyclicError.self = cyclicError;
+    assert.equal(getFirstValidationMessage({ emptyField: cyclicError }), undefined);
+
+    const nanBudget = agentConfigSchema.safeParse({
+      name: 'Audit Sentinel',
+      provider: 'OpenAI',
+      model: 'gpt-4o',
+      endpointUrl: '',
+      mode: 'assisted',
+      temperature: 0.2,
+      monthlyBudget: Number.NaN,
+    });
+    assert.equal(nanBudget.success, false);
+    assert.ok(nanBudget.error.issues.some((issue) => issue.path.includes('monthlyBudget')));
   });
 });

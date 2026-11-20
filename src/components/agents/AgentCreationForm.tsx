@@ -1,17 +1,10 @@
-import React from 'react';
-import { useForm, type FieldErrors } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { FormField, Input, Select } from '@/components/ui/input';
-import {
-  agentCreationSchema,
-  getFirstValidationMessage,
-  type AgentCreationFormValues,
-} from '../../lib/validations/agent';
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { agentCreationSchema, AgentCreationFormValues } from "../../lib/validations/agent";
 
 interface AgentCreationFormProps {
-  onSubmit: (data: AgentCreationFormValues) => void | Promise<void>;
+  onSubmit: (data: AgentCreationFormValues) => void;
 }
 
 export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }) => {
@@ -22,127 +15,71 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
   } = useForm<AgentCreationFormValues>({
     resolver: zodResolver(agentCreationSchema),
     defaultValues: {
-      name: '',
-      provider: 'openai',
-      model: 'gpt-4',
-      apiKey: '',
-      endpointUrl: '',
+      name: "",
+      provider: "openai",
+      model: "gpt-4",
+      apiKey: "",
+      endpointUrl: "",
       tokenLimit: 2048,
       spendingThreshold: 50,
     },
   });
 
-  const handleValidSubmit = async (data: AgentCreationFormValues) => {
-    try {
-      await onSubmit(data);
-      toast.success(`Agent "${data.name}" created.`);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create agent.';
-      toast.error(message);
-    }
-  };
-
-  const handleInvalidSubmit = (fieldErrors: FieldErrors<AgentCreationFormValues>) => {
-    toast.error('Invalid agent configuration.', {
-      description:
-        getFirstValidationMessage(fieldErrors) ??
-        'Please resolve the highlighted validation errors.',
-    });
-  };
-
   return (
-    <form
-      onSubmit={handleSubmit(handleValidSubmit, handleInvalidSubmit)}
-      className="max-w-lg space-y-4"
-      noValidate
-    >
-      <FormField label="Agent Name" htmlFor="agents-create-name" required error={errors.name?.message}>
-        <Input
-          id="agents-create-name"
-          invalid={Boolean(errors.name)}
-          {...register('name')}
-        />
-      </FormField>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-lg">
+      <div>
+        <label className="block text-sm font-medium">Agent Name</label>
+        <input {...register("name")} className="mt-1 block w-full rounded-md border p-2" />
+        {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+      </div>
 
-      <FormField
-        label="Provider"
-        htmlFor="agents-create-provider"
-        required
-        error={errors.provider?.message}
-      >
-        <Select
-          id="agents-create-provider"
-          invalid={Boolean(errors.provider)}
-          {...register('provider')}
-        >
+      <div>
+        <label className="block text-sm font-medium">Provider</label>
+        <select {...register("provider")} className="mt-1 block w-full rounded-md border p-2">
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic</option>
           <option value="custom">Custom</option>
-        </Select>
-      </FormField>
+        </select>
+        {errors.provider && <p className="text-red-500 text-sm mt-1">{errors.provider.message}</p>}
+      </div>
 
-      <FormField label="Model" htmlFor="agents-create-model" required error={errors.model?.message}>
-        <Input
-          id="agents-create-model"
-          invalid={Boolean(errors.model)}
-          {...register('model')}
-        />
-      </FormField>
+      <div>
+        <label className="block text-sm font-medium">Model</label>
+        <input {...register("model")} className="mt-1 block w-full rounded-md border p-2" />
+        {errors.model && <p className="text-red-500 text-sm mt-1">{errors.model.message}</p>}
+      </div>
 
-      <FormField label="API Key" htmlFor="agents-create-api-key" error={errors.apiKey?.message}>
-        <Input
-          id="agents-create-api-key"
-          type="password"
-          invalid={Boolean(errors.apiKey)}
-          {...register('apiKey')}
-        />
-      </FormField>
+      <div>
+        <label className="block text-sm font-medium">API Key</label>
+        <input type="password" {...register("apiKey")} className="mt-1 block w-full rounded-md border p-2" />
+        {errors.apiKey && <p className="text-red-500 text-sm mt-1">{errors.apiKey.message}</p>}
+      </div>
 
-      <FormField
-        label="Endpoint URL"
-        htmlFor="agents-create-endpoint"
-        error={errors.endpointUrl?.message}
+      <div>
+        <label className="block text-sm font-medium">Endpoint URL</label>
+        <input {...register("endpointUrl")} className="mt-1 block w-full rounded-md border p-2" />
+        {errors.endpointUrl && <p className="text-red-500 text-sm mt-1">{errors.endpointUrl.message}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium">Token Limit</label>
+        <input type="number" {...register("tokenLimit")} className="mt-1 block w-full rounded-md border p-2" />
+        {errors.tokenLimit && <p className="text-red-500 text-sm mt-1">{errors.tokenLimit.message}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium">Spending Threshold ($)</label>
+        <input type="number" step="0.01" {...register("spendingThreshold")} className="mt-1 block w-full rounded-md border p-2" />
+        {errors.spendingThreshold && <p className="text-red-500 text-sm mt-1">{errors.spendingThreshold.message}</p>}
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
       >
-        <Input
-          id="agents-create-endpoint"
-          type="url"
-          invalid={Boolean(errors.endpointUrl)}
-          {...register('endpointUrl')}
-        />
-      </FormField>
-
-      <FormField
-        label="Token Limit"
-        htmlFor="agents-create-token-limit"
-        required
-        error={errors.tokenLimit?.message}
-      >
-        <Input
-          id="agents-create-token-limit"
-          type="number"
-          invalid={Boolean(errors.tokenLimit)}
-          {...register('tokenLimit', { valueAsNumber: true })}
-        />
-      </FormField>
-
-      <FormField
-        label="Spending Threshold ($)"
-        htmlFor="agents-create-spending-threshold"
-        required
-        error={errors.spendingThreshold?.message}
-      >
-        <Input
-          id="agents-create-spending-threshold"
-          type="number"
-          step="0.01"
-          invalid={Boolean(errors.spendingThreshold)}
-          {...register('spendingThreshold', { valueAsNumber: true })}
-        />
-      </FormField>
-
-      <Button type="submit" variant="primary" loading={isSubmitting} className="w-full">
-        {isSubmitting ? 'Creating...' : 'Create Agent'}
-      </Button>
+        {isSubmitting ? "Creating..." : "Create Agent"}
+      </button>
     </form>
   );
 };

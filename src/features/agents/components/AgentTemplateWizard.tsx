@@ -338,7 +338,11 @@ function ReviewField({
 /*  Main Wizard                                                       */
 /* ------------------------------------------------------------------ */
 
-export function AgentTemplateWizard() {
+export interface AgentTemplateWizardProps {
+  onSubmit?: (values: TemplateWizardValues) => void | Promise<void>;
+}
+
+export function AgentTemplateWizard({ onSubmit: onSubmitProp }: AgentTemplateWizardProps = {}) {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const stepRef = useRef<HTMLDivElement>(null);
@@ -417,15 +421,22 @@ export function AgentTemplateWizard() {
   }, []);
 
   const onSubmit = useCallback(
-    (values: TemplateWizardValues) => {
-      const template = getTemplateById(values.templateId);
-      toast.success(`Agent "${values.name}" launched from ${template?.name ?? 'template'}.`, {
-        description: `${values.provider} · ${values.model} · ${values.budget.toLocaleString()} XLM budget`,
-      });
-      setDirection(1);
-      setStep(WIZARD_STEPS.length - 1);
+    async (values: TemplateWizardValues) => {
+      try {
+        await onSubmitProp?.(values);
+        const template = getTemplateById(values.templateId);
+        toast.success(`Agent "${values.name}" launched from ${template?.name ?? 'template'}.`, {
+          description: `${values.provider} · ${values.model} · ${values.budget.toLocaleString()} XLM budget`,
+        });
+        setDirection(1);
+        setStep(WIZARD_STEPS.length - 1);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to launch agent from template.';
+        toast.error(message);
+      }
     },
-    [],
+    [onSubmitProp],
   );
 
   const onInvalid = useCallback((fieldErrors: FieldErrors<TemplateWizardValues>) => {
