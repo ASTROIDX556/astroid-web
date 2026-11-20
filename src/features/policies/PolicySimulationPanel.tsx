@@ -83,7 +83,7 @@ export function PolicySimulationPanel({ policies = [], config, className = '' }:
         <p className="text-xs text-foreground-secondary">Check a hypothetical agent transaction against configured spending rules. No transaction is submitted.</p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={simulate} noValidate className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={simulate} noValidate className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {fields.map((field) => (
             <div key={field.id} className={field.id === 'recipient' ? 'sm:col-span-2' : ''}>
               <label className="mb-1 block text-xs font-semibold" htmlFor={`preview-${field.id}`}>{field.label}</label>

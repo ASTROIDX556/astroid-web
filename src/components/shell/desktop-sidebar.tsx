@@ -59,6 +59,7 @@ export function DesktopSidebar() {
           aria-haspopup="dialog"
           aria-expanded={assistantOpen}
           aria-pressed={assistantOpen}
+          aria-controls="ai-assistant-drawer"
           className={cn(
             SIDEBAR_FOCUS,
             'flex w-full items-center gap-3 rounded-button border-l-2 px-3 py-2 text-sm font-medium transition-colors duration-fast',

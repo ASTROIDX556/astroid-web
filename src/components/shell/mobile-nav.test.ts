@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
 import { navSections } from '../../lib/nav';
+import { FINANCIAL_BRIEFING_PROMPTS } from '../../features/ai/constants';
 
 describe('Mobile Navigation Drawer (#368)', () => {
   describe('Navigation items & sections structure', () => {
@@ -80,6 +81,18 @@ describe('Mobile Navigation Drawer (#368)', () => {
 
       const openTrigger = getTriggerAttrs(true);
       assert.equal(openTrigger['aria-expanded'], true);
+    });
+  });
+
+  describe('Financial briefing quick actions (#504)', () => {
+    test('provides predefined prompts for the primary operator workflows', () => {
+      assert.ok(FINANCIAL_BRIEFING_PROMPTS.length >= 5);
+      for (const prompt of FINANCIAL_BRIEFING_PROMPTS) {
+        assert.ok(prompt.id.length > 0);
+        assert.ok(prompt.label.length > 0);
+        assert.ok(prompt.prompt.length > 0);
+        assert.ok(prompt.icon);
+      }
     });
   });
 });

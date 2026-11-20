@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn';
 import { env, isMockMode } from '@/lib/env';
 import type { ChatMessage } from '@/types/domain';
 import { FinancialBriefingPanel } from '@/features/ai/FinancialBriefingPanel';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 const defaultSuggestions = [
   {
@@ -40,6 +41,9 @@ export function AssistantDrawer() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const headingId = 'assistant-command-terminal-heading';
 
   useEffect(() => {
     if (open && pendingPrompt) setDraft(pendingPrompt);
@@ -82,13 +86,12 @@ export function AssistantDrawer() {
     if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [open, messages]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [setOpen]);
+  useFocusTrap({
+    active: open,
+    containerRef: panelRef,
+    onEscape: () => setOpen(false),
+    initialFocusRef: closeButtonRef,
+  });
 
   const send = async (text: string) => {
     const trimmed = text.trim();
@@ -165,8 +168,10 @@ export function AssistantDrawer() {
         )}
       >
         <div
+          id="ai-assistant-drawer"
+          ref={panelRef}
           role="dialog"
-          aria-label="AI Executive Command Terminal"
+          aria-labelledby={headingId}
           aria-modal="false"
           className="shadow-raised relative flex h-[580px] max-h-[calc(100vh-120px)] w-[400px] max-w-[calc(100vw-48px)] flex-col overflow-hidden rounded-card border border-border-strong bg-surface/95 backdrop-blur-xl"
         >
@@ -176,7 +181,7 @@ export function AssistantDrawer() {
                 <Sparkles className="h-4 w-4" aria-hidden />
               </span>
               <div>
-                <h3 className="font-display text-sm font-semibold leading-tight">
+                <h3 id={headingId} className="font-display text-sm font-semibold leading-tight">
                   Command Terminal
                 </h3>
                 <p className="text-2xs text-foreground-secondary">
@@ -185,6 +190,7 @@ export function AssistantDrawer() {
               </div>
             </span>
             <button
+              ref={closeButtonRef}
               type="button"
               onClick={() => setOpen(false)}
               className="grid h-8 w-8 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"

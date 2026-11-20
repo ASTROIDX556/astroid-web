@@ -89,7 +89,7 @@ export function PolicySimulationView({ open, onClose, result, loading = false, e
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: reducedMotion ? 0 : 0.22 }}
-            className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-surface text-foreground shadow-2xl outline-none"
+            className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-dialog border border-border bg-surface text-foreground shadow-soft-3 outline-none"
           >
             <header className="flex items-start justify-between gap-4 border-b border-border p-6">
               <div>
