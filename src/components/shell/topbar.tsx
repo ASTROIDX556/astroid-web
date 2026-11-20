@@ -16,6 +16,7 @@ import { WalletNetworkSwitcher } from '@/features/network/WalletNetworkSwitcher'
 import { CircuitBreakerControl } from '@/features/security';
 import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
 import { useFreighterStore } from '@/stores/freighter-store';
+import { getFreighterRecovery } from '@/features/wallet/freighterErrorRecovery';
 import { cn } from '@/lib/cn';
 
 /** Shared, brand-tinted focus ring for every top-bar control (WCAG AA). */
@@ -68,7 +69,19 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
       }
 
       if (state.error && state.error !== previousState.error && state.status !== 'locked') {
-        toast.error('Freighter connection unavailable', { description: state.error });
+        const recovery = getFreighterRecovery(state.errorCode, state.retryCount);
+        const retryable =
+          recovery.action === 'retry' || recovery.action === 'unlock_and_retry';
+        toast.error(recovery.title, {
+          id: 'freighter-error',
+          description: state.error,
+          action: retryable
+            ? {
+                label: recovery.actionLabel,
+                onClick: () => void walletStore.getState().retryConnection(),
+              }
+            : undefined,
+        });
       }
 
       if (
