@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePopoverFocus } from '@/hooks/usePopoverFocus';
 import { X, Sparkles } from 'lucide-react';
 import { useAssistantStore } from '@/stores/ui-store';
 import { useAssistantSeed, useBriefing } from '@/hooks/use-queries';
@@ -46,6 +47,7 @@ export function AssistantDrawer() {
   }, [open, pendingPrompt]);
   const [seeded, setSeeded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -82,13 +84,15 @@ export function AssistantDrawer() {
     if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [open, messages]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [setOpen]);
+  // Escape closes the assistant, focus moves into it on open and returns to
+  // whatever opened it on close. It is a floating, non-modal panel, so the page
+  // behind stays interactive and outside presses do not dismiss it.
+  usePopoverFocus({
+    open,
+    containerRef: dialogRef,
+    onClose: () => setOpen(false),
+    closeOnOutsidePress: false,
+  });
 
   const send = async (text: string) => {
     const trimmed = text.trim();
@@ -161,14 +165,18 @@ export function AssistantDrawer() {
           'fixed bottom-6 right-6 z-50 flex flex-col items-end justify-end transition-all duration-base ease-astroid sm:bottom-8 sm:right-8',
           open
             ? 'pointer-events-auto origin-bottom-right scale-100 opacity-100'
-            : 'pointer-events-none origin-bottom-right scale-95 opacity-0',
+            : // `invisible` also drops the hidden panel's buttons and input from
+              // the tab order and the accessibility tree.
+              'pointer-events-none invisible origin-bottom-right scale-95 opacity-0',
         )}
       >
         <div
+          ref={dialogRef}
           role="dialog"
           aria-label="AI Executive Command Terminal"
           aria-modal="false"
-          className="shadow-raised relative flex h-[580px] max-h-[calc(100vh-120px)] w-[400px] max-w-[calc(100vw-48px)] flex-col overflow-hidden rounded-card border border-border-strong bg-surface/95 backdrop-blur-xl"
+          tabIndex={-1}
+          className="shadow-raised relative flex h-[580px] focus:outline-none max-h-[calc(100vh-120px)] w-[400px] max-w-[calc(100vw-48px)] flex-col overflow-hidden rounded-card border border-border-strong bg-surface/95 backdrop-blur-xl"
         >
           <header className="h-16 flex shrink-0 items-center justify-between border-b border-border bg-surface-secondary/40 px-5">
             <span className="flex items-center gap-3">
