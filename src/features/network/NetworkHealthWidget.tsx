@@ -28,7 +28,7 @@ export function NetworkHealthWidget() {
       <div
         role="status"
         aria-label="Stellar RPC network health: offline"
-        className="flex items-center gap-1.5 rounded-button border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-2xs font-semibold text-rose-400"
+        className="flex items-center gap-1.5 rounded-button border border-danger/30 bg-danger/10 px-2.5 py-1 text-2xs font-semibold text-danger"
       >
         <XCircle className="h-3.5 w-3.5" aria-hidden />
         <span>RPC Offline</span>
@@ -36,7 +36,7 @@ export function NetworkHealthWidget() {
           type="button"
           onClick={() => refetch()}
           className={cn(
-            'ml-1 rounded-xs text-2xs underline hover:text-white',
+            'ml-1 rounded-xs text-2xs underline hover:text-foreground',
             WIDGET_FOCUS,
           )}
         >
@@ -67,12 +67,12 @@ export function NetworkHealthWidget() {
         <span className="relative flex h-2 w-2">
           <span
             className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
-              isHealthy ? 'bg-emerald-400' : isDegraded ? 'bg-amber-400' : 'bg-rose-400'
+              isHealthy ? 'bg-success' : isDegraded ? 'bg-warning' : 'bg-danger'
             }`}
           />
           <span
             className={`relative inline-flex h-2 w-2 rounded-full ${
-              isHealthy ? 'bg-emerald-500' : isDegraded ? 'bg-amber-500' : 'bg-rose-500'
+              isHealthy ? 'bg-success' : isDegraded ? 'bg-warning' : 'bg-danger'
             }`}
           />
         </span>
@@ -132,7 +132,7 @@ export function NetworkHealthWidget() {
 
             <div className="flex justify-between items-center bg-surface-secondary/60 p-2 rounded-button">
               <span className="flex items-center gap-1.5 text-foreground-secondary text-2xs">
-                <Server className="h-3.5 w-3.5 text-blue-400" />
+                <Server className="h-3.5 w-3.5 text-info" />
                 <span>Horizon API Node</span>
               </span>
               <Badge variant="success" size="sm" className="text-3xs uppercase">

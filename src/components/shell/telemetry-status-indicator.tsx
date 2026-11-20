@@ -7,8 +7,8 @@ const STATUS_CONFIG: Record<
   TelemetryConnectionStatus,
   { label: string; icon: typeof Radio; dot: string; text: string }
 > = {
-  connected: { label: 'Live', icon: RadioTower, dot: 'bg-emerald-500', text: 'text-emerald-500' },
-  connecting: { label: 'Connecting', icon: Radio, dot: 'bg-amber-500', text: 'text-amber-500' },
+  connected: { label: 'Live', icon: RadioTower, dot: 'bg-success', text: 'text-success' },
+  connecting: { label: 'Connecting', icon: Radio, dot: 'bg-warning', text: 'text-warning' },
   offline: { label: 'Offline', icon: WifiOff, dot: 'bg-foreground-muted', text: 'text-foreground-muted' },
 };
 

@@ -245,7 +245,7 @@ export function RBACManagementView() {
                     <button
                       type="button"
                       onClick={() => handleRemoveMember(member.id)}
-                      className="text-foreground-muted hover:text-rose-400 transition-colors p-1"
+                      className="text-foreground-muted hover:text-danger transition-colors p-1"
                       title="Remove member"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -322,7 +322,7 @@ export function RBACManagementView() {
                 className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs text-foreground focus:border-gold focus:outline-none"
               />
               {inviteForm.formState.errors.name && (
-                <p className="text-2xs text-rose-400">{inviteForm.formState.errors.name.message}</p>
+                <p className="text-2xs text-danger">{inviteForm.formState.errors.name.message}</p>
               )}
             </div>
 
@@ -335,7 +335,7 @@ export function RBACManagementView() {
                 className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs font-mono text-foreground focus:border-gold focus:outline-none"
               />
               {inviteForm.formState.errors.email && (
-                <p className="text-2xs text-rose-400">{inviteForm.formState.errors.email.message}</p>
+                <p className="text-2xs text-danger">{inviteForm.formState.errors.email.message}</p>
               )}
             </div>
 

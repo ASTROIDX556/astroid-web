@@ -30,7 +30,7 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
       <div>
         <label className="block text-sm font-medium">Agent Name</label>
         <input {...register("name")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+        {errors.name && <p className="text-danger text-sm mt-1">{errors.name.message}</p>}
       </div>
 
       <div>
@@ -40,43 +40,43 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
           <option value="anthropic">Anthropic</option>
           <option value="custom">Custom</option>
         </select>
-        {errors.provider && <p className="text-red-500 text-sm mt-1">{errors.provider.message}</p>}
+        {errors.provider && <p className="text-danger text-sm mt-1">{errors.provider.message}</p>}
       </div>
 
       <div>
         <label className="block text-sm font-medium">Model</label>
         <input {...register("model")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.model && <p className="text-red-500 text-sm mt-1">{errors.model.message}</p>}
+        {errors.model && <p className="text-danger text-sm mt-1">{errors.model.message}</p>}
       </div>
 
       <div>
         <label className="block text-sm font-medium">API Key</label>
         <input type="password" {...register("apiKey")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.apiKey && <p className="text-red-500 text-sm mt-1">{errors.apiKey.message}</p>}
+        {errors.apiKey && <p className="text-danger text-sm mt-1">{errors.apiKey.message}</p>}
       </div>
 
       <div>
         <label className="block text-sm font-medium">Endpoint URL</label>
         <input {...register("endpointUrl")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.endpointUrl && <p className="text-red-500 text-sm mt-1">{errors.endpointUrl.message}</p>}
+        {errors.endpointUrl && <p className="text-danger text-sm mt-1">{errors.endpointUrl.message}</p>}
       </div>
 
       <div>
         <label className="block text-sm font-medium">Token Limit</label>
         <input type="number" {...register("tokenLimit")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.tokenLimit && <p className="text-red-500 text-sm mt-1">{errors.tokenLimit.message}</p>}
+        {errors.tokenLimit && <p className="text-danger text-sm mt-1">{errors.tokenLimit.message}</p>}
       </div>
 
       <div>
         <label className="block text-sm font-medium">Spending Threshold ($)</label>
         <input type="number" step="0.01" {...register("spendingThreshold")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.spendingThreshold && <p className="text-red-500 text-sm mt-1">{errors.spendingThreshold.message}</p>}
+        {errors.spendingThreshold && <p className="text-danger text-sm mt-1">{errors.spendingThreshold.message}</p>}
       </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+        className="w-full bg-gold text-accent-foreground p-2 rounded-md hover:bg-gold-strong disabled:opacity-50"
       >
         {isSubmitting ? "Creating..." : "Create Agent"}
       </button>

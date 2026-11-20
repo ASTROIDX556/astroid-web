@@ -100,7 +100,7 @@ export default function AuthPage() {
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:radial-gradient(ellipse_at_center,white,transparent_80%)] opacity-5" />
         <motion.div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-indigo-500/10 blur-[120px]"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-gold/10 blur-[120px]"
           animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.4, 0.3] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -113,7 +113,7 @@ export default function AuthPage() {
         className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface/80 p-8 shadow-soft-2 backdrop-blur-xl"
       >
         <div className="flex flex-col items-center text-center">
-          <Link href="/" className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-accent-gradient text-white shadow-gold hover:opacity-90 transition-opacity">
+          <Link href="/" className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-accent-gradient text-background-secondary shadow-gold hover:opacity-90 transition-opacity">
             <Sparkles className="h-7 w-7" aria-hidden />
           </Link>
           <h1 className="font-display text-2xl font-bold tracking-tight">Authenticate</h1>

@@ -83,12 +83,12 @@ export const ProposalQueue: React.FC<ProposalQueueProps> = ({ proposals }) => {
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-3 items-center">
           <div>
-            <label htmlFor="status-filter" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <label htmlFor="status-filter" className="block text-xs font-medium text-foreground-secondary mb-1">Status</label>
             <select
               id="status-filter"
               value={(table.getColumn('status')?.getFilterValue() as string) ?? ''}
               onChange={e => table.getColumn('status')?.setFilterValue(e.target.value || undefined)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground shadow-sm focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="">All Statuses</option>
               <option value="PENDING">Pending</option>
@@ -98,12 +98,12 @@ export const ProposalQueue: React.FC<ProposalQueueProps> = ({ proposals }) => {
           </div>
 
           <div>
-            <label htmlFor="risk-tier-filter" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Risk Tier</label>
+            <label htmlFor="risk-tier-filter" className="block text-xs font-medium text-foreground-secondary mb-1">Risk Tier</label>
             <select
               id="risk-tier-filter"
               value={(table.getColumn('riskTier')?.getFilterValue() as string) ?? ''}
               onChange={e => table.getColumn('riskTier')?.setFilterValue(e.target.value || undefined)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground shadow-sm focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="">All Risk Tiers</option>
               <option value="LOW">Low</option>
@@ -114,29 +114,29 @@ export const ProposalQueue: React.FC<ProposalQueueProps> = ({ proposals }) => {
           </div>
 
           <div>
-            <label htmlFor="agent-filter" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Agent Source</label>
+            <label htmlFor="agent-filter" className="block text-xs font-medium text-foreground-secondary mb-1">Agent Source</label>
             <input
               id="agent-filter"
               type="text"
               placeholder="Filter agent..."
               value={(table.getColumn('agentSource')?.getFilterValue() as string) ?? ''}
               onChange={e => table.getColumn('agentSource')?.setFilterValue(e.target.value || undefined)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground shadow-sm focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900">
+      <div className="overflow-x-auto rounded-lg border border-border shadow">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-surface-secondary">
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
                   <th
                     key={header.id}
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-foreground-muted uppercase tracking-wider cursor-pointer select-none"
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     <div className="flex items-center space-x-1">
@@ -155,18 +155,18 @@ export const ProposalQueue: React.FC<ProposalQueueProps> = ({ proposals }) => {
               </tr>
             ))}
           </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="bg-surface divide-y divide-border">
             {table.getRowModel().rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colSpan={columns.length} className="px-6 py-4 text-center text-sm text-foreground-muted">
                   No proposals found matching the filter criteria.
                 </td>
               </tr>
             ) : (
               table.getRowModel().rows.map(row => (
-                <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr key={row.id} className="hover:bg-surface-secondary">
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td key={cell.id} className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -178,21 +178,21 @@ export const ProposalQueue: React.FC<ProposalQueueProps> = ({ proposals }) => {
       </div>
 
       <div className="flex items-center justify-between px-2">
-        <div className="text-sm text-gray-700 dark:text-gray-300">
+        <div className="text-sm text-foreground-secondary">
           Page <span className="font-medium">{table.getState().pagination.pageIndex + 1}</span> of <span className="font-medium">{table.getPageCount()}</span>
         </div>
         <div className="space-x-2">
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="rounded border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+            className="rounded border border-border bg-surface px-3 py-1 text-sm font-medium text-foreground-secondary disabled:opacity-50"
           >
             Previous
           </button>
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="rounded border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+            className="rounded border border-border bg-surface px-3 py-1 text-sm font-medium text-foreground-secondary disabled:opacity-50"
           >
             Next
           </button>
