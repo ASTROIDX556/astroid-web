@@ -1,60 +1,54 @@
 'use client';
 
-import { Download, FileJson, FileSpreadsheet } from 'lucide-react';
-import { buttonVariants } from '@/components/ui/button';
-import { Dropdown, type DropdownItem } from '@/components/ui/dropdown';
-import { cn } from '@/lib/cn';
-import { exportAuditEvents } from './export-utils';
+import React from 'react';
+import { Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { AuditEvent } from './types';
 
-export interface AuditExportMenuProps {
-  /** The currently visible (filtered) audit events to export. */
-  events: readonly AuditEvent[];
-  className?: string;
-  label?: string;
+interface AuditExportMenuProps {
+  events: AuditEvent[];
 }
 
-/**
- * Export dropdown for the audit-log header.
- *
- * Exports exactly the rows the table is showing (filters, search, and time
- * range applied) as a CSV download with proper escaping or a pretty-printed
- * JSON file, both stamped with a timestamped filename.
- */
-export function AuditExportMenu({ events, className, label = 'Export audit log' }: AuditExportMenuProps) {
-  const disabled = events.length === 0;
-  const countLabel = `${events.length} ${events.length === 1 ? 'event' : 'events'}`;
+export function AuditExportMenu({ events }: AuditExportMenuProps) {
+  const handleExportCsv = () => {
+    if (events.length === 0) return;
 
-  const items: DropdownItem[] = [
-    {
-      label: `Download CSV (${countLabel})`,
-      icon: <FileSpreadsheet className="h-3.5 w-3.5 text-success" aria-hidden />,
-      disabled,
-      onSelect: () => exportAuditEvents(events, 'csv'),
-    },
-    {
-      label: `Download JSON (${countLabel})`,
-      icon: <FileJson className="h-3.5 w-3.5 text-gold" aria-hidden />,
-      disabled,
-      onSelect: () => exportAuditEvents(events, 'json'),
-    },
-  ];
+    const headers = ['ID', 'Timestamp', 'Level', 'EventType', 'ActorId', 'ActorName', 'Summary', 'Details', 'Amount', 'Asset'];
+    const rows = events.map((event) => [
+      event.id,
+      event.timestamp,
+      event.level,
+      event.eventType,
+      event.actorId,
+      `"${event.actorName.replace(/"/g, '""')}"`,
+      `"${event.summary.replace(/"/g, '""')}"`,
+      `"${event.details.replace(/"/g, '""')}"`,
+      event.amount ?? '',
+      event.asset ?? '',
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <Dropdown
-      align="end"
-      aria-label={label}
-      className={cn('min-w-[220px]', className)}
-      triggerClassName={buttonVariants({ variant: 'outline', size: 'sm' })}
-      trigger={
-        <span className="inline-flex items-center gap-1.5">
-          <Download className="h-3.5 w-3.5" aria-hidden />
-          Export
-        </span>
-      }
-      items={items}
-    />
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={handleExportCsv}
+      disabled={events.length === 0}
+      leftIcon={<Download className="h-3.5 w-3.5" aria-hidden />}
+      aria-label="Export filtered audit logs to CSV"
+    >
+      Export CSV
+    </Button>
   );
 }
-
-export default AuditExportMenu;
