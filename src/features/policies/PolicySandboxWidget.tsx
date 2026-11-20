@@ -157,7 +157,7 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
 
       <CardContent className="space-y-5 pt-5">
         {/* Input form */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <FormField
             label="Recipient address"
             htmlFor="sandbox-recipient"
@@ -234,7 +234,7 @@ export function PolicySandboxWidget({ policies }: PolicySandboxWidgetProps) {
             label="Memo (optional)"
             htmlFor="sandbox-memo"
             error={errors.memo}
-            className="md:col-span-2 gap-2"
+            className="sm:col-span-2 xl:col-span-3 gap-2"
           >
             <Input
               id="sandbox-memo"
