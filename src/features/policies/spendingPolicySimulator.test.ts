@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
-import { formatCurrency, formatPercent } from '../../lib/format';
 import {
   calculateBudgetSimulation,
   computeRiskScore,
@@ -16,12 +15,8 @@ import {
   parseXdrPayload,
   type PolicyRule,
 } from './usePolicySimulation';
-import { ASSET_RATES } from './types';
-import type { Policy } from '../../types/domain';
 
 const VALID_STELLAR_KEY_1 = 'GA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVSGZ';
-const VALID_STELLAR_KEY_2 = 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H';
-const BLOCKED_STELLAR_KEY = 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ';
 
 describe('Spending policy rule simulator with real-time validation feedback (#551)', () => {
   describe('Transaction evaluation input schema (sandboxTransactionSchema)', () => {
