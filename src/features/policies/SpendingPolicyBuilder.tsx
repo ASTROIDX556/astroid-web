@@ -83,16 +83,20 @@ export function SpendingPolicyBuilder() {
             <h3 className="mt-1 font-display text-xl font-semibold tracking-tight">Spending guardrail configuration</h3>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {appliedTemplateId ? (
-              <Badge variant="neutral" size="sm" className="mr-1">
-                Template applied
-              </Badge>
-            ) : null}
+            <span role="status" aria-live="polite" className="contents">
+              {appliedTemplateId ? (
+                <Badge variant="neutral" size="sm" className="mr-1">
+                  Template applied
+                </Badge>
+              ) : null}
+            </span>
             <Button
               type="button"
               variant="outline"
               size="sm"
               leftIcon={<LayoutTemplate className="h-4 w-4" aria-hidden />}
+              aria-haspopup="dialog"
+              aria-expanded={templateModalOpen}
               onClick={() => setTemplateModalOpen(true)}
             >
               Rule templates
