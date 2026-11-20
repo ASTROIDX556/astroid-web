@@ -5,6 +5,7 @@ import { ArrowUpRight, Send, Sparkles } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/cn';
 import type { ChatMessage } from '@/types/domain';
+import { MessageContent } from '@/features/chat/MessageContent';
 
 export interface FinancialBriefingPrompt {
   label: string;
@@ -74,7 +75,11 @@ export function FinancialBriefingPanel({
                     : 'border border-border bg-surface-secondary/60 text-foreground',
                 )}
               >
-                {message.content}
+                {message.role === 'assistant' ? (
+                  <MessageContent content={message.content} />
+                ) : (
+                  message.content
+                )}
               </div>
             </div>
           ))}

@@ -138,6 +138,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Command.Dialog
+      id="command-palette"
       open
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onClose();

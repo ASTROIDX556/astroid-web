@@ -15,9 +15,11 @@ import {
   PROVIDER_LABELS,
   PROVIDER_MODELS,
   createAgentSchema,
+  DEFAULT_AGENT_ASSET_PERMISSIONS,
   requiresEndpoint,
   type CreateAgentInput,
 } from './schema';
+import { PermissionScopeMatrix } from './PermissionScopeMatrix';
 
 /**
  * Controlled agent configuration form. Model options are derived from the
@@ -45,6 +47,7 @@ export function AgentConfigForm() {
       mode: 'assisted',
       temperature: 0.2,
       monthlyBudget: 500,
+      assetPermissions: DEFAULT_AGENT_ASSET_PERMISSIONS,
       singleTransactionCap: 100,
       timeoutSeconds: 60,
       dailyBudget: 100,
@@ -387,6 +390,8 @@ export function AgentConfigForm() {
             />
           </FormField>
         </fieldset>
+
+        <PermissionScopeMatrix register={register} watch={watch} errors={errors} />
 
         <FormField
           label="Description"
