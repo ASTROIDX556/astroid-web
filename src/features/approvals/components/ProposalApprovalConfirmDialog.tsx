@@ -15,6 +15,7 @@ import type { LocalApprovalDecision } from '@/stores/proposal-approval-store';
 import { cn } from '@/lib/cn';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import type { Proposal } from '@/types/domain';
+import { fetchProposalApprovalState } from '@/features/approvals/approvalApi';
 
 export interface ProposalApprovalConfirmDialogProps {
   proposal: Proposal;
@@ -69,6 +70,24 @@ export function ProposalApprovalConfirmDialog({
   const handleConfirm = async () => {
     if (!action || busy) return;
     setSignError(null);
+
+    try {
+      const latest = await fetchProposalApprovalState(proposal.id);
+      if (latest.status !== 'pending') {
+        const message = 'This proposal is no longer pending.';
+        setSignError(message);
+        toast.error(message);
+        return;
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'The latest approval state could not be verified.';
+      setSignError(message);
+      toast.error(message);
+      return;
+    }
 
     // Optional wallet signature round-trip before the decision is recorded.
     if (isApprove && xdr) {

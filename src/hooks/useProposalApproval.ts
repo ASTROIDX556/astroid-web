@@ -1,8 +1,16 @@
 'use client';
 
 import { useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { Proposal } from '@/types/domain';
+import { useCurrentUser } from '@/hooks/use-queries';
+import { queryKeys } from '@/services/query-keys';
+import {
+  approvalQueryKeys,
+  fetchProposalApprovalState,
+  submitProposalDecision,
+} from '@/features/approvals/approvalApi';
 import {
   computeQuorumStatus,
   useProposalApprovalStore,
@@ -29,6 +37,8 @@ export interface UseProposalApprovalResult {
  * success and failure paths.
  */
 export function useProposalApproval(proposal: Proposal): UseProposalApprovalResult {
+  const queryClient = useQueryClient();
+  const currentUser = useCurrentUser();
   const entry = useProposalApprovalStore((state) => state.getEntry(proposal.id));
   const beginDecision = useProposalApprovalStore((state) => state.beginDecision);
   const resolveDecision = useProposalApprovalStore((state) => state.resolveDecision);
@@ -36,39 +46,63 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
 
   const quorum = computeQuorumStatus(proposal, entry.decision);
 
+  const mutation = useMutation({
+    mutationFn: submitProposalDecision,
+  });
+
   const decide = useCallback(
     async (decision: LocalApprovalDecision): Promise<boolean> => {
       if (entry.isProcessing) return false;
+      if (entry.decision) return false;
       if (proposal.status !== 'pending') {
         toast.error('This proposal is no longer pending.');
+        return false;
+      }
+      if (decision === 'changes_requested') {
+        toast.error('Request changes is not supported by the proposal decision API.');
         return false;
       }
 
       beginDecision(proposal.id);
 
       try {
-        // Placeholder for the signing/submission round-trip — network or
-        // wallet failures land in the catch block below.
-        await Promise.resolve();
+        const latest = await fetchProposalApprovalState(proposal.id);
+        if (latest.status !== 'pending') {
+          throw new Error('This proposal is no longer pending.');
+        }
+
+        const activeUser = currentUser.data;
+        const next = await mutation.mutateAsync({
+          proposalId: proposal.id,
+          decision,
+          reviewer: activeUser
+            ? {
+                id: activeUser.id,
+                name: activeUser.name,
+                avatar: activeUser.avatar,
+              }
+            : { id: 'usr_signed_in', name: 'You' },
+        });
 
         resolveDecision(proposal.id, decision);
+        queryClient.setQueryData(approvalQueryKeys.proposal(proposal.id), next);
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.proposals }),
+          queryClient.invalidateQueries({ queryKey: approvalQueryKeys.all }),
+        ]);
 
         if (decision === 'approved') {
-          const next = computeQuorumStatus(proposal, 'approved');
+          const progress = computeQuorumStatus(proposal, 'approved');
           toast.success(
-            next.isQuorumMet ? 'Approved — quorum reached' : 'Approval recorded',
+            progress.isQuorumMet ? 'Approved — quorum reached' : 'Approval recorded',
             {
-              description: next.isQuorumMet
-                ? `${next.approvedWeight} of ${next.requiredApprovals} approvals met. Ready to execute.`
-                : `${next.remaining} more approval${next.remaining === 1 ? '' : 's'} needed.`,
+              description: progress.isQuorumMet
+                ? `${progress.approvedWeight} of ${progress.requiredApprovals} approvals met. Ready to execute.`
+                : `${progress.remaining} more approval${progress.remaining === 1 ? '' : 's'} needed.`,
             },
           );
-        } else if (decision === 'rejected') {
-          toast.success('Proposal rejected');
         } else {
-          toast.success('Changes requested', {
-            description: 'The proposal was returned for revision.',
-          });
+          toast.success('Proposal rejected');
         }
         return true;
       } catch (err) {
@@ -79,7 +113,17 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
         return false;
       }
     },
-    [entry.isProcessing, proposal, beginDecision, resolveDecision, failDecision],
+    [
+      entry.isProcessing,
+      entry.decision,
+      proposal,
+      beginDecision,
+      resolveDecision,
+      failDecision,
+      mutation,
+      currentUser.data,
+      queryClient,
+    ],
   );
 
   const approve = useCallback(() => decide('approved'), [decide]);

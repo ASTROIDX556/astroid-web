@@ -134,23 +134,26 @@ export interface ApprovalProgress {
 }
 
 export function approvalProgress(snapshot: ProposalApprovalSnapshot): ApprovalProgress {
-  const approved = countApproved(snapshot.approvals);
+  const required = Math.max(0, snapshot.requiredApprovals);
+  const approved = Math.min(countApproved(snapshot.approvals), required);
   const rejected = snapshot.approvals.filter(
     (approval) => approval.decision === 'rejected',
   ).length;
   const pending = snapshot.approvals.filter(
     (approval) => approval.decision === 'pending',
   ).length;
-  const required = Math.max(1, snapshot.requiredApprovals);
-  const percent = Math.min(100, Math.round((approved / required) * 100));
+  const percent =
+    required === 0
+      ? 100
+      : Math.min(100, Math.round((approved / required) * 100));
 
   return {
     approved,
     rejected,
     pending,
-    required: snapshot.requiredApprovals,
+    required,
     percent,
-    quorumMet: approved >= snapshot.requiredApprovals,
-    remaining: Math.max(0, snapshot.requiredApprovals - approved),
+    quorumMet: required === 0 || approved >= required,
+    remaining: Math.max(0, required - approved),
   };
 }
