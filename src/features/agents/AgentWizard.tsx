@@ -34,11 +34,7 @@ const stepFields: Record<number, (keyof AgentWizardValues)[]> = {
   3: [],
 };
 
-export interface AgentWizardProps {
-  onSubmit?: (values: AgentWizardValues) => void | Promise<void>;
-}
-
-export function AgentWizard({ onSubmit: onSubmitProp }: AgentWizardProps = {}) {
+export function AgentWizard() {
   const [step, setStep] = useState(0);
   const form = useForm<AgentWizardValues>({
     resolver: zodResolver(agentWizardSchema),
@@ -94,25 +90,16 @@ export function AgentWizard({ onSubmit: onSubmitProp }: AgentWizardProps = {}) {
     setStep((value) => Math.min(value + 1, steps.length - 1));
   };
 
-  const onSubmit = async (values: AgentWizardValues) => {
-    try {
-      await onSubmitProp?.(values);
-      toast.success(`Agent "${values.name}" launched.`, {
-        description: `${PROVIDER_LABELS[values.provider]} · ${values.model} · ${values.budget.toLocaleString()} XLM budget`,
-      });
-      setStep(steps.length - 1);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to register autonomous agent.';
-      toast.error(message);
-    }
+  const onSubmit = (values: AgentWizardValues) => {
+    toast.success(`Agent "${values.name}" launched.`, {
+      description: `${PROVIDER_LABELS[values.provider]} · ${values.model} · ${values.budget.toLocaleString()} XLM budget`,
+    });
+    setStep(steps.length - 1);
   };
 
   const onInvalid = (fieldErrors: FieldErrors<AgentWizardValues>) => {
     toast.error('Agent registration validation failed.', {
-      description:
-        getFirstValidationMessage(fieldErrors) ??
-        'Please resolve the highlighted validation errors before launching.',
+      description: getFirstValidationMessage(fieldErrors) ?? 'Please resolve the highlighted validation errors before launching.',
     });
   };
 

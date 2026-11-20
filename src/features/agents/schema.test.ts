@@ -1,21 +1,20 @@
 import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
-
-import { agentProviderConfigSchema as standaloneProviderConfigSchema } from './providerConfigSchema';
 import {
   AGENT_PROVIDERS,
   PROVIDER_MODELS,
-  agentConfigPanelSchema,
-  agentConfigSchema,
   agentConfigurationEditorSchema,
+  agentConfigSchema,
   agentConfigurationSchema,
-  agentProviderConfigSchema,
+  agentProviderConfigSchema as providerSettingsSchema,
   agentWizardSchema,
   getFirstValidationMessage,
   templateWizardSchema,
   updateAgentSchema,
   type AgentConfigurationEditorInput,
 } from './schema';
+import { agentConfigPanelSchema } from './components/AgentConfigPanel';
+import { agentProviderConfigSchema } from './providerConfigSchema';
 
 type ParseResult =
   | { success: true; data: AgentConfigurationEditorInput }
@@ -36,14 +35,13 @@ const validEditorConfig = {
 test('agent config rejects a model outside the selected provider catalog', () => {
   const result = agentConfigSchema.safeParse({
     name: 'Treasury agent',
-    provider: 'Nvidia',
-    model: 'gpt-4o',
+    description: '',
+    provider: 'OpenAI',
+    model: 'claude-3-5-sonnet-latest',
     endpointUrl: '',
     mode: 'assisted',
     temperature: 0.2,
     monthlyBudget: 500,
-    singleTransactionCap: 100,
-    timeoutSeconds: 60,
   });
 
   assert.equal(result.success, false);
@@ -53,10 +51,10 @@ test('agent config rejects a model outside the selected provider catalog', () =>
 });
 
 test('provider configuration rejects an empty custom endpoint', () => {
-  const result = standaloneProviderConfigSchema.safeParse({
-    name: 'Local custom',
+  const result = agentProviderConfigSchema.safeParse({
+    name: 'Local agent',
     provider: 'custom',
-    model: 'my-model',
+    model: 'finance-model-v1',
     temperature: 0.7,
     endpointUrl: '',
     apiKey: '',
@@ -195,8 +193,8 @@ test('editor schema requires an http(s) endpoint for self-hosted providers', () 
   }
 });
 
-describe('agentConfigSchema (createAgentSchema)', () => {
-  const validPayload = {
+describe('agent form schemas & validation helpers', () => {
+  const base = {
     name: 'Treasury Guard',
     description: 'Automated Stellar rebalancing assistant',
     provider: 'Nvidia' as const,
@@ -212,311 +210,54 @@ describe('agentConfigSchema (createAgentSchema)', () => {
     rateLimitPerMinute: 60,
     tokenThreshold: 4096,
   };
+  const hasErr = (r: { success: boolean; error?: { issues: { path: PropertyKey[] }[] } }, f: string) =>
+    !r.success && Boolean(r.error?.issues.some((i) => i.path.includes(f)));
 
-  test('accepts a complete valid hosted-provider configuration', () => {
-    const result = agentConfigSchema.safeParse(validPayload);
-    assert.equal(result.success, true);
+  test('createAgentSchema & updateAgentSchema enforce endpoints, catalog models, NaN, and budget caps', () => {
+    assert.equal(agentConfigSchema.safeParse(base).success, true);
+    assert.ok(hasErr(agentConfigSchema.safeParse({ ...base, provider: 'Custom', model: 'v2', endpointUrl: '' }), 'endpointUrl'));
+    assert.ok(hasErr(agentConfigSchema.safeParse({ ...base, provider: 'Ollama', model: 'llama3.1:70b', endpointUrl: 'ftp://host' }), 'endpointUrl'));
+    assert.equal(agentConfigSchema.safeParse({ ...base, provider: 'Ollama', model: 'llama3.1:70b', endpointUrl: 'http://localhost:11434' }).success, true);
+    assert.ok(hasErr(agentConfigSchema.safeParse({ ...base, provider: 'OpenAI', model: 'claude-3-opus' }), 'model'));
+    assert.ok(hasErr(agentConfigSchema.safeParse({ ...base, temperature: 2.5 }), 'temperature'));
+    assert.ok(hasErr(agentConfigSchema.safeParse({ ...base, monthlyBudget: Number.NaN }), 'monthlyBudget'));
+    assert.ok(hasErr(agentConfigSchema.safeParse({ ...base, monthlyBudget: 200, singleTransactionCap: 250 }), 'singleTransactionCap'));
+    assert.ok(hasErr(agentConfigSchema.safeParse({ ...base, monthlyBudget: 200, dailyBudget: 300 }), 'dailyBudget'));
+    assert.ok(hasErr(agentConfigSchema.safeParse({ ...base, dailyBudget: 100, maxSpendPerTransaction: 150 }), 'maxSpendPerTransaction'));
+
+    assert.equal(updateAgentSchema.safeParse({}).success, false);
+    assert.ok(hasErr(updateAgentSchema.safeParse({ provider: 'Custom' }), 'endpointUrl'));
+    assert.equal(updateAgentSchema.safeParse({ temperature: 0.8, monthlyBudget: 2500 }).success, true);
   });
 
-  test('requires an http(s) endpoint URL for Custom and Ollama providers', () => {
-    const missingCustomEndpoint = agentConfigSchema.safeParse({
-      ...validPayload,
-      provider: 'Custom',
-      model: 'my-fine-tune-v2',
-      endpointUrl: '',
-    });
-    assert.equal(missingCustomEndpoint.success, false);
-    assert.ok(
-      missingCustomEndpoint.error.issues.some((issue) => issue.path.includes('endpointUrl')),
-    );
+  test('wizard, provider, panel, configuration schemas & getFirstValidationMessage', () => {
+    const wiz = { name: 'Copilot', description: 'Monitors Stellar treasury balances.', ownerDepartment: 'Treasury', provider: 'OpenAI' as const, model: 'gpt-4o-mini', apiKey: 'sk-live', endpointUrl: 'https://api.openai.com/v1', contextWindowTokens: 128_000, budget: 5000, singleTransactionCap: 1500 };
+    assert.equal(agentWizardSchema.safeParse(wiz).success, true);
+    assert.ok(hasErr(agentWizardSchema.safeParse({ ...wiz, budget: 1000, singleTransactionCap: 1500 }), 'singleTransactionCap'));
+    assert.ok(hasErr(agentWizardSchema.safeParse({ ...wiz, apiKey: 'bad key' }), 'apiKey'));
 
-    const invalidScheme = agentConfigSchema.safeParse({
-      ...validPayload,
-      provider: 'Ollama',
-      model: 'llama3.1:70b',
-      endpointUrl: 'ftp://localhost:11434',
-    });
-    assert.equal(invalidScheme.success, false);
-    assert.ok(invalidScheme.error.issues.some((issue) => issue.path.includes('endpointUrl')));
+    const tpl = { templateId: 'arb', name: 'DEX Alpha', description: 'Governed cross-pair Stellar arbitrage.', ownerDepartment: 'Trading', provider: 'Anthropic' as const, model: 'claude-3-5-sonnet-latest', apiKey: '', budget: 10_000, singleTransactionCap: 2_000, maxHourlyBudgetUsd: 50, requireApprovalAbove: undefined, allowedNetworks: ['Stellar Mainnet'] };
+    assert.equal(templateWizardSchema.safeParse(tpl).success, true);
+    const blank = templateWizardSchema.safeParse({ ...tpl, requireApprovalAbove: '' });
+    assert.equal(blank.success && blank.data.requireApprovalAbove, undefined);
+    assert.ok(hasErr(templateWizardSchema.safeParse({ ...tpl, budget: 5_000, requireApprovalAbove: 6_000 }), 'requireApprovalAbove'));
+    assert.ok(hasErr(templateWizardSchema.safeParse({ ...tpl, allowedNetworks: [] }), 'allowedNetworks'));
 
-    const validOllama = agentConfigSchema.safeParse({
-      ...validPayload,
-      provider: 'Ollama',
-      model: 'llama3.1:70b',
-      endpointUrl: 'http://localhost:11434',
-    });
-    assert.equal(validOllama.success, true);
-  });
+    const prov = { name: 'Prod OpenAI', provider: 'openai' as const, model: 'gpt-4o', temperature: 0.5, endpointUrl: '', apiKey: '' };
+    assert.ok(hasErr(providerSettingsSchema.safeParse(prov), 'apiKey'));
+    assert.equal(providerSettingsSchema.safeParse({ ...prov, apiKey: 'sk-live' }).success, true);
+    assert.ok(hasErr(providerSettingsSchema.safeParse({ ...prov, provider: 'ollama', model: 'llama3.1' }), 'endpointUrl'));
 
-  test('rejects models not offered by the selected hosted provider', () => {
-    const result = agentConfigSchema.safeParse({
-      ...validPayload,
-      provider: 'OpenAI',
-      model: 'claude-sonnet-4-20250514',
-    });
-    assert.equal(result.success, false);
-    assert.ok(result.error.issues.some((issue) => issue.path.includes('model')));
-  });
+    const panel = { provider: 'anthropic' as const, model: 'claude-sonnet-5', temperature: 0.7, maxTokens: 2048, systemPrompt: 'Stay within bounds.' };
+    assert.equal(agentConfigPanelSchema.safeParse(panel).success, true);
+    assert.ok(hasErr(agentConfigPanelSchema.safeParse({ ...panel, systemPrompt: '   ' }), 'systemPrompt'));
+    assert.ok(hasErr(agentConfigPanelSchema.safeParse({ ...panel, provider: 'gemini' }), 'model'));
 
-  test('enforces temperature bounds and cross-field budget hierarchy', () => {
-    const outOfRangeTemp = agentConfigSchema.safeParse({
-      ...validPayload,
-      temperature: 2.5,
-    });
-    assert.equal(outOfRangeTemp.success, false);
-    assert.ok(outOfRangeTemp.error.issues.some((issue) => issue.path.includes('temperature')));
-
-    const capExceedsMonthly = agentConfigSchema.safeParse({
-      ...validPayload,
-      monthlyBudget: 200,
-      singleTransactionCap: 250,
-    });
-    assert.equal(capExceedsMonthly.success, false);
-    assert.ok(
-      capExceedsMonthly.error.issues.some((issue) => issue.path.includes('singleTransactionCap')),
-    );
-
-    const dailyExceedsMonthly = agentConfigSchema.safeParse({
-      ...validPayload,
-      monthlyBudget: 200,
-      dailyBudget: 300,
-    });
-    assert.equal(dailyExceedsMonthly.success, false);
-    assert.ok(
-      dailyExceedsMonthly.error.issues.some((issue) => issue.path.includes('dailyBudget')),
-    );
-
-    const maxSpendExceedsDaily = agentConfigSchema.safeParse({
-      ...validPayload,
-      monthlyBudget: 500,
-      dailyBudget: 100,
-      maxSpendPerTransaction: 150,
-    });
-    assert.equal(maxSpendExceedsDaily.success, false);
-    assert.ok(
-      maxSpendExceedsDaily.error.issues.some((issue) =>
-        issue.path.includes('maxSpendPerTransaction'),
-      ),
-    );
-  });
-});
-
-describe('updateAgentSchema', () => {
-  test('rejects empty update payloads and enforces endpoint when switching to Custom', () => {
-    const emptyUpdate = updateAgentSchema.safeParse({});
-    assert.equal(emptyUpdate.success, false);
-
-    const customWithoutEndpoint = updateAgentSchema.safeParse({
-      provider: 'Custom',
-    });
-    assert.equal(customWithoutEndpoint.success, false);
-    assert.ok(
-      customWithoutEndpoint.error.issues.some((issue) => issue.path.includes('endpointUrl')),
-    );
-
-    const validPartialUpdate = updateAgentSchema.safeParse({
-      temperature: 0.8,
-      monthlyBudget: 2500,
-    });
-    assert.equal(validPartialUpdate.success, true);
-  });
-});
-
-describe('agentWizardSchema', () => {
-  const validWizard = {
-    name: 'Treasury Copilot',
-    description: 'Monitors Stellar treasury balances and proposes rebalances.',
-    ownerDepartment: 'Treasury',
-    provider: 'OpenAI' as const,
-    model: 'gpt-4o-mini',
-    apiKey: 'sk-live-secret-token',
-    endpointUrl: 'https://api.openai.com/v1',
-    contextWindowTokens: 128_000,
-    budget: 5000,
-    singleTransactionCap: 1500,
-  };
-
-  test('validates multi-step registration payload and blocks invalid caps or API keys', () => {
-    assert.equal(agentWizardSchema.safeParse(validWizard).success, true);
-
-    const capOverBudget = agentWizardSchema.safeParse({
-      ...validWizard,
-      budget: 1000,
-      singleTransactionCap: 1500,
-    });
-    assert.equal(capOverBudget.success, false);
-    assert.ok(
-      capOverBudget.error.issues.some((issue) => issue.path.includes('singleTransactionCap')),
-    );
-
-    const whitespaceApiKey = agentWizardSchema.safeParse({
-      ...validWizard,
-      apiKey: 'sk-bad key with spaces',
-    });
-    assert.equal(whitespaceApiKey.success, false);
-    assert.ok(whitespaceApiKey.error.issues.some((issue) => issue.path.includes('apiKey')));
-  });
-});
-
-describe('templateWizardSchema', () => {
-  const validTemplateWizard = {
-    templateId: 'arbitrageur',
-    name: 'DEX Arbitrage Alpha',
-    description: 'Executes governed cross-pair Stellar DEX arbitrage.',
-    ownerDepartment: 'Trading Operations',
-    provider: 'Anthropic' as const,
-    model: 'claude-sonnet-4-20250514',
-    apiKey: '',
-    budget: 10_000,
-    singleTransactionCap: 2_000,
-    maxHourlyBudgetUsd: 50,
-    requireApprovalAbove: undefined,
-    allowedNetworks: ['Stellar Mainnet'],
-  };
-
-  test('accepts omitted optional approval threshold and rejects invalid policy bounds', () => {
-    assert.equal(templateWizardSchema.safeParse(validTemplateWizard).success, true);
-
-    const emptyStringApproval = templateWizardSchema.safeParse({
-      ...validTemplateWizard,
-      requireApprovalAbove: '',
-    });
-    assert.equal(emptyStringApproval.success, true);
-    if (emptyStringApproval.success) {
-      assert.equal(emptyStringApproval.data.requireApprovalAbove, undefined);
-    }
-
-    const approvalAboveBudget = templateWizardSchema.safeParse({
-      ...validTemplateWizard,
-      budget: 5_000,
-      requireApprovalAbove: 6_000,
-    });
-    assert.equal(approvalAboveBudget.success, false);
-    assert.ok(
-      approvalAboveBudget.error.issues.some((issue) =>
-        issue.path.includes('requireApprovalAbove'),
-      ),
-    );
-
-    const noNetworks = templateWizardSchema.safeParse({
-      ...validTemplateWizard,
-      allowedNetworks: [],
-    });
-    assert.equal(noNetworks.success, false);
-    assert.ok(noNetworks.error.issues.some((issue) => issue.path.includes('allowedNetworks')));
-  });
-});
-
-describe('agentProviderConfigSchema & agentConfigPanelSchema', () => {
-  test('enforces API key + catalog model for hosted providers and endpoint for self-hosted', () => {
-    const hostedMissingKey = agentProviderConfigSchema.safeParse({
-      name: 'Production OpenAI',
-      provider: 'openai',
-      model: 'gpt-4o',
-      temperature: 0.5,
-      endpointUrl: '',
-      apiKey: '',
-    });
-    assert.equal(hostedMissingKey.success, false);
-    assert.ok(hostedMissingKey.error.issues.some((issue) => issue.path.includes('apiKey')));
-
-    const hostedValid = agentProviderConfigSchema.safeParse({
-      name: 'Production OpenAI',
-      provider: 'openai',
-      model: 'gpt-4o',
-      temperature: 0.5,
-      endpointUrl: '',
-      apiKey: 'sk-live-valid-token',
-    });
-    assert.equal(hostedValid.success, true);
-
-    const ollamaMissingEndpoint = agentProviderConfigSchema.safeParse({
-      name: 'Local Ollama',
-      provider: 'ollama',
-      model: 'llama3.1',
-      temperature: 0.3,
-      endpointUrl: '',
-      apiKey: '',
-    });
-    assert.equal(ollamaMissingEndpoint.success, false);
-    assert.ok(
-      ollamaMissingEndpoint.error.issues.some((issue) => issue.path.includes('endpointUrl')),
-    );
-  });
-
-  test('validates agentConfigPanelSchema prompt, token integer bounds, and model catalog', () => {
-    const validPanel = agentConfigPanelSchema.safeParse({
-      provider: 'anthropic',
-      model: 'claude-sonnet-5',
-      temperature: 0.7,
-      maxTokens: 2048,
-      systemPrompt: 'Operate within treasury risk bounds.',
-      systemPromptTemplate: '',
-    });
-    assert.equal(validPanel.success, true);
-
-    const blankPrompt = agentConfigPanelSchema.safeParse({
-      provider: 'anthropic',
-      model: 'claude-sonnet-5',
-      temperature: 0.7,
-      maxTokens: 2048,
-      systemPrompt: '   ',
-    });
-    assert.equal(blankPrompt.success, false);
-    assert.ok(blankPrompt.error.issues.some((issue) => issue.path.includes('systemPrompt')));
-
-    const mismatchedModel = agentConfigPanelSchema.safeParse({
-      provider: 'gemini',
-      model: 'gpt-4o',
-      temperature: 0.7,
-      maxTokens: 2048,
-      systemPrompt: 'Operate within treasury risk bounds.',
-    });
-    assert.equal(mismatchedModel.success, false);
-    assert.ok(mismatchedModel.error.issues.some((issue) => issue.path.includes('model')));
-  });
-});
-
-describe('agentConfigurationSchema & getFirstValidationMessage', () => {
-  test('enforces permission scopes and extracts nested validation messages', () => {
-    const missingScopes = agentConfigurationSchema.safeParse({
-      name: 'Audit Sentinel',
-      description: 'Continuously audits outgoing Stellar transactions.',
-      provider: 'OpenAI',
-      model: 'gpt-4o',
-      endpointUrl: '',
-      mode: 'assisted',
-      temperature: 0.1,
-      monthlyBudget: 1000,
-      dailySpendingLimit: 200,
-      capabilities: [],
-    });
-    assert.equal(missingScopes.success, false);
-    assert.ok(missingScopes.error.issues.some((issue) => issue.path.includes('capabilities')));
-
-    const extracted = getFirstValidationMessage({
-      nested: {
-        budget: { message: 'Budget must be greater than 0' },
-      },
-    });
-    assert.equal(extracted, 'Budget must be greater than 0');
-
-    // Cyclic DOM `ref` objects attached by react-hook-form must never cause recursion errors
-    const cyclicError: Record<string, unknown> = { message: '' };
-    cyclicError.ref = cyclicError;
-    cyclicError.self = cyclicError;
-    assert.equal(getFirstValidationMessage({ emptyField: cyclicError }), undefined);
-
-    const nanBudget = agentConfigSchema.safeParse({
-      name: 'Audit Sentinel',
-      provider: 'OpenAI',
-      model: 'gpt-4o',
-      endpointUrl: '',
-      mode: 'assisted',
-      temperature: 0.2,
-      monthlyBudget: Number.NaN,
-    });
-    assert.equal(nanBudget.success, false);
-    assert.ok(nanBudget.error.issues.some((issue) => issue.path.includes('monthlyBudget')));
+    assert.ok(hasErr(agentConfigurationSchema.safeParse({ name: 'Sentinel', description: 'Audits outgoing Stellar transactions.', provider: 'OpenAI', model: 'gpt-4o', endpointUrl: '', mode: 'assisted', temperature: 0.1, monthlyBudget: 1000, dailySpendingLimit: 200, capabilities: [] }), 'capabilities'));
+    assert.equal(getFirstValidationMessage({ nested: { budget: { message: 'Budget > 0' } } }), 'Budget > 0');
+    const cyc: Record<string, unknown> = { message: '' };
+    cyc.ref = cyc;
+    cyc.self = cyc;
+    assert.equal(getFirstValidationMessage({ empty: cyc }), undefined);
   });
 });

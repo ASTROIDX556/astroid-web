@@ -286,11 +286,7 @@ export const createAgentSchema = agentConfigFields.superRefine((values, ctx) => 
     });
   }
 
-  if (
-    typeof values.dailyBudget === 'number' &&
-    typeof values.monthlyBudget === 'number' &&
-    values.dailyBudget > values.monthlyBudget
-  ) {
+  if (typeof values.dailyBudget === 'number' && values.dailyBudget > values.monthlyBudget) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['dailyBudget'],
@@ -298,26 +294,18 @@ export const createAgentSchema = agentConfigFields.superRefine((values, ctx) => 
     });
   }
 
-  if (
-    typeof values.maxSpendPerTransaction === 'number' &&
-    typeof values.dailyBudget === 'number' &&
-    values.maxSpendPerTransaction > values.dailyBudget
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['maxSpendPerTransaction'],
-      message: 'Max spend per transaction cannot exceed the daily budget',
-    });
-  } else if (
-    typeof values.maxSpendPerTransaction === 'number' &&
-    typeof values.monthlyBudget === 'number' &&
-    values.maxSpendPerTransaction > values.monthlyBudget
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['maxSpendPerTransaction'],
-      message: 'Max spend per transaction cannot exceed the monthly budget',
-    });
+  if (typeof values.maxSpendPerTransaction === 'number') {
+    const exceedsDaily =
+      typeof values.dailyBudget === 'number' && values.maxSpendPerTransaction > values.dailyBudget;
+    if (exceedsDaily || values.maxSpendPerTransaction > values.monthlyBudget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maxSpendPerTransaction'],
+        message: exceedsDaily
+          ? 'Max spend per transaction cannot exceed the daily budget'
+          : 'Max spend per transaction cannot exceed the monthly budget',
+      });
+    }
   }
 });
 
@@ -537,67 +525,13 @@ export const agentProviderConfigSchema = agentUpdateSchema;
 export type AgentProviderConfigValues = AgentUpdateValues;
 export const agentProviderTypes = AGENT_PROVIDER_TYPES;
 
-// ---------------------------------------------------------------------------
-// Update: inline agent model & prompt panel (AgentConfigPanel)
-// ---------------------------------------------------------------------------
-
-export const agentConfigPanelSchema = z
-  .object({
-    provider: z.enum(AGENT_PROVIDER_TYPES, {
-      errorMap: () => ({ message: 'Select a supported provider.' }),
-    }),
-    model: z
-      .string({ required_error: 'Model is required.' })
-      .trim()
-      .min(1, 'Model is required.')
-      .max(AGENT_MODEL_MAX_LENGTH, `Model identifier cannot exceed ${AGENT_MODEL_MAX_LENGTH} characters.`),
-    temperature: z.coerce
-      .number({ invalid_type_error: 'Temperature must be a number.' })
-      .finite('Temperature must be a number.')
-      .min(0, 'Temperature cannot be below 0.')
-      .max(2, 'Temperature cannot exceed 2.'),
-    maxTokens: z.coerce
-      .number({ invalid_type_error: 'Max tokens must be a number.' })
-      .int('Max tokens must be a whole number.')
-      .min(1, 'Max tokens must be at least 1.')
-      .max(2_000_000, 'Max tokens cannot exceed 2,000,000.'),
-    systemPrompt: z
-      .string({ required_error: 'System prompt is required.' })
-      .trim()
-      .min(1, 'System prompt is required.')
-      .max(20_000, 'System prompt cannot exceed 20,000 characters.'),
-    systemPromptTemplate: z.string().optional().or(z.literal('')),
-  })
-  .superRefine((values, ctx) => {
-    const catalog = providerModelOptions[values.provider];
-    if (catalog.length > 0 && values.model && !catalog.includes(values.model)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['model'],
-        message: 'Select a model offered by the chosen provider.',
-      });
-    }
-  });
-
-export type AgentConfigPanelValues = z.infer<typeof agentConfigPanelSchema>;
-
-/**
- * Extracts the first non-empty error message from a react-hook-form FieldErrors
- * map so validation error toasts can display actionable guidance.
- */
-export function getFirstValidationMessage(
-  errors: Record<string, unknown>,
-  visited: Set<object> = new Set(),
-): string | undefined {
+export function getFirstValidationMessage(errors: Record<string, unknown>, visited: Set<object> = new Set()): string | undefined {
   if (visited.has(errors)) return undefined;
   visited.add(errors);
-
   for (const [key, value] of Object.entries(errors)) {
     if (key === 'ref' || !value || typeof value !== 'object') continue;
-    if ('message' in value && typeof (value as { message?: unknown }).message === 'string') {
-      const message = (value as { message: string }).message.trim();
-      if (message.length > 0) return message;
-    }
+    const msg = (value as { message?: unknown }).message;
+    if (typeof msg === 'string' && msg.trim()) return msg.trim();
     const nested = getFirstValidationMessage(value as Record<string, unknown>, visited);
     if (nested) return nested;
   }

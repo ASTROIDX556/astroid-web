@@ -14,23 +14,14 @@ import {
   Sparkles,
   AlertTriangle,
 } from 'lucide-react';
-import {
-  useForm,
-  Controller,
-  type FieldErrors,
-  type UseFormReturn,
-} from 'react-hook-form';
+import { useForm, Controller, type FieldErrors, type UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Select, Textarea } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/cn';
-import {
-  getFirstValidationMessage,
-  templateWizardSchema,
-  type TemplateWizardValues,
-} from '@/lib/validations/agent';
+import { getFirstValidationMessage, templateWizardSchema, type TemplateWizardValues } from '@/lib/validations/agent';
 import { WIZARD_STEPS, STEP_FIELDS } from '../templateWizardSchema';
 import { AGENT_TEMPLATES, getTemplateById, type AgentTemplate } from '../templates';
 
@@ -172,14 +163,7 @@ function PoliciesStep({ form }: { form: UseFormReturn<TemplateWizardValues> }) {
           error={errors.budget?.message}
           required
         >
-          <Input
-            id="tpl-budget"
-            type="number"
-            step="0.01"
-            placeholder="10000"
-            invalid={Boolean(errors.budget)}
-            {...form.register('budget', { valueAsNumber: true })}
-          />
+          <Input id="tpl-budget" type="number" step="0.01" placeholder="10000" invalid={Boolean(errors.budget)} {...form.register('budget', { valueAsNumber: true })} />
         </FormField>
 
         <FormField
@@ -188,14 +172,7 @@ function PoliciesStep({ form }: { form: UseFormReturn<TemplateWizardValues> }) {
           error={errors.singleTransactionCap?.message}
           required
         >
-          <Input
-            id="tpl-singleTransactionCap"
-            type="number"
-            step="0.01"
-            placeholder="2000"
-            invalid={Boolean(errors.singleTransactionCap)}
-            {...form.register('singleTransactionCap', { valueAsNumber: true })}
-          />
+          <Input id="tpl-singleTransactionCap" type="number" step="0.01" placeholder="2000" invalid={Boolean(errors.singleTransactionCap)} {...form.register('singleTransactionCap', { valueAsNumber: true })} />
         </FormField>
 
         <FormField
@@ -204,14 +181,7 @@ function PoliciesStep({ form }: { form: UseFormReturn<TemplateWizardValues> }) {
           error={errors.maxHourlyBudgetUsd?.message}
           required
         >
-          <Input
-            id="tpl-maxHourlyBudgetUsd"
-            type="number"
-            step="0.01"
-            placeholder="50"
-            invalid={Boolean(errors.maxHourlyBudgetUsd)}
-            {...form.register('maxHourlyBudgetUsd', { valueAsNumber: true })}
-          />
+          <Input id="tpl-maxHourlyBudgetUsd" type="number" step="0.01" placeholder="50" invalid={Boolean(errors.maxHourlyBudgetUsd)} {...form.register('maxHourlyBudgetUsd', { valueAsNumber: true })} />
         </FormField>
 
         <FormField
@@ -220,28 +190,11 @@ function PoliciesStep({ form }: { form: UseFormReturn<TemplateWizardValues> }) {
           error={errors.requireApprovalAbove?.message}
           hint="Leave blank to disable automatic approval thresholds"
         >
-          <Input
-            id="tpl-requireApprovalAbove"
-            type="number"
-            step="0.01"
-            placeholder="5000"
-            invalid={Boolean(errors.requireApprovalAbove)}
-            {...form.register('requireApprovalAbove', {
-              setValueAs: (value) =>
-                value === '' || value === null || value === undefined
-                  ? undefined
-                  : Number(value),
-            })}
-          />
+          <Input id="tpl-requireApprovalAbove" type="number" step="0.01" placeholder="5000" invalid={Boolean(errors.requireApprovalAbove)} {...form.register('requireApprovalAbove', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })} />
         </FormField>
       </div>
 
-      <FormField
-        label="Allowed networks"
-        htmlFor="tpl-networks"
-        error={errors.allowedNetworks?.message}
-        required
-      >
+      <FormField label="Allowed networks" htmlFor="tpl-networks" error={errors.allowedNetworks?.message} required>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Select allowed networks">
           {NETWORK_OPTIONS.map((net) => (
             <Controller
@@ -338,11 +291,7 @@ function ReviewField({
 /*  Main Wizard                                                       */
 /* ------------------------------------------------------------------ */
 
-export interface AgentTemplateWizardProps {
-  onSubmit?: (values: TemplateWizardValues) => void | Promise<void>;
-}
-
-export function AgentTemplateWizard({ onSubmit: onSubmitProp }: AgentTemplateWizardProps = {}) {
+export function AgentTemplateWizard() {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const stepRef = useRef<HTMLDivElement>(null);
@@ -397,17 +346,9 @@ export function AgentTemplateWizard({ onSubmit: onSubmitProp }: AgentTemplateWiz
   /** Validate current step fields and advance. */
   const handleNext = useCallback(async () => {
     const fields = STEP_FIELDS[step] ?? [];
-    if (fields.length === 0) {
-      setDirection(1);
-      setStep((s) => Math.min(s + 1, WIZARD_STEPS.length - 1));
-      return;
-    }
-    const valid = await form.trigger(fields);
-    if (!valid) {
+    if (fields.length > 0 && !(await form.trigger(fields))) {
       toast.error('Please resolve the validation errors before proceeding.', {
-        description:
-          getFirstValidationMessage(form.formState.errors) ??
-          'Check the highlighted fields in this step.',
+        description: getFirstValidationMessage(form.formState.errors) ?? 'Check the highlighted fields in this step.',
       });
       return;
     }
@@ -420,30 +361,18 @@ export function AgentTemplateWizard({ onSubmit: onSubmitProp }: AgentTemplateWiz
     setStep((s) => Math.max(s - 1, 0));
   }, []);
 
-  const onSubmit = useCallback(
-    async (values: TemplateWizardValues) => {
-      try {
-        await onSubmitProp?.(values);
-        const template = getTemplateById(values.templateId);
-        toast.success(`Agent "${values.name}" launched from ${template?.name ?? 'template'}.`, {
-          description: `${values.provider} · ${values.model} · ${values.budget.toLocaleString()} XLM budget`,
-        });
-        setDirection(1);
-        setStep(WIZARD_STEPS.length - 1);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to launch agent from template.';
-        toast.error(message);
-      }
-    },
-    [onSubmitProp],
-  );
+  const onSubmit = useCallback((values: TemplateWizardValues) => {
+    const tpl = getTemplateById(values.templateId);
+    toast.success(`Agent "${values.name}" launched from ${tpl?.name ?? 'template'}.`, {
+      description: `${values.provider} · ${values.model} · ${values.budget.toLocaleString()} XLM budget`,
+    });
+    setDirection(1);
+    setStep(WIZARD_STEPS.length - 1);
+  }, []);
 
   const onInvalid = useCallback((fieldErrors: FieldErrors<TemplateWizardValues>) => {
     toast.error('Template configuration validation failed.', {
-      description:
-        getFirstValidationMessage(fieldErrors) ??
-        'Please resolve the highlighted validation errors before launching.',
+      description: getFirstValidationMessage(fieldErrors) ?? 'Please resolve the highlighted validation errors before launching.',
     });
   }, []);
 

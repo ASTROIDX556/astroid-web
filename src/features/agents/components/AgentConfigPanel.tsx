@@ -5,15 +5,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Copy, Settings2 } from 'lucide-react';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Select, Textarea } from '@/components/ui/input';
 import {
-  agentConfigPanelSchema,
+  providerModelOptions,
   agentProviderTypes,
   getFirstValidationMessage,
-  providerModelOptions,
-  type AgentConfigPanelValues,
   type AgentProviderType,
 } from '@/lib/validations/agent';
 import {
@@ -29,6 +28,28 @@ const PROVIDER_LABELS: Record<AgentProviderType, string> = {
   ollama: 'Ollama',
   custom: 'Custom',
 };
+
+/**
+ * Validation schema for the agent configuration panel.
+ * Ensures temperature stays in [0, 2] and maxTokens is positive.
+ */
+export const agentConfigPanelSchema = z
+  .object({
+    provider: z.enum(agentProviderTypes),
+    model: z.string().trim().min(1, 'Model is required.'),
+    temperature: z.coerce.number().finite().min(0, 'Temperature cannot be below 0.').max(2, 'Temperature cannot exceed 2.'),
+    maxTokens: z.coerce.number().int().min(1, 'Max tokens must be at least 1.'),
+    systemPrompt: z.string().trim().min(1, 'System prompt is required.'),
+    systemPromptTemplate: z.string().optional().or(z.literal('')),
+  })
+  .superRefine((values, ctx) => {
+    const catalog = providerModelOptions[values.provider];
+    if (catalog.length > 0 && values.model && !catalog.includes(values.model)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['model'], message: 'Select a model offered by the chosen provider.' });
+    }
+  });
+
+type AgentConfigPanelValues = z.infer<typeof agentConfigPanelSchema>;
 
 export interface AgentConfigPanelProps {
   defaultValues?: Partial<AgentConfigPanelValues>;
@@ -47,20 +68,16 @@ export function AgentConfigPanel({
   onSubmit,
   className,
 }: AgentConfigPanelProps) {
-  const initialProvider = defaultValues?.provider ?? 'openai';
-  const initialModel =
-    defaultValues?.model ?? providerModelOptions[initialProvider][0] ?? '';
-
   const form = useForm<AgentConfigPanelValues>({
     resolver: zodResolver(agentConfigPanelSchema),
     defaultValues: {
+      provider: 'openai',
+      model: providerModelOptions.openai[0] ?? '',
       temperature: 0.7,
       maxTokens: 2048,
       systemPrompt: '',
       systemPromptTemplate: '',
       ...defaultValues,
-      provider: initialProvider,
-      model: initialModel,
     },
     mode: 'onChange',
   });
@@ -70,7 +87,7 @@ export function AgentConfigPanel({
   const systemPromptTemplate = form.watch('systemPromptTemplate');
   const previousProvider = useRef<AgentProviderType>(provider);
 
-  // When provider changes after initial mount, reset only the model to the first available for that provider
+  // When provider changes, reset only the model to the first available for that provider
   useEffect(() => {
     if (previousProvider.current === provider) return;
     previousProvider.current = provider;

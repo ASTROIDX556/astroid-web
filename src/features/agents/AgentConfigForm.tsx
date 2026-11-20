@@ -20,16 +20,12 @@ import {
   type CreateAgentInput,
 } from './schema';
 
-export interface AgentConfigFormProps {
-  onSubmit?: (values: CreateAgentInput) => void | Promise<void>;
-}
-
 /**
  * Controlled agent configuration form. Model options are derived from the
  * selected provider, and switching providers resets the model (and clears
  * stale endpoint errors) so only valid configurations can be submitted.
  */
-export function AgentConfigForm({ onSubmit: onSubmitProp }: AgentConfigFormProps = {}) {
+export function AgentConfigForm() {
   const {
     register,
     handleSubmit,
@@ -88,25 +84,18 @@ export function AgentConfigForm({ onSubmit: onSubmitProp }: AgentConfigFormProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
-  const onSubmit = async (values: CreateAgentInput) => {
-    try {
-      await onSubmitProp?.(values);
-      toast.success(`${values.name} configured`, {
-        description: `${PROVIDER_LABELS[values.provider]} · ${values.model || 'custom model'} deployed to the Stellar testnet control plane.`,
-      });
-      reset();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to save agent configuration.';
-      toast.error(message);
-    }
+  const onSubmit = (values: CreateAgentInput) => {
+    // Mock-mode deployment: the API contract is defined in astroid-api
+    // (POST /agents); wire the payload there once the backend ships.
+    toast.success(`${values.name} configured`, {
+      description: `${PROVIDER_LABELS[values.provider]} · ${values.model || 'custom model'} deployed to the Stellar testnet control plane.`,
+    });
+    reset();
   };
 
   const onInvalid = (fieldErrors: FieldErrors<CreateAgentInput>) => {
     toast.error('Invalid agent configuration.', {
-      description:
-        getFirstValidationMessage(fieldErrors) ??
-        'Please resolve the highlighted validation errors before saving.',
+      description: getFirstValidationMessage(fieldErrors) ?? 'Please resolve the highlighted validation errors before saving.',
     });
   };
 
