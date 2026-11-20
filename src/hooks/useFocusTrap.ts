@@ -39,6 +39,44 @@ export function isKeyboardFocusable(element: HTMLElement): boolean {
   );
 }
 
+/** Where Tab / Shift+Tab should send focus, or `null` to let the browser move it. */
+export type TabTarget<T> = { kind: 'container' } | { kind: 'element'; element: T } | null;
+
+/**
+ * Decides how a Tab press is handled inside a focus trap. Pure so the wrap
+ * rules can be tested without a DOM:
+ *
+ * - no focusable children: pin focus to the container itself;
+ * - focus is outside the container: pull it back to the first (or, with Shift,
+ *   last) focusable;
+ * - Shift+Tab on the first focusable (or the container): wrap to the last;
+ * - Tab on the last focusable: wrap to the first;
+ * - otherwise: the browser's own order is already inside the trap.
+ */
+export function resolveTabTarget<T>(state: {
+  focusables: readonly T[];
+  active: T | null;
+  activeInsideContainer: boolean;
+  activeIsContainer: boolean;
+  shiftKey: boolean;
+}): TabTarget<T> {
+  const { focusables, active, activeInsideContainer, activeIsContainer, shiftKey } = state;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (first === undefined || last === undefined) return { kind: 'container' };
+
+  if (!activeInsideContainer) {
+    return { kind: 'element', element: shiftKey ? last : first };
+  }
+  if (shiftKey && (active === first || activeIsContainer)) {
+    return { kind: 'element', element: last };
+  }
+  if (!shiftKey && active === last) {
+    return { kind: 'element', element: first };
+  }
+  return null;
+}
+
 export interface UseFocusTrapOptions {
   /** Whether the modal/drawer is currently open. */
   active: boolean;
@@ -120,28 +158,24 @@ export function useFocusTrap({
 
       if (event.key !== 'Tab') return;
 
-      const focusables = getFocusables();
-      if (focusables.length === 0) {
+      const activeElement =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const target = resolveTabTarget<HTMLElement>({
+        focusables: getFocusables(),
+        active: activeElement,
+        activeInsideContainer: container.contains(activeElement),
+        activeIsContainer: activeElement === container,
+        shiftKey: event.shiftKey,
+      });
+      if (!target) return;
+
+      event.preventDefault();
+      if (target.kind === 'container') {
         // Nothing focusable inside: pin focus to the panel itself so Tab
         // cannot escape to the page behind the overlay.
-        event.preventDefault();
         container.focus({ preventScroll: true });
-        return;
-      }
-
-      const first = focusables[0]!;
-      const last = focusables[focusables.length - 1]!;
-      const activeElement = document.activeElement;
-
-      if (!container.contains(activeElement)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
-      } else if (event.shiftKey && (activeElement === first || activeElement === container)) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && activeElement === last) {
-        event.preventDefault();
-        first.focus();
+      } else {
+        target.element.focus();
       }
     };
 

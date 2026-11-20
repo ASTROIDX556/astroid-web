@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Activity, Server, Cpu, RefreshCw, XCircle, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { usePopoverFocus } from '@/hooks/usePopoverFocus';
 import { useNetworkHealth } from './useNetworkHealth';
 import { cn } from '@/lib/cn';
 
@@ -13,6 +14,17 @@ const WIDGET_FOCUS =
 export function NetworkHealthWidget() {
   const { data, isLoading, isError, refetch, isFetching } = useNetworkHealth(5000);
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Escape / outside press close the details panel and hand focus back to the
+  // trigger. Must run before the early returns below.
+  usePopoverFocus({
+    open: isOpen,
+    containerRef: panelRef,
+    triggerRef,
+    onClose: () => setIsOpen(false),
+  });
 
   if (isLoading && !data) {
     return (
@@ -54,6 +66,7 @@ export function NetworkHealthWidget() {
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
@@ -95,9 +108,11 @@ export function NetworkHealthWidget() {
       {/* Expanded Health Popover Panel */}
       {isOpen && (
         <div
+          ref={panelRef}
           role="dialog"
           aria-label="Stellar network health details"
-          className="absolute right-0 top-full mt-2 z-50 w-72 rounded-card border border-border bg-surface p-4 shadow-xl space-y-3"
+          tabIndex={-1}
+          className="absolute right-0 top-full mt-2 z-50 w-72 rounded-card border border-border bg-surface p-4 shadow-xl space-y-3 focus:outline-none"
         >
           <div className="flex items-center justify-between border-b border-border pb-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">

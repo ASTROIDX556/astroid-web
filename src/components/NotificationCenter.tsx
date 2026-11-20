@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { usePopoverFocus } from '@/hooks/usePopoverFocus';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -190,31 +191,14 @@ export function NotificationCenter() {
     });
   }, [setNotifications]);
 
-  // Close on outside click / Escape
-  useEffect(() => {
-    if (!open) return undefined;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [open, setOpen]);
+  // Escape and outside presses dismiss the popover; focus moves into it on open
+  // and returns to the bell on close.
+  usePopoverFocus({
+    open,
+    containerRef: popoverRef,
+    triggerRef,
+    onClose: () => setOpen(false),
+  });
 
   return (
     <div className="relative">
@@ -251,11 +235,12 @@ export function NotificationCenter() {
             ref={popoverRef}
             role="dialog"
             aria-label="Notification center"
+            tabIndex={-1}
             initial={{ opacity: 0, y: -8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="glass absolute right-0 top-full z-50 mt-2 flex w-[380px] max-h-[480px] flex-col overflow-hidden rounded-md shadow-soft-2"
+            className="glass absolute right-0 top-full z-50 mt-2 flex w-[380px] max-h-[480px] flex-col overflow-hidden rounded-md shadow-soft-2 focus:outline-none"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
