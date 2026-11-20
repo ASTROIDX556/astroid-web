@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type RefObject } from 'react';
+import { resolveFocusCycleTarget } from './focusCycle';
 import { focusTrapStack } from './focusTrapStack';
 
 /**
@@ -133,28 +134,20 @@ export function useFocusTrap({
 
       if (event.key !== 'Tab') return;
 
-      const focusables = getFocusables();
-      if (focusables.length === 0) {
-        // Nothing focusable inside: pin focus to the panel itself so Tab
-        // cannot escape to the page behind the overlay.
+      const activeElement =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const target = resolveFocusCycleTarget<HTMLElement>({
+        focusables: getFocusables(),
+        active: activeElement,
+        container,
+        containsActive: container.contains(activeElement),
+        shiftKey: event.shiftKey,
+        precedes: (a, b) =>
+          Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING),
+      });
+      if (target) {
         event.preventDefault();
-        container.focus({ preventScroll: true });
-        return;
-      }
-
-      const first = focusables[0]!;
-      const last = focusables[focusables.length - 1]!;
-      const activeElement = document.activeElement;
-
-      if (!container.contains(activeElement)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
-      } else if (event.shiftKey && (activeElement === first || activeElement === container)) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && activeElement === last) {
-        event.preventDefault();
-        first.focus();
+        target.focus({ preventScroll: target === container });
       }
     };
 
