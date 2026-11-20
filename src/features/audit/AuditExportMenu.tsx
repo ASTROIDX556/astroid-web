@@ -1,54 +1,58 @@
 'use client';
 
-import React from 'react';
-import { Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { AuditEvent } from './types';
+import { exportAuditEvents, type AuditExportFormat } from './export-utils';
+import { Dropdown, type DropdownItem } from '@/components/ui/dropdown';
 
 interface AuditExportMenuProps {
   events: AuditEvent[];
 }
 
 export function AuditExportMenu({ events }: AuditExportMenuProps) {
-  const handleExportCsv = () => {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = (format: AuditExportFormat) => {
     if (events.length === 0) return;
-
-    const headers = ['ID', 'Timestamp', 'Level', 'EventType', 'ActorId', 'ActorName', 'Summary', 'Details', 'Amount', 'Asset'];
-    const rows = events.map((event) => [
-      event.id,
-      event.timestamp,
-      event.level,
-      event.eventType,
-      event.actorId,
-      `"${event.actorName.replace(/"/g, '""')}"`,
-      `"${event.summary.replace(/"/g, '""')}"`,
-      `"${event.details.replace(/"/g, '""')}"`,
-      event.amount ?? '',
-      event.asset ?? '',
-    ]);
-
-    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setIsExporting(true);
+    try {
+      exportAuditEvents(events, format);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
+  const items: DropdownItem[] = [
+    {
+      label: 'Export as CSV',
+      icon: <FileSpreadsheet className="h-4 w-4 text-success" aria-hidden />,
+      onSelect: () => handleExport('csv'),
+    },
+    {
+      label: 'Export as JSON',
+      icon: <FileText className="h-4 w-4 text-info" aria-hidden />,
+      onSelect: () => handleExport('json'),
+    },
+  ];
+
   return (
-    <Button
-      variant="secondary"
-      size="sm"
-      onClick={handleExportCsv}
-      disabled={events.length === 0}
-      leftIcon={<Download className="h-3.5 w-3.5" aria-hidden />}
-      aria-label="Export filtered audit logs to CSV"
-    >
-      Export CSV
-    </Button>
+    <Dropdown
+      align="end"
+      aria-label="Export audit logs"
+      trigger={(
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={events.length === 0 || isExporting}
+          leftIcon={<Download className="h-3.5 w-3.5" aria-hidden />}
+          aria-label="Export audit logs"
+        >
+          Export
+        </Button>
+      )}
+      items={items}
+    />
   );
 }
