@@ -4,6 +4,20 @@ import { create } from 'zustand';
 import type { StateCreator } from 'zustand';
 
 export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'locked';
+export type SignatureRequestStatus =
+  | 'idle'
+  | 'requesting'
+  | 'signed'
+  | 'rejected'
+  | 'timeout';
+
+export const DEFAULT_SIGNATURE_TIMEOUT_MS = 45_000;
+const MAX_TIMEOUT_MS = 2_147_483_647;
+
+export interface SignatureRequestOptions {
+  networkPassphrase?: string;
+  timeoutMs?: number;
+}
 
 /**
  * Stellar networks the app can target. Freighter itself owns the extension's
@@ -84,6 +98,8 @@ export interface FreighterWalletState {
   targetNetwork: StellarNetworkId;
   /** True while a network switch request is in flight. */
   isSwitching: boolean;
+  /** Lifecycle state for the most recent Freighter transaction-signing request. */
+  signatureStatus: SignatureRequestStatus;
   error: string | null;
   checkExtension: () => Promise<boolean>;
   connect: () => Promise<string | null>;
@@ -104,7 +120,7 @@ export interface FreighterWalletState {
   adoptConnection: (publicKey: string | null) => void;
   /** Compatibility setter retained for consumers of the original wallet API. */
   updatePublicKey: (publicKey: string) => void;
-  requestSignature: (xdr: string, options?: { networkPassphrase?: string }) => Promise<string>;
+  requestSignature: (xdr: string, options?: SignatureRequestOptions) => Promise<string>;
   hydrate: () => Promise<void>;
 }
 
@@ -119,12 +135,21 @@ export type WalletActions = Pick<
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
 
-const withTimeout = async <T>(promise: Promise<T>, ms = 15000): Promise<T> => {
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  ms = 15000,
+  createTimeoutError?: () => Error,
+): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return await new Promise<T>((resolve, reject) => {
     timeoutId = setTimeout(() => {
-      reject(new Error('Freighter wallet request timed out. Check that the extension is installed and unlocked.'));
+      reject(
+        createTimeoutError?.() ??
+          new Error(
+            'Freighter wallet request timed out. Check that the extension is installed and unlocked.',
+          ),
+      );
     }, ms);
 
     promise.then(
@@ -139,6 +164,64 @@ const withTimeout = async <T>(promise: Promise<T>, ms = 15000): Promise<T> => {
     );
   });
 };
+
+class SignatureTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Freighter signature request timed out after ${timeoutMs} ms.`);
+    this.name = 'SignatureTimeoutError';
+  }
+}
+
+function isSignatureRejection(error: unknown): boolean {
+  const details =
+    error && typeof error === 'object'
+      ? (error as { name?: unknown; code?: unknown; message?: unknown })
+      : {};
+  const code = String(details.code ?? '');
+  const text = [details.name, details.message, code]
+    .map(String)
+    .join(' ')
+    .toLowerCase();
+  return (
+    code === '4001' ||
+    /user.{0,20}(reject|cancel|declin|deni)|(reject|cancel|declin|deni).{0,20}user/.test(
+      text,
+    )
+  );
+}
+
+/** Runs a single signing attempt and records its observable lifecycle. */
+export async function trackSignatureRequest<T>(
+  request: () => Promise<T>,
+  onStatusChange: (status: SignatureRequestStatus) => void,
+  timeoutMs = DEFAULT_SIGNATURE_TIMEOUT_MS,
+): Promise<T> {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_TIMEOUT_MS) {
+    throw new RangeError(
+      `Signature timeout must be an integer between 1 and ${MAX_TIMEOUT_MS} ms.`,
+    );
+  }
+
+  onStatusChange('requesting');
+  try {
+    const result = await withTimeout(
+      Promise.resolve().then(request),
+      timeoutMs,
+      () => new SignatureTimeoutError(timeoutMs),
+    );
+    onStatusChange('signed');
+    return result;
+  } catch (error) {
+    if (error instanceof SignatureTimeoutError) {
+      onStatusChange('timeout');
+    } else if (isSignatureRejection(error)) {
+      onStatusChange('rejected');
+    } else {
+      onStatusChange('idle');
+    }
+    throw error;
+  }
+}
 
 interface FreighterNetworkResult {
   network?: string;
@@ -202,6 +285,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   networkPassphrase: null,
   targetNetwork: 'testnet',
   isSwitching: false,
+  signatureStatus: 'idle',
   error: null,
 
   checkExtension: async () => {
@@ -371,52 +455,83 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     set({ status: 'connected', isInstalled: true, publicKey, error: null });
   },
 
-  requestSignature: async (xdr: string, options?: { networkPassphrase?: string }) => {
+  requestSignature: async (xdr: string, options?: SignatureRequestOptions) => {
     if (!xdr || !xdr.trim()) {
       throw new Error('Transaction XDR is required to request a signature.');
     }
-
-    // Fail-closed network gate: never sign against a wallet network that
-    // differs from the expected one, and never sign when the wallet's
-    // network cannot be verified at all.
-    const expectedPassphrase = options?.networkPassphrase ?? resolveExpectedPassphrase(get().targetNetwork);
-    let walletPassphrase = get().networkPassphrase;
-    if (!walletPassphrase) {
-      await get().refreshNetwork();
-      walletPassphrase = get().networkPassphrase;
-    }
-    if (isNetworkMismatch(walletPassphrase, expectedPassphrase)) {
-      const walletLabel = networkLabelForId(networkIdForPassphrase(walletPassphrase));
-      const expectedLabel = networkLabelForId(networkIdForPassphrase(expectedPassphrase));
-      const message = `Network mismatch: Freighter is on ${walletLabel}, but this action targets ${expectedLabel}. Switch the wallet to ${expectedLabel} before signing.`;
+    if (get().signatureStatus === 'requesting') {
+      const message = 'A Freighter signature request is already in progress.';
       set({ error: message });
       throw new Error(message);
     }
 
+    set({ signatureStatus: 'requesting', error: null });
+
     try {
+      // Fail-closed network gate: never sign against a wallet network that
+      // differs from the expected one, and never sign when the wallet's
+      // network cannot be verified at all.
+      const requestedPassphrase = options?.networkPassphrase?.trim();
+      const expectedPassphrase =
+        requestedPassphrase || resolveExpectedPassphrase(get().targetNetwork);
+      let walletPassphrase = get().networkPassphrase;
+      if (!walletPassphrase) {
+        await get().refreshNetwork();
+        walletPassphrase = get().networkPassphrase;
+      }
+      if (isNetworkMismatch(walletPassphrase, expectedPassphrase)) {
+        const walletLabel = networkLabelForId(networkIdForPassphrase(walletPassphrase));
+        const expectedLabel = networkLabelForId(
+          networkIdForPassphrase(expectedPassphrase),
+        );
+        throw new Error(
+          `Network mismatch: Freighter is on ${walletLabel}, but this action targets ${expectedLabel}. Switch the wallet to ${expectedLabel} before signing.`,
+        );
+      }
+
       const freighter = await getFreighter();
-      if (typeof freighter.signTransaction !== 'function') {
+      const signTransaction = freighter.signTransaction;
+      if (typeof signTransaction !== 'function') {
         throw new Error('Freighter does not expose transaction signing support.');
       }
 
-      const response = await withTimeout(
-        freighter.signTransaction(xdr, expectedPassphrase ? { networkPassphrase: expectedPassphrase } : undefined),
+      return await trackSignatureRequest(
+        async () => {
+          const response = await signTransaction(
+            xdr,
+            expectedPassphrase ? { networkPassphrase: expectedPassphrase } : undefined,
+          );
+          const signedXdr =
+            typeof response === 'string'
+              ? response
+              : ((
+                  response as { signedTxXdr?: string; signedXDR?: string; xdr?: string }
+                )?.signedTxXdr ??
+                (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })
+                  ?.signedXDR ??
+                (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })
+                  ?.xdr);
+
+          if (!signedXdr) {
+            throw new Error('Freighter did not return a signed transaction payload.');
+          }
+          return signedXdr;
+        },
+        (signatureStatus) =>
+          set(
+            signatureStatus === 'requesting'
+              ? { signatureStatus, error: null }
+              : { signatureStatus },
+          ),
+        options?.timeoutMs ?? DEFAULT_SIGNATURE_TIMEOUT_MS,
       );
-      const signedXdr =
-        typeof response === 'string'
-          ? response
-          : (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.signedTxXdr ??
-            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.signedXDR ??
-            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.xdr;
-
-      if (!signedXdr) {
-        throw new Error('Freighter did not return a signed transaction payload.');
-      }
-
-      return signedXdr;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Signature request failed.';
-      set({ error: message, status: 'disconnected' });
+      set(
+        get().signatureStatus === 'requesting'
+          ? { signatureStatus: 'idle', error: message }
+          : { error: message },
+      );
       throw error;
     }
   },

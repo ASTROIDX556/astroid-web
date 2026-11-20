@@ -15,7 +15,7 @@ const GROUP_CLASS =
   '[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-2xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-foreground-muted';
 
 const ITEM_CLASS =
-  'flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-sm text-foreground outline-none transition-colors duration-fast data-[selected=true]:bg-surface-secondary data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50';
+  'flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-sm text-foreground outline-none transition-colors duration-fast data-[selected=true]:bg-surface-secondary data-[selected=true]:ring-2 data-[selected=true]:ring-inset data-[selected=true]:ring-ring data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50';
 
 /**
  * Global command menu (⌘K / Ctrl+K) built on cmdk.
