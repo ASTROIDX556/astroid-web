@@ -15,8 +15,8 @@ import { QueryBoundary } from '@/components/dashboard/query-boundary';
 import { StatCard, SectionLabel } from '@/components/dashboard/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { SkeletonCard } from '@/components/ui/skeleton';
+import { FinancialBriefingCard } from '@/features/dashboard/FinancialBriefingCard';
 import {
   CashflowChart,
   CategoryBarChart,
@@ -28,20 +28,9 @@ import { useOverview, useBriefing, useBudgets } from '@/hooks/use-queries';
 import { useAssistantStore } from '@/stores/ui-store';
 import { useHydrated } from '@/hooks/use-hydrated';
 import { usePreferencesStore, type CashflowDisplay, type DashboardCurrency } from '@/stores';
-import { formatCurrency, formatDashboardCurrency, formatNumber, formatRelativeTime } from '@/lib/format';
+import { formatCurrency, formatDashboardCurrency, formatNumber } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
-
-const severityBadge: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
-  info: 'info',
-  success: 'success',
-  warning: 'warning',
-  danger: 'danger',
-  low: 'info',
-  medium: 'warning',
-  high: 'danger',
-  critical: 'danger',
-};
 
 export default function OverviewPage() {
   const overview = useOverview();
@@ -181,89 +170,12 @@ export default function OverviewPage() {
 
         {/* AI briefing */}
         <ErrorBoundary section="AI briefing">
-          <Card elevation="soft" className="relative h-full overflow-hidden">
-            <div
-              className="pointer-events-none absolute inset-0 bg-gold-sheen"
-              aria-hidden
-            />
-            <CardHeader className="relative">
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-gold" aria-hidden />
-                Briefing
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative">
-              <QueryBoundary
-                query={briefing}
-                loading={
-                  <div className="space-y-3">
-                    <div className="skeleton h-4 w-3/4 rounded-sm" />
-                    <div className="skeleton h-16 w-full rounded-sm" />
-                    <div className="skeleton h-16 w-full rounded-sm" />
-                  </div>
-                }
-              >
-                {(data) => (
-                  <div className="space-y-4">
-                    <div>
-                      <p className="font-display text-base font-semibold">
-                        {data?.greeting ?? 'Financial Executive Briefing'}
-                      </p>
-                      <p className="mt-1 text-xs leading-relaxed text-foreground-secondary">
-                        {data?.summary ?? 'Treasury systems operating normally.'}
-                      </p>
-                    </div>
-                    <ul className="space-y-2.5">
-                      {(data?.insights ?? []).slice(0, 3).map((insight) => (
-                        <li
-                          key={insight.id}
-                          className="rounded-sm border border-border bg-surface/60 p-3"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-xs font-medium text-foreground">
-                              {insight.title}
-                            </p>
-                            <Badge
-                              variant={severityBadge[insight.severity] ?? 'info'}
-                              size="sm"
-                            >
-                              {insight.severity}
-                            </Badge>
-                          </div>
-                          <p className="mt-1 text-2xs leading-relaxed text-foreground-secondary">
-                            {insight.detail}
-                          </p>
-                          {insight.action && (
-                            <Link
-                              href={insight.action.href}
-                              className="mt-1.5 inline-flex items-center gap-1 text-2xs font-medium text-gold-strong hover:underline"
-                            >
-                              {insight.action.label}
-                              <ArrowUpRight className="h-3 w-3" aria-hidden />
-                            </Link>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => openAssistant(true)}
-                    >
-                      Open assistant
-                    </Button>
-                    <p className="text-center text-2xs text-foreground-muted">
-                      Generated{' '}
-                      {data?.generatedAt
-                        ? formatRelativeTime(data.generatedAt)
-                        : 'just now'}
-                    </p>
-                  </div>
-                )}
-              </QueryBoundary>
-            </CardContent>
-          </Card>
+          <FinancialBriefingCard
+            briefing={briefing.data ?? null}
+            loading={briefing.isPending}
+            error={briefing.error?.message ?? null}
+            onOpenAssistant={() => openAssistant(true)}
+          />
         </ErrorBoundary>
       </div>
 
