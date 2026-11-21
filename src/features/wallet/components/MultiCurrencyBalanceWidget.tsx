@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Coins, DollarSign, Layers } from 'lucide-react';
+import { Coins, DollarSign, Layers, WifiOff } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AnimatedNumber } from '@/components/ui/motion';
@@ -23,6 +23,22 @@ const CATEGORY_LABEL: Record<Exclude<AssetFilter, 'all'>, string> = {
   stablecoin: 'Stablecoin',
   custom: 'Custom',
 };
+
+/** Skeleton row shown while balances are being fetched. */
+function BalanceSkeleton() {
+  return (
+    <li aria-hidden className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+      <div className="flex items-center gap-3">
+        <span className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
+        <div className="flex flex-col gap-1.5">
+          <span className="h-3 w-16 animate-pulse rounded-xs bg-surface-secondary" />
+          <span className="h-2.5 w-24 animate-pulse rounded-xs bg-surface-secondary" />
+        </div>
+      </div>
+      <span className="h-3 w-14 animate-pulse rounded-xs bg-surface-secondary" />
+    </li>
+  );
+}
 
 function classifyAsset(code: string): Exclude<AssetFilter, 'all'> {
   if (NATIVE_CODES.has(code)) return 'native';
@@ -56,6 +72,8 @@ const filterOptions: { value: AssetFilter; label: string; icon: React.ReactNode 
 interface MultiCurrencyBalanceWidgetProps {
   balances: AssetBalance[];
   className?: string;
+  isLoading?: boolean;
+  isOffline?: boolean;
 }
 
 /**
@@ -67,6 +85,8 @@ interface MultiCurrencyBalanceWidgetProps {
 export function MultiCurrencyBalanceWidget({
   balances,
   className,
+  isLoading = false,
+  isOffline = false,
 }: MultiCurrencyBalanceWidgetProps) {
   const [filter, setFilter] = useState<AssetFilter>('all');
   const [showZeroBalances, setShowZeroBalances] = useState(true);
@@ -85,6 +105,7 @@ export function MultiCurrencyBalanceWidget({
   }, [balances, filter, showZeroBalances]);
 
   const hasZeroBalances = balances.some((b) => b.balance === 0);
+  const showSkeleton = isLoading && balances.length === 0;
 
   return (
     <Card
@@ -100,10 +121,16 @@ export function MultiCurrencyBalanceWidget({
           </p>
           <p className="tabular font-display text-3xl font-semibold tracking-tight">
             <AnimatedNumber
-              value={totalUsdValue}
+              value={isOffline ? 0 : totalUsdValue}
               formatter={(v) => formatCurrency(v, 'USDC')}
             />
           </p>
+          {isOffline && (
+            <p role="status" className="gap-1 mt-1 flex items-center text-2xs text-foreground-secondary">
+              <WifiOff className="h-3 w-3" aria-hidden />
+              Offline — showing last known values unavailable
+            </p>
+          )}
         </div>
 
         <div
@@ -147,7 +174,9 @@ export function MultiCurrencyBalanceWidget({
       )}
 
       <ul className="mt-4 divide-y divide-border" aria-label="Asset balances">
-        {visibleBalances.length === 0 ? (
+        {showSkeleton ? (
+          Array.from({ length: 3 }).map((_, i) => <BalanceSkeleton key={i} />)
+        ) : visibleBalances.length === 0 ? (
           <li className="py-6 text-center text-sm text-foreground-secondary">
             No assets match this filter.
           </li>
