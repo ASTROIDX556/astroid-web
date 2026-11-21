@@ -49,6 +49,8 @@ npm run dev       # http://localhost:3001
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | Yes (prod) | Base URL of `astroid-api`, e.g. `https://api.example.com` |
 | `NEXT_PUBLIC_API_VERSION` | No | API version prefix, defaults to `/api/v1` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes (prod) | Supabase project URL for telemetry and subscriptions |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes (prod) | Supabase public anon key |
 
 ## Scripts
 

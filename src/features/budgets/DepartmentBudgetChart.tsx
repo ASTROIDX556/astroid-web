@@ -15,9 +15,15 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/format';
 import type { DepartmentBudget } from './types';
+import {
+  calculateConsumptionPercent,
+  normalizeThreshold,
+} from './utils/budgetConsumption';
 
 interface DepartmentBudgetChartProps {
   data: DepartmentBudget[];
+  warningThreshold?: number;
+  criticalThreshold?: number;
 }
 
 interface DepartmentChartRow {
@@ -25,17 +31,26 @@ interface DepartmentChartRow {
   department: string;
   limit: number;
   spent: number;
+  remaining: number;
   asset: DepartmentBudget['asset'];
   utilization: number;
 }
 
-function utilizationColor(value: number): string {
-  if (value >= 100) return 'rgb(var(--danger))';
-  if (value >= 80) return 'rgb(var(--warning))';
+function utilizationColor(value: number, warning: number, critical: number): string {
+  if (value >= critical) return 'rgb(var(--danger))';
+  if (value >= warning) return 'rgb(var(--warning))';
   return 'rgb(var(--chart-1))';
 }
 
-export function DepartmentBudgetChart({ data }: DepartmentBudgetChartProps) {
+export function DepartmentBudgetChart({
+  data,
+  warningThreshold = 80,
+  criticalThreshold = 95,
+}: DepartmentBudgetChartProps) {
+  const safeWarning = normalizeThreshold(warningThreshold, 80);
+  const safeCritical = normalizeThreshold(criticalThreshold, 95);
+  const warning = Math.min(safeWarning, safeCritical);
+  const critical = Math.max(safeWarning, safeCritical);
   const rows: DepartmentChartRow[] = data
     .filter((department) => department.totalLimit > 0)
     .map((department) => ({
@@ -43,8 +58,9 @@ export function DepartmentBudgetChart({ data }: DepartmentBudgetChartProps) {
       department: department.departmentName,
       limit: department.totalLimit,
       spent: department.totalSpent,
+      remaining: Math.max(0, department.totalLimit - department.totalSpent),
       asset: department.asset,
-      utilization: (department.totalSpent / department.totalLimit) * 100,
+      utilization: calculateConsumptionPercent(department.totalSpent, department.totalLimit),
     }));
   const maxUtilization = rows.reduce(
     (maximum, row) => Math.max(maximum, row.utilization),
@@ -103,9 +119,14 @@ export function DepartmentBudgetChart({ data }: DepartmentBudgetChartProps) {
                   tick={{ fill: 'rgb(var(--text-secondary))', fontSize: 11 }}
                 />
                 <ReferenceLine
-                  x={80}
+                  x={warning}
                   stroke="rgb(var(--warning))"
                   strokeDasharray="4 4"
+                />
+                <ReferenceLine
+                  x={critical}
+                  stroke="rgb(var(--danger))"
+                  strokeDasharray="2 3"
                 />
                 <Tooltip
                   cursor={{ fill: 'rgb(var(--surface-secondary))', opacity: 0.5 }}
@@ -120,7 +141,10 @@ export function DepartmentBudgetChart({ data }: DepartmentBudgetChartProps) {
                           Spent: {formatCurrency(row.spent, row.asset)} of{' '}
                           {formatCurrency(row.limit, row.asset)}
                         </p>
-                        <p className="font-medium" style={{ color: utilizationColor(row.utilization) }}>
+                        <p className="text-foreground-secondary">
+                          Remaining: {formatCurrency(row.remaining, row.asset)}
+                        </p>
+                        <p className="font-medium" style={{ color: utilizationColor(row.utilization, warning, critical) }}>
                           {Math.round(row.utilization)}% utilized
                         </p>
                       </div>
@@ -134,7 +158,7 @@ export function DepartmentBudgetChart({ data }: DepartmentBudgetChartProps) {
                   maxBarSize={24}
                 >
                   {rows.map((row) => (
-                    <Cell key={row.id} fill={utilizationColor(row.utilization)} />
+                    <Cell key={row.id} fill={utilizationColor(row.utilization, warning, critical)} />
                   ))}
                 </Bar>
               </BarChart>
@@ -143,7 +167,7 @@ export function DepartmentBudgetChart({ data }: DepartmentBudgetChartProps) {
         )}
         {rows.length > 0 && (
           <p className="mt-3 border-t border-border pt-3 text-2xs text-foreground-muted">
-            The dashed line marks the 80% review threshold.
+            Dashed lines mark the {warning}% warning and {critical}% critical thresholds.
           </p>
         )}
       </CardContent>
