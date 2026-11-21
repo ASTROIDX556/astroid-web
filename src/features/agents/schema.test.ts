@@ -5,6 +5,8 @@ import {
   PROVIDER_MODELS,
   agentConfigurationEditorSchema,
   agentConfigSchema,
+  agentModelVersionSchema,
+  spendingLimitSchema,
   type AgentConfigurationEditorInput,
 } from './schema';
 import { agentProviderConfigSchema } from './providerConfigSchema';
@@ -184,4 +186,78 @@ test('editor schema requires an http(s) endpoint for self-hosted providers', () 
     });
     assert.equal(valid.success, true, provider);
   }
+});
+
+// ---------------------------------------------------------------------------
+// Model version strings and refined spending limits (#556, #524)
+// ---------------------------------------------------------------------------
+
+test('agentModelVersionSchema validates structured model identifiers and tags', () => {
+  const validModels = [
+    'meta/llama-3.1-405b-instruct',
+    'mistralai/mistral-large-2',
+    'gpt-4o-2024-08-06',
+    'claude-3-5-sonnet@20241022',
+    'custom-model:v1.2.3',
+    'my_org/finance_agent_v2.1',
+  ];
+
+  for (const model of validModels) {
+    const result = agentModelVersionSchema.safeParse(model);
+    assert.equal(result.success, true, model);
+  }
+
+  const invalidModels = [
+    'model with spaces',
+    'meta/llama$invalid',
+    'model<script>',
+    '',
+    '   ',
+  ];
+
+  for (const model of invalidModels) {
+    const result = agentModelVersionSchema.safeParse(model);
+    assert.equal(result.success, false, model);
+  }
+});
+
+test('editor schema rejects model strings containing invalid version characters', () => {
+  const result = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    provider: 'Custom',
+    model: 'custom model with spaces',
+    endpointUrl: 'https://inference.example.com/v1',
+  }) as ParseResult;
+
+  assert.equal(result.success, false);
+  assert.equal(issueFor(result, 'model'), 'Model version string contains invalid characters.');
+});
+
+test('spendingLimitSchema enforces positive finite numerical bounds', () => {
+  assert.equal(spendingLimitSchema.safeParse(500).success, true);
+  assert.equal(spendingLimitSchema.safeParse(100_000_000).success, true);
+
+  for (const invalid of [0, -10, NaN, Infinity, -Infinity, 100_000_001, '500']) {
+    assert.equal(spendingLimitSchema.safeParse(invalid).success, false, String(invalid));
+  }
+});
+
+test('editor schema enforces dailySpendingLimit within maxBudget', () => {
+  const valid = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    maxBudget: 1000,
+    dailySpendingLimit: 250,
+  });
+  assert.equal(valid.success, true);
+
+  const exceeded = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    maxBudget: 1000,
+    dailySpendingLimit: 1500,
+  }) as ParseResult;
+  assert.equal(exceeded.success, false);
+  assert.equal(
+    issueFor(exceeded, 'dailySpendingLimit'),
+    'Daily spending limit cannot exceed the max budget.',
+  );
 });
