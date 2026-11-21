@@ -10,59 +10,57 @@ export interface AgentUpdateVariables {
 export interface AgentConfig {
   id: string;
   name: string;
-  spendingThreshold?: number;
-  allowedModels?: string[];
-  fallbackProviders?: string[];
+  model: string;
+  spendingThreshold: number;
+  allowedModels: string[];
+  fallbackProvider: string;
   [key: string]: any;
 }
 
 async function updateAgentApi(agent: AgentConfig): Promise<AgentConfig> {
-  // Simulated API call
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (agent.name === 'FAIL_TEST') {
-        reject(new Error('Failed to update agent'));
-      } else {
-        resolve(agent);
-      }
-    }, 200);
+  const response = await fetch(`/api/agents/${agent.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(agent),
   });
+  if (!response.ok) {
+    throw new Error('Failed to update agent configuration');
+  }
+  return response.json();
 }
 
 export function useAgentMutation(agentId?: string) {
+  const effectiveAgentId = agentId || 'agent-mock-id';
   const queryClient = useQueryClient();
-
-  const effectiveId = agentId || 'agent-mock-id';
 
   return useMutation({
     mutationFn: (variables: AgentUpdateVariables) => {
-      const id = variables.id || effectiveId;
-      return updateAgentApi({ id, name: 'Agent', ...variables.data });
+      const id = variables.id || effectiveAgentId;
+      return updateAgentApi({ id, name: 'Agent', model: 'gpt-4', spendingThreshold: 100, allowedModels: [], fallbackProvider: 'openai', ...variables.data });
     },
-    onMutate: async (variables) => {
-      const id = variables.id || effectiveId;
+    onMutate: async (variables: AgentUpdateVariables) => {
+      const id = variables.id || effectiveAgentId;
       await queryClient.cancelQueries({ queryKey: ['agent', id] });
 
       const previousAgent = queryClient.getQueryData<AgentConfig>(['agent', id]);
 
-      queryClient.setQueryData<AgentConfig>(['agent', id], (old) => {
-        if (!old) return { id, name: 'Agent', ...variables.data };
-        return { ...old, ...variables.data };
+      queryClient.setQueryData(['agent', id], (old: AgentConfig | undefined) => {
+        return old ? { ...old, ...variables.data } : { id, name: 'Agent', model: 'gpt-4', spendingThreshold: 100, allowedModels: [], fallbackProvider: 'openai', ...variables.data };
       });
 
       return { previousAgent, id };
     },
-    onError: (err, _variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context?.previousAgent && context?.id) {
         queryClient.setQueryData(['agent', context.id], context.previousAgent);
       }
-      toast.error(`Failed to update agent config: ${err.message}`);
+      toast.error('Failed to update agent configuration. Changes rolled back.');
     },
     onSuccess: () => {
-      toast.success('Agent configuration updated successfully');
+      toast.success('Agent configuration updated successfully!');
     },
     onSettled: (_data, _error, _variables, context) => {
-      const id = context?.id || effectiveId;
+      const id = context?.id || effectiveAgentId;
       queryClient.invalidateQueries({ queryKey: ['agent', id] });
     },
   });
