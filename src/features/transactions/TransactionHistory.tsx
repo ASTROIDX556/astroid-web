@@ -20,6 +20,7 @@ import type { Transaction } from '@/types/domain';
 import { TransactionDetailDrawer } from './TransactionDetailDrawer';
 import { TransactionFilters } from './TransactionFilters';
 import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
+import { usePersistedTransactionFilters } from './usePersistedTransactionFilters';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
@@ -62,7 +63,7 @@ export function TransactionHistory({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<TransactionFilterValues>(() =>
+  const [filters, setFilters] = usePersistedTransactionFilters(
     initialFilters(searchParams),
   );
 
