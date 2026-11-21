@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import { downloadCsv } from '@/lib/csv';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -18,12 +17,12 @@ import { transactionStatus } from '@/lib/status';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { TransactionDetailDrawer } from './TransactionDetailDrawer';
-import { TransactionFilters } from './TransactionFilters';
+import { TransactionExportToolbar } from './TransactionExportToolbar';
+import { TransactionFilterBar } from './TransactionFilterBar';
 import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
-  onExportCSV?: (transactions: Transaction[]) => void;
 }
 
 const transactionStatuses: Transaction['status'][] = [
@@ -54,10 +53,7 @@ function initialFilters(searchParams: URLSearchParams): TransactionFilterValues 
   };
 }
 
-export function TransactionHistory({
-  transactions,
-  onExportCSV,
-}: TransactionHistoryProps) {
+export function TransactionHistory({ transactions }: TransactionHistoryProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -101,29 +97,6 @@ export function TransactionHistory({
     [selectedId, transactions],
   );
 
-  const exportTransactions = (rows: Transaction[]) => {
-    downloadCsv(
-      rows,
-      [
-        { header: 'ID', value: (transaction) => transaction.id },
-        { header: 'Recipient', value: (transaction) => transaction.counterparty },
-        { header: 'Recipient address', value: (transaction) => transaction.counterpartyAddress },
-        { header: 'Purpose', value: (transaction) => transaction.purpose },
-        { header: 'Agent', value: (transaction) => transaction.agentName ?? '' },
-        {
-          header: 'Amount',
-          value: (transaction) => transaction.direction === 'outbound'
-            ? -transaction.amount
-            : transaction.amount,
-        },
-        { header: 'Asset', value: (transaction) => transaction.asset },
-        { header: 'Status', value: (transaction) => transaction.status },
-        { header: 'Timestamp', value: (transaction) => transaction.createdAt },
-      ],
-      `transactions-${new Date().toISOString().slice(0, 10)}.csv`,
-    );
-  };
-
   const summary = useMemo(
     () => ({
       totalValue: filteredTransactions.reduce((sum, tx) => sum + tx.usdValue, 0),
@@ -137,6 +110,15 @@ export function TransactionHistory({
 
   return (
     <div className="space-y-5">
+      <TransactionExportToolbar
+        transactions={transactions}
+        dateFrom={filters.dateFrom}
+        dateTo={filters.dateTo}
+        onDateRangeChange={({ dateFrom, dateTo }) =>
+          setFilters((current) => ({ ...current, dateFrom, dateTo }))
+        }
+      />
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
           <div className="flex items-center justify-between">
@@ -173,13 +155,11 @@ export function TransactionHistory({
         </Card>
       </div>
 
-      <TransactionFilters
+      <TransactionFilterBar
         transactions={transactions}
-        visibleTransactions={filteredTransactions}
         value={filters}
         filteredCount={filteredTransactions.length}
         onChange={setFilters}
-        onExportCSV={onExportCSV}
       />
 
       <DataTable
@@ -187,7 +167,6 @@ export function TransactionHistory({
         pageSize={8}
         pageSizeOptions={[8, 16, 32, 64]}
         caption="Transaction activity"
-        onExportCSV={exportTransactions}
         onRowClick={(transaction) => setSelectedId(transaction.id)}
         getRowId={(row) => row.id}
         emptyState={

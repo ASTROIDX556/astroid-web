@@ -1,3 +1,5 @@
+/** Shared CSV primitives — RFC 4180 quoting plus spreadsheet-safe text cells. */
+
 export type CsvCell = string | number | boolean | Date | null | undefined;
 export type CsvValue = CsvCell;
 
@@ -6,8 +8,21 @@ export interface CsvColumn<TData> {
   value: (row: TData) => CsvCell;
 }
 
+/** Leading characters spreadsheet apps can interpret as a formula. */
+const FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
+/**
+ * Quotes a single field, doubles embedded quotes and prefixes text that could
+ * be imported as a spreadsheet formula with an apostrophe. Numbers and booleans
+ * keep their native representation so amounts remain numeric in spreadsheets.
+ */
 function escapeCsvCell(value: CsvCell): string {
-  return `"${String(value instanceof Date ? value.toISOString() : value ?? '').replace(/"/g, '""')}"`;
+  if (value instanceof Date) return `"${value.toISOString()}"`;
+  if (typeof value === 'number' || typeof value === 'boolean') return `"${value}"`;
+
+  const text = value == null ? '' : String(value);
+  const safeText = FORMULA_PREFIX.test(text) ? `'${text}` : text;
+  return `"${safeText.replace(/"/g, '""')}"`;
 }
 
 export function serializeCsv<TData>(

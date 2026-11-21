@@ -1,18 +1,16 @@
 'use client';
 
-import { FileSpreadsheet, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
 import type { Transaction, TransactionStatus } from '@/types/domain';
 import type { TransactionFilterValues } from './filterTransactions';
 
-interface TransactionFiltersProps {
+interface TransactionFilterBarProps {
   transactions: Transaction[];
-  visibleTransactions: Transaction[];
   value: TransactionFilterValues;
   filteredCount: number;
   onChange: (value: TransactionFilterValues) => void;
-  onExportCSV?: (transactions: Transaction[]) => void;
 }
 
 const STATUSES: TransactionStatus[] = [
@@ -28,14 +26,12 @@ const STATUSES: TransactionStatus[] = [
   'failed',
 ];
 
-export function TransactionFilters({
+export function TransactionFilterBar({
   transactions,
-  visibleTransactions,
   value,
   filteredCount,
   onChange,
-  onExportCSV,
-}: TransactionFiltersProps) {
+}: TransactionFilterBarProps) {
   const assets = Array.from(
     new Set(transactions.map((transaction) => transaction.asset)),
   ).sort();
@@ -62,7 +58,7 @@ export function TransactionFilters({
 
   return (
     <section aria-label="Transaction filters" className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <label className="gap-1.5 flex min-w-0 flex-col sm:col-span-2 xl:col-span-2">
           <span className="text-xs font-medium text-foreground">
             Search transactions
@@ -131,27 +127,6 @@ export function TransactionFilters({
           </Select>
         </label>
 
-        <label className="gap-1.5 flex min-w-0 flex-col">
-          <span className="text-xs font-medium text-foreground">From date</span>
-          <Input
-            type="date"
-            value={value.dateFrom}
-            max={value.dateTo || undefined}
-            onChange={(event) => update({ dateFrom: event.target.value })}
-            aria-label="Filter transactions from date"
-          />
-        </label>
-
-        <label className="gap-1.5 flex min-w-0 flex-col">
-          <span className="text-xs font-medium text-foreground">To date</span>
-          <Input
-            type="date"
-            value={value.dateTo}
-            min={value.dateFrom || undefined}
-            onChange={(event) => update({ dateTo: event.target.value })}
-            aria-label="Filter transactions to date"
-          />
-        </label>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
@@ -183,17 +158,6 @@ export function TransactionFilters({
             </Button>
           )}
         </div>
-        {onExportCSV && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => onExportCSV(visibleTransactions)}
-          >
-            <FileSpreadsheet className="mr-1.5 h-4 w-4" aria-hidden />
-            Export CSV
-          </Button>
-        )}
       </div>
     </section>
   );
