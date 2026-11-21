@@ -4,7 +4,13 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { useThemeStore } from '@/stores/theme-store';
 
-export function PageTransition({ children, className }: { children: React.ReactNode; className?: string }) {
+export function PageTransition({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   const pathname = usePathname();
   const systemReducedMotion = useReducedMotion();
   const preferenceReducedMotion = useThemeStore((state) => state.reducedMotion);

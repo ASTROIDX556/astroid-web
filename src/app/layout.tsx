@@ -92,7 +92,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             theme="system"
             toastOptions={{
               classNames: {
-                toast: 'glass !rounded-md !border-border !text-foreground !shadow-soft-2 font-sans',
+                toast:
+                  'glass !rounded-md !border-border !text-foreground !shadow-soft-2 font-sans',
                 title: '!text-foreground',
                 description: '!text-foreground-secondary',
                 actionButton: '!bg-gold !text-gold-foreground',

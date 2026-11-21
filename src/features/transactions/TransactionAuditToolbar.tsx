@@ -63,28 +63,30 @@ export function TransactionAuditToolbar({
     router.replace(pathname, { scroll: false });
   };
 
-  const hasActiveFilters = Boolean(searchTerm || statusFilter !== 'all' || assetFilter !== 'all');
+  const hasActiveFilters = Boolean(
+    searchTerm || statusFilter !== 'all' || assetFilter !== 'all',
+  );
 
   return (
     <div className="space-y-4">
       {/* Toolbar Container */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-        <div className="flex flex-wrap items-center gap-2.5 flex-1">
+        <div className="gap-2.5 flex flex-1 flex-wrap items-center">
           {/* Debounced Search Input */}
-          <div className="relative min-w-[220px] flex-1 max-w-sm">
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-foreground-muted" />
+          <div className="relative min-w-[220px] max-w-sm flex-1">
+            <Search className="top-2.5 h-3.5 w-3.5 absolute left-3 text-foreground-muted" />
             <input
               type="text"
               placeholder="Search by agent name, tx hash, or recipient address..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-button border border-border bg-surface pl-9 pr-8 py-1.5 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
+              className="py-1.5 w-full rounded-button border border-border bg-surface pl-9 pr-8 text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-2.5 text-foreground-muted hover:text-foreground"
+                className="right-2.5 top-2.5 absolute text-foreground-muted hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -95,7 +97,7 @@ export function TransactionAuditToolbar({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-button border border-border bg-surface px-3 py-1.5 text-xs text-foreground font-medium focus:border-gold focus:outline-none"
+            className="py-1.5 rounded-button border border-border bg-surface px-3 text-xs font-medium text-foreground focus:border-gold focus:outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="success">Success</option>
@@ -107,7 +109,7 @@ export function TransactionAuditToolbar({
           <select
             value={assetFilter}
             onChange={(e) => setAssetFilter(e.target.value)}
-            className="rounded-button border border-border bg-surface px-3 py-1.5 text-xs text-foreground font-medium focus:border-gold focus:outline-none"
+            className="py-1.5 rounded-button border border-border bg-surface px-3 text-xs font-medium text-foreground focus:border-gold focus:outline-none"
           >
             <option value="all">All Assets</option>
             <option value="USDC">USDC</option>
@@ -126,13 +128,18 @@ export function TransactionAuditToolbar({
             </button>
           )}
         </div>
-
       </div>
 
       {/* Record Counter */}
       <div className="flex items-center justify-between text-2xs text-foreground-muted">
-        <span>Showing {filteredRecordsCount} of {totalRecordsCount} transactions</span>
-        {hasActiveFilters && <span className="font-mono text-gold font-medium">URL state synchronized</span>}
+        <span>
+          Showing {filteredRecordsCount} of {totalRecordsCount} transactions
+        </span>
+        {hasActiveFilters && (
+          <span className="font-mono font-medium text-gold">
+            URL state synchronized
+          </span>
+        )}
       </div>
     </div>
   );

@@ -40,8 +40,8 @@ export function NetworkHealthWidget() {
 
   if (isLoading && !data) {
     return (
-      <div className="flex items-center gap-2 rounded-button border border-border bg-surface px-2.5 py-1 text-2xs text-foreground-muted animate-pulse">
-        <Activity className="h-3.5 w-3.5 text-gold animate-spin" />
+      <div className="px-2.5 flex animate-pulse items-center gap-2 rounded-button border border-border bg-surface py-1 text-2xs text-foreground-muted">
+        <Activity className="h-3.5 w-3.5 animate-spin text-gold" />
         <span>Ping RPC...</span>
       </div>
     );
@@ -52,7 +52,7 @@ export function NetworkHealthWidget() {
       <div
         role="status"
         aria-label="Stellar RPC network health: offline"
-        className="flex items-center gap-1.5 rounded-button border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-2xs font-semibold text-rose-400"
+        className="gap-1.5 px-2.5 flex items-center rounded-button border border-rose-500/30 bg-rose-500/10 py-1 text-2xs font-semibold text-rose-400"
       >
         <XCircle className="h-3.5 w-3.5" aria-hidden />
         <span>RPC Offline</span>
@@ -83,7 +83,7 @@ export function NetworkHealthWidget() {
         onClick={() => setIsOpen((prev) => !prev)}
         aria-controls={isOpen ? panelId : undefined}
         className={cn(
-          'flex items-center gap-2 rounded-button border border-border bg-surface px-2.5 py-1.5 text-2xs font-medium transition-colors hover:border-gold hover:bg-surface-secondary',
+          'px-2.5 py-1.5 flex items-center gap-2 rounded-button border border-border bg-surface text-2xs font-medium transition-colors hover:border-gold hover:bg-surface-secondary',
           WIDGET_FOCUS,
         )}
         aria-label={`Stellar network health: ${data.status}, ${data.rpcLatencyMs} milliseconds latency. Toggle health details`}
@@ -103,15 +103,19 @@ export function NetworkHealthWidget() {
           />
         </span>
 
-        <span className="hidden sm:inline-block font-mono text-foreground font-semibold">
+        <span className="hidden font-mono font-semibold text-foreground sm:inline-block">
           #{data.ledgerSequence}
         </span>
 
-        <span className="font-mono text-foreground-secondary tabular">
+        <span className="tabular font-mono text-foreground-secondary">
           {data.rpcLatencyMs}ms
         </span>
 
-        <Badge variant={badgeVariant} size="sm" className="capitalize text-3xs py-0 px-1.5">
+        <Badge
+          variant={badgeVariant}
+          size="sm"
+          className="text-3xs px-1.5 py-0 capitalize"
+        >
           {data.status}
         </Badge>
 
@@ -124,10 +128,10 @@ export function NetworkHealthWidget() {
           id={panelId}
           role="dialog"
           aria-label="Stellar network health details"
-          className="absolute right-0 top-full mt-2 z-50 w-72 rounded-card border border-border bg-surface p-4 shadow-xl space-y-3"
+          className="w-72 absolute right-0 top-full z-50 mt-2 space-y-3 rounded-card border border-border bg-surface p-4 shadow-xl"
         >
           <div className="flex items-center justify-between border-b border-border pb-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <div className="gap-1.5 flex items-center text-xs font-semibold text-foreground">
               <Activity className="h-4 w-4 text-gold" />
               <span>{data.networkName} Health</span>
             </div>
@@ -136,19 +140,22 @@ export function NetworkHealthWidget() {
               onClick={() => refetch()}
               disabled={isFetching}
               className={cn(
-                'grid h-6 w-6 place-items-center rounded-xs text-foreground-muted hover:text-foreground transition-colors',
+                'grid h-6 w-6 place-items-center rounded-xs text-foreground-muted transition-colors hover:text-foreground',
                 WIDGET_FOCUS,
               )}
               title="Refresh RPC latency"
               aria-label="Refresh network health"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin text-gold' : ''}`} aria-hidden />
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin text-gold' : ''}`}
+                aria-hidden
+              />
             </button>
           </div>
 
           <div className="space-y-2 text-xs">
-            <div className="flex justify-between items-center bg-surface-secondary/60 p-2 rounded-button">
-              <span className="flex items-center gap-1.5 text-foreground-secondary text-2xs">
+            <div className="flex items-center justify-between rounded-button bg-surface-secondary/60 p-2">
+              <span className="gap-1.5 flex items-center text-2xs text-foreground-secondary">
                 <Cpu className="h-3.5 w-3.5 text-gold" />
                 <span>Soroban RPC Node</span>
               </span>
@@ -157,8 +164,8 @@ export function NetworkHealthWidget() {
               </Badge>
             </div>
 
-            <div className="flex justify-between items-center bg-surface-secondary/60 p-2 rounded-button">
-              <span className="flex items-center gap-1.5 text-foreground-secondary text-2xs">
+            <div className="flex items-center justify-between rounded-button bg-surface-secondary/60 p-2">
+              <span className="gap-1.5 flex items-center text-2xs text-foreground-secondary">
                 <Server className="h-3.5 w-3.5 text-blue-400" />
                 <span>Horizon API Node</span>
               </span>
@@ -167,7 +174,7 @@ export function NetworkHealthWidget() {
               </Badge>
             </div>
 
-            <div className="flex justify-between items-center pt-1 text-2xs text-foreground-muted font-mono">
+            <div className="flex items-center justify-between pt-1 font-mono text-2xs text-foreground-muted">
               <span>Ledgers Closed: #{data.ledgerSequence}</span>
               <span>Latency: {data.rpcLatencyMs} ms</span>
             </div>

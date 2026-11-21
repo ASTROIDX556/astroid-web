@@ -41,7 +41,7 @@ function DepartmentBudgetTooltip({ active, payload }: CustomTooltipProps) {
   return (
     <div className="rounded-button border border-border bg-surface p-3 text-xs shadow-lg">
       <p className="font-semibold text-foreground">{firstEntry.department}</p>
-      <div className="mt-1.5 space-y-1 tabular text-foreground-secondary">
+      <div className="mt-1.5 tabular space-y-1 text-foreground-secondary">
         <p>
           Allocated:{' '}
           <span className="font-medium text-foreground">
@@ -62,7 +62,9 @@ function DepartmentBudgetTooltip({ active, payload }: CustomTooltipProps) {
         </p>
         <p>
           Utilization:{' '}
-          <span className="font-medium text-gold">{firstEntry.utilizationPercent}%</span>
+          <span className="font-medium text-gold">
+            {firstEntry.utilizationPercent}%
+          </span>
         </p>
       </div>
     </div>
@@ -80,7 +82,7 @@ export function DepartmentBudgetChart({
 
   if (data.length === 0) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-card border border-dashed border-border bg-surface/40 p-6 text-xs text-foreground-secondary">
+      <div className="h-48 flex items-center justify-center rounded-card border border-dashed border-border bg-surface/40 p-6 text-xs text-foreground-secondary">
         No department budget allocations available to display.
       </div>
     );

@@ -141,9 +141,8 @@ export const resources = {
    * authorization flags that the aggregated balance cards do not need.
    */
   getWalletTrustlines: (id: string): Promise<HorizonBalance[]> =>
-    resolve(
-      mockTrustlineBalances,
-      () => one<HorizonBalance[]>(`/wallets/${id}/trustlines`),
+    resolve(mockTrustlineBalances, () =>
+      one<HorizonBalance[]>(`/wallets/${id}/trustlines`),
     ),
 
   // -- agents -------------------------------------------------------------

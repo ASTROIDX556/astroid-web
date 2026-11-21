@@ -1,15 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import {
-
-  ShieldCheck,
-  ShieldOff,
-  Zap,
-  Clock,
-  User,
-  AlertTriangle,
-} from 'lucide-react';
+import { ShieldCheck, ShieldOff, Zap, Clock, User, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,7 +61,7 @@ function TopbarIndicator({ currentUser }: { currentUser: string }) {
           'relative grid h-9 w-9 place-items-center rounded-button transition-all duration-fast',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           status === 'frozen'
-            ? 'bg-danger/10 text-danger animate-pulse hover:bg-danger/20'
+            ? 'animate-pulse bg-danger/10 text-danger hover:bg-danger/20'
             : 'text-foreground-secondary hover:bg-surface-secondary hover:text-foreground',
         )}
         aria-label={
@@ -160,7 +152,9 @@ function SettingsPanel({ currentUser }: { currentUser: string }) {
             )}
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">
-                {status === 'frozen' ? 'Circuit Breaker Active' : 'All Systems Operational'}
+                {status === 'frozen'
+                  ? 'Circuit Breaker Active'
+                  : 'All Systems Operational'}
               </p>
               <p className="text-xs text-foreground-secondary">
                 {status === 'frozen'
@@ -168,11 +162,7 @@ function SettingsPanel({ currentUser }: { currentUser: string }) {
                   : 'Agent transactions are proceeding normally.'}
               </p>
             </div>
-            <Badge
-              variant={status === 'frozen' ? 'danger' : 'success'}
-              size="sm"
-              dot
-            >
+            <Badge variant={status === 'frozen' ? 'danger' : 'success'} size="sm" dot>
               {status === 'frozen' ? 'FROZEN' : 'OPERATIONAL'}
             </Badge>
           </div>
@@ -185,12 +175,12 @@ function SettingsPanel({ currentUser }: { currentUser: string }) {
               </h4>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                 <dt className="text-foreground-muted">Tripped at</dt>
-                <dd className="flex items-center gap-1.5 font-medium text-foreground">
+                <dd className="gap-1.5 flex items-center font-medium text-foreground">
                   <Clock className="h-3 w-3 text-foreground-muted" />
                   {formatTimestamp(trippedAt)}
                 </dd>
                 <dt className="text-foreground-muted">Initiated by</dt>
-                <dd className="flex items-center gap-1.5 font-medium text-foreground">
+                <dd className="gap-1.5 flex items-center font-medium text-foreground">
                   <User className="h-3 w-3 text-foreground-muted" />
                   {trippedBy ?? '—'}
                 </dd>
@@ -221,7 +211,7 @@ function SettingsPanel({ currentUser }: { currentUser: string }) {
               )}
             </Button>
             {status === 'frozen' && (
-              <div className="flex items-center gap-1.5 text-2xs text-danger">
+              <div className="gap-1.5 flex items-center text-2xs text-danger">
                 <AlertTriangle className="h-3 w-3" />
                 Active — all agents halted
               </div>

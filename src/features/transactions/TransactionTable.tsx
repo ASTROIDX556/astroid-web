@@ -27,7 +27,9 @@ export function TransactionTable({ transactions, className }: TransactionTablePr
           return (
             <div className="min-w-0">
               <p className="truncate font-medium text-foreground">{tx.counterparty}</p>
-              <p className="tabular text-2xs text-foreground-muted">{truncateHash(tx.counterpartyAddress)}</p>
+              <p className="tabular text-2xs text-foreground-muted">
+                {truncateHash(tx.counterpartyAddress)}
+              </p>
             </div>
           );
         },
@@ -35,12 +37,18 @@ export function TransactionTable({ transactions, className }: TransactionTablePr
       {
         accessorKey: 'purpose',
         header: 'Purpose',
-        cell: ({ row }) => <span className="text-foreground-secondary">{row.original.purpose}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground-secondary">{row.original.purpose}</span>
+        ),
       },
       {
         accessorKey: 'agentName',
         header: 'Agent',
-        cell: ({ row }) => <span className="text-foreground-secondary">{row.original.agentName ?? '—'}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground-secondary">
+            {row.original.agentName ?? '—'}
+          </span>
+        ),
       },
       {
         accessorKey: 'amount',
@@ -51,7 +59,7 @@ export function TransactionTable({ transactions, className }: TransactionTablePr
           const Icon = outbound ? ArrowUpRight : ArrowDownLeft;
           return (
             <span
-              className={`inline-flex items-center justify-end gap-1 font-medium tabular ${
+              className={`tabular inline-flex items-center justify-end gap-1 font-medium ${
                 outbound ? 'text-foreground' : 'text-success'
               }`}
             >
@@ -78,13 +86,15 @@ export function TransactionTable({ transactions, className }: TransactionTablePr
       {
         accessorKey: 'riskScore',
         header: 'Risk',
-        cell: ({ row }) => <RiskBadge score={row.original.riskScore} />, 
+        cell: ({ row }) => <RiskBadge score={row.original.riskScore} />,
       },
       {
         accessorKey: 'createdAt',
         header: 'When',
         cell: ({ row }) => (
-          <span className="text-2xs text-foreground-muted">{formatRelativeTime(row.original.createdAt)}</span>
+          <span className="text-2xs text-foreground-muted">
+            {formatRelativeTime(row.original.createdAt)}
+          </span>
         ),
         meta: { className: 'text-right' },
       },

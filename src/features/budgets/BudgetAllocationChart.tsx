@@ -11,8 +11,19 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { AlertTriangle, ShieldAlert, BarChart3, Table as TableIcon } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  AlertTriangle,
+  ShieldAlert,
+  BarChart3,
+  Table as TableIcon,
+} from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChartFrame } from '@/components/charts/chart-frame';
 import {
@@ -24,7 +35,12 @@ import {
   type BudgetStatus,
 } from '@/components/charts/theme';
 import { formatCurrency } from '@/lib/format';
-import { ChartTooltipShell, useMounted, ChartSkeleton, ChartEmptyState } from '@/components/charts/theme';
+import {
+  ChartTooltipShell,
+  useMounted,
+  ChartSkeleton,
+  ChartEmptyState,
+} from '@/components/charts/theme';
 
 export interface BudgetDepartmentData {
   id: string;
@@ -43,11 +59,41 @@ export interface BudgetAllocationChartProps {
 }
 
 const DEFAULT_BUDGET_DATA: BudgetDepartmentData[] = [
-  { id: '1', department: 'Treasury & Operations', allocated: 25000, consumed: 14500, currency: 'USDC' },
-  { id: '2', department: 'Trading & Arbitrage', allocated: 40000, consumed: 34800, currency: 'USDC' },
-  { id: '3', department: 'R&D AI Cluster', allocated: 15000, consumed: 16200, currency: 'USDC' },
-  { id: '4', department: 'Marketing & Bounties', allocated: 10000, consumed: 4200, currency: 'USDC' },
-  { id: '5', department: 'Security Audit Pool', allocated: 30000, consumed: 21000, currency: 'USDC' },
+  {
+    id: '1',
+    department: 'Treasury & Operations',
+    allocated: 25000,
+    consumed: 14500,
+    currency: 'USDC',
+  },
+  {
+    id: '2',
+    department: 'Trading & Arbitrage',
+    allocated: 40000,
+    consumed: 34800,
+    currency: 'USDC',
+  },
+  {
+    id: '3',
+    department: 'R&D AI Cluster',
+    allocated: 15000,
+    consumed: 16200,
+    currency: 'USDC',
+  },
+  {
+    id: '4',
+    department: 'Marketing & Bounties',
+    allocated: 10000,
+    consumed: 4200,
+    currency: 'USDC',
+  },
+  {
+    id: '5',
+    department: 'Security Audit Pool',
+    allocated: 30000,
+    consumed: 21000,
+    currency: 'USDC',
+  },
 ];
 
 /**
@@ -96,13 +142,15 @@ const CustomTooltip = ({ active, payload }: any) => {
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-foreground-secondary">Remaining:</span>
-          <span className={`tabular font-medium ${data.consumed > data.allocated ? 'text-danger' : 'text-success'}`}>
+          <span
+            className={`tabular font-medium ${data.consumed > data.allocated ? 'text-danger' : 'text-success'}`}
+          >
             {data.consumed > data.allocated ? '−' : ''}
             {formatCurrency(remaining, currency)}
           </span>
         </div>
-        <div className="flex justify-between items-center gap-4 pt-1 border-t border-border/40">
-          <span className="text-foreground-secondary font-medium">Utilization:</span>
+        <div className="flex items-center justify-between gap-4 border-t border-border/40 pt-1">
+          <span className="font-medium text-foreground-secondary">Utilization:</span>
           <span className="tabular font-bold" style={{ color }}>
             {Math.round(utilization)}%
           </span>
@@ -110,13 +158,13 @@ const CustomTooltip = ({ active, payload }: any) => {
       </div>
 
       {status === 'warning' && (
-        <div className="flex items-center gap-1 text-2xs font-medium text-warning pt-1">
+        <div className="flex items-center gap-1 pt-1 text-2xs font-medium text-warning">
           <AlertTriangle className="h-3 w-3 shrink-0" />
           <span>Approaching Limit (≥80%)</span>
         </div>
       )}
       {status === 'danger' && (
-        <div className="flex items-center gap-1 text-2xs font-semibold text-danger pt-1">
+        <div className="flex items-center gap-1 pt-1 text-2xs font-semibold text-danger">
           <ShieldAlert className="h-3 w-3 shrink-0" />
           <span>Budget Limit Exceeded!</span>
         </div>
@@ -179,7 +227,7 @@ export function BudgetAllocationChart({
   return (
     <Card className={`overflow-hidden ${className}`}>
       <CardHeader className="border-b border-border bg-surface-primary/60 pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-gold" aria-hidden="true" />
@@ -198,8 +246,12 @@ export function BudgetAllocationChart({
 
             <button
               onClick={() => setShowTableView((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
-              aria-label={showTableView ? 'Switch to graphical chart view' : 'Switch to accessible tabular view'}
+              className="gap-1.5 px-2.5 py-1.5 inline-flex items-center rounded-md border border-border text-xs font-medium text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={
+                showTableView
+                  ? 'Switch to graphical chart view'
+                  : 'Switch to accessible tabular view'
+              }
             >
               {showTableView ? (
                 <>
@@ -208,7 +260,10 @@ export function BudgetAllocationChart({
                 </>
               ) : (
                 <>
-                  <TableIcon className="h-3.5 w-3.5 text-foreground-secondary" aria-hidden="true" />
+                  <TableIcon
+                    className="h-3.5 w-3.5 text-foreground-secondary"
+                    aria-hidden="true"
+                  />
                   <span>Accessible Table</span>
                 </>
               )}
@@ -241,7 +296,9 @@ export function BudgetAllocationChart({
                 />
                 <XAxis
                   type="number"
-                  tickFormatter={(val: number) => formatCurrency(val, 'USDC', { compact: true })}
+                  tickFormatter={(val: number) =>
+                    formatCurrency(val, 'USDC', { compact: true })
+                  }
                   stroke={CHART_COLORS.axis}
                   tick={AXIS_TICK}
                 />
@@ -261,7 +318,11 @@ export function BudgetAllocationChart({
                 />
                 <Legend
                   wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
-                  formatter={(value) => <span className="text-foreground-secondary font-medium">{value}</span>}
+                  formatter={(value) => (
+                    <span className="font-medium text-foreground-secondary">
+                      {value}
+                    </span>
+                  )}
                 />
                 <Bar
                   dataKey="allocated"
@@ -279,7 +340,9 @@ export function BudgetAllocationChart({
                   onMouseLeave={() => setActiveBarIndex(null)}
                 >
                   {data.map((entry, index) => {
-                    const { color } = getThresholdColor(utilizationPercent(entry.consumed, entry.allocated));
+                    const { color } = getThresholdColor(
+                      utilizationPercent(entry.consumed, entry.allocated),
+                    );
                     const isHovered = activeBarIndex === index;
                     return (
                       <Cell
@@ -299,15 +362,15 @@ export function BudgetAllocationChart({
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3 text-2xs text-foreground-secondary">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="flex items-center gap-1.5">
+                <span className="gap-1.5 flex items-center">
                   <LegendDot status="normal" />
                   <span>Optimal (&lt;80%)</span>
                 </span>
-                <span className="flex items-center gap-1.5">
+                <span className="gap-1.5 flex items-center">
                   <LegendDot status="warning" />
                   <span>Warning (80%–99%)</span>
                 </span>
-                <span className="flex items-center gap-1.5">
+                <span className="gap-1.5 flex items-center">
                   <LegendDot status="danger" />
                   <span>Critical Exceeded (&ge;100%)</span>
                 </span>
@@ -317,9 +380,12 @@ export function BudgetAllocationChart({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs" aria-label="Budget Allocation Tabular Data">
+            <table
+              className="w-full text-left text-xs"
+              aria-label="Budget Allocation Tabular Data"
+            >
               <thead>
-                <tr className="border-b border-border text-foreground-muted font-medium">
+                <tr className="border-b border-border font-medium text-foreground-muted">
                   <th className="py-2.5 px-3">Department</th>
                   <th className="py-2.5 px-3 text-right">Allocated Limit</th>
                   <th className="py-2.5 px-3 text-right">Consumed Balance</th>
@@ -331,7 +397,10 @@ export function BudgetAllocationChart({
               <tbody className="divide-y divide-border/60">
                 {data.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-8 px-3 text-center text-foreground-secondary">
+                    <td
+                      colSpan={6}
+                      className="px-3 py-8 text-center text-foreground-secondary"
+                    >
                       No department budgets yet.
                     </td>
                   </tr>
@@ -341,21 +410,28 @@ export function BudgetAllocationChart({
                   const remaining = Math.max(0, dept.allocated - dept.consumed);
                   const { status } = getThresholdColor(pct);
                   return (
-                    <tr key={dept.id} className="hover:bg-surface-secondary/40 transition-colors">
-                      <td className="py-3 px-3 font-medium text-foreground">{dept.department}</td>
-                      <td className="py-3 px-3 text-right tabular text-foreground">
+                    <tr
+                      key={dept.id}
+                      className="transition-colors hover:bg-surface-secondary/40"
+                    >
+                      <td className="px-3 py-3 font-medium text-foreground">
+                        {dept.department}
+                      </td>
+                      <td className="tabular px-3 py-3 text-right text-foreground">
                         {formatCurrency(dept.allocated, dept.currency || 'USDC')}
                       </td>
-                      <td className="py-3 px-3 text-right tabular text-foreground">
+                      <td className="tabular px-3 py-3 text-right text-foreground">
                         {formatCurrency(dept.consumed, dept.currency || 'USDC')}
                       </td>
-                      <td className={`py-3 px-3 text-right tabular font-medium ${dept.consumed > dept.allocated ? 'text-danger' : 'text-success'}`}>
+                      <td
+                        className={`tabular px-3 py-3 text-right font-medium ${dept.consumed > dept.allocated ? 'text-danger' : 'text-success'}`}
+                      >
                         {formatCurrency(remaining, dept.currency || 'USDC')}
                       </td>
-                      <td className="py-3 px-3 text-right tabular font-bold">
+                      <td className="tabular px-3 py-3 text-right font-bold">
                         {Math.round(pct)}%
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td className="px-3 py-3 text-center">
                         {status === 'danger' && (
                           <Badge variant="danger" size="sm">
                             Exceeded

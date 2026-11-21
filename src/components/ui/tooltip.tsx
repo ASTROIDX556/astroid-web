@@ -37,7 +37,7 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
         <span
           role="tooltip"
           className={cn(
-            'glass pointer-events-none absolute z-50 w-max max-w-xs animate-fade-in rounded-sm px-2.5 py-1.5 text-2xs font-medium text-foreground shadow-soft-2',
+            'glass px-2.5 py-1.5 pointer-events-none absolute z-50 w-max max-w-xs animate-fade-in rounded-sm text-2xs font-medium text-foreground shadow-soft-2',
             sideClass[side],
             className,
           )}

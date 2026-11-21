@@ -106,9 +106,9 @@ export function useFocusTrap({
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const getFocusables = () =>
-      Array.from(
-        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-      ).filter(isKeyboardFocusable);
+      Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        isKeyboardFocusable,
+      );
 
     const focusInitial = () => {
       const target = initialFocusRefRef.current?.current ?? container;
@@ -149,7 +149,10 @@ export function useFocusTrap({
       if (!container.contains(activeElement)) {
         event.preventDefault();
         (event.shiftKey ? last : first).focus();
-      } else if (event.shiftKey && (activeElement === first || activeElement === container)) {
+      } else if (
+        event.shiftKey &&
+        (activeElement === first || activeElement === container)
+      ) {
         event.preventDefault();
         last.focus();
       } else if (!event.shiftKey && activeElement === last) {

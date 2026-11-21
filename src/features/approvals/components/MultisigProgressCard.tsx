@@ -145,7 +145,9 @@ export function MultisigProgressCard({
     signTransaction,
   } = useStellarWallet();
 
-  const [localStatus, setLocalStatus] = useState<Record<string, MultisigSignerStatus>>({});
+  const [localStatus, setLocalStatus] = useState<Record<string, MultisigSignerStatus>>(
+    {},
+  );
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [signError, setSignError] = useState<string | null>(null);
 
@@ -309,7 +311,7 @@ export function MultisigProgressCard({
 
         <span
           className={cn(
-            'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-2xs font-medium text-foreground ring-1',
+            'gap-1.5 inline-flex shrink-0 items-center rounded-full px-2 py-1 text-2xs font-medium text-foreground ring-1',
             thresholdMet
               ? 'bg-success-soft ring-success/40'
               : blocked
@@ -320,11 +322,19 @@ export function MultisigProgressCard({
           <ShieldCheck
             className={cn(
               'h-3.5 w-3.5',
-              thresholdMet ? 'text-success' : blocked ? 'text-danger' : 'text-foreground-secondary',
+              thresholdMet
+                ? 'text-success'
+                : blocked
+                  ? 'text-danger'
+                  : 'text-foreground-secondary',
             )}
             aria-hidden
           />
-          {thresholdMet ? 'Ready to submit' : blocked ? 'Cannot reach threshold' : 'Awaiting signatures'}
+          {thresholdMet
+            ? 'Ready to submit'
+            : blocked
+              ? 'Cannot reach threshold'
+              : 'Awaiting signatures'}
         </span>
       </CardHeader>
 
@@ -368,8 +378,11 @@ export function MultisigProgressCard({
                 )}
               />
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden>
-              <span className="font-display text-2xl leading-none tabular-nums text-foreground">
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center"
+              aria-hidden
+            >
+              <span className="font-display text-2xl tabular-nums leading-none text-foreground">
                 {signedWeight}
               </span>
               <span className="mt-1 text-2xs tabular-nums text-foreground-secondary">
@@ -435,7 +448,9 @@ export function MultisigProgressCard({
                   key={signer.publicKey}
                   className={cn(
                     'grid grid-cols-1 items-center gap-2 rounded-card border px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]',
-                    isYou ? 'border-gold bg-gold/5' : 'border-border bg-surface-secondary/40',
+                    isYou
+                      ? 'border-gold bg-gold/5'
+                      : 'border-border bg-surface-secondary/40',
                   )}
                 >
                   <div className="min-w-0">
@@ -466,7 +481,8 @@ export function MultisigProgressCard({
                   </div>
 
                   <span className="text-2xs tabular-nums text-foreground-secondary sm:text-right">
-                    Weight <span className="font-medium text-foreground">{signer.weight}</span>
+                    Weight{' '}
+                    <span className="font-medium text-foreground">{signer.weight}</span>
                   </span>
 
                   <span
@@ -517,7 +533,12 @@ export function MultisigProgressCard({
             )}
 
             {thresholdMet && onSubmit ? (
-              <Button type="button" variant="primary" size="sm" onClick={() => onSubmit(request)}>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => onSubmit(request)}
+              >
                 Submit to network
               </Button>
             ) : null}
@@ -557,7 +578,10 @@ export function MultisigProgressCard({
             </div>
             <div>
               <dt className="text-2xs text-foreground-secondary">Source account</dt>
-              <dd className="font-mono text-2xs text-foreground" title={request.sourceAccount}>
+              <dd
+                className="font-mono text-2xs text-foreground"
+                title={request.sourceAccount}
+              >
                 {truncateHash(request.sourceAccount, 6, 6)}
               </dd>
             </div>
@@ -600,13 +624,17 @@ export function MultisigProgressCard({
             {request.networkPassphrase ? (
               <div className="sm:col-span-2">
                 <dt className="text-2xs text-foreground-secondary">Network</dt>
-                <dd className="font-mono text-2xs text-foreground">{request.networkPassphrase}</dd>
+                <dd className="font-mono text-2xs text-foreground">
+                  {request.networkPassphrase}
+                </dd>
               </div>
             ) : null}
             {request.expiresAt ? (
               <div className="sm:col-span-2">
                 <dt className="text-2xs text-foreground-secondary">Valid until</dt>
-                <dd className="font-mono text-2xs text-foreground">{request.expiresAt}</dd>
+                <dd className="font-mono text-2xs text-foreground">
+                  {request.expiresAt}
+                </dd>
               </div>
             ) : null}
             <div className="sm:col-span-2">

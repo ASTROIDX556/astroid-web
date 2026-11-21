@@ -3,7 +3,7 @@ import { cn } from '@/lib/cn';
 import { initials } from '@/lib/format';
 
 const avatarVariants = cva(
-  'inline-flex shrink-0 items-center justify-center overflow-hidden font-sans font-semibold uppercase select-none',
+  'inline-flex shrink-0 select-none items-center justify-center overflow-hidden font-sans font-semibold uppercase',
   {
     variants: {
       size: {
@@ -38,7 +38,8 @@ function tint(name: string): string {
     'bg-surface-secondary text-foreground',
   ];
   let hash = 0;
-  for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < name.length; i += 1)
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   return tints[hash % tints.length] as string;
 }
 

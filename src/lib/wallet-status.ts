@@ -12,9 +12,18 @@
  * Pure and dependency-free so it can be unit-tested without React or a wallet.
  */
 
-export type StellarWalletStatus = 'idle' | 'checking' | 'connected' | 'missing' | 'error';
+export type StellarWalletStatus =
+  | 'idle'
+  | 'checking'
+  | 'connected'
+  | 'missing'
+  | 'error';
 
-export type SharedConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'locked';
+export type SharedConnectionStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'locked';
 
 /**
  * @param local - the widget's own status (its last attempt / validation)

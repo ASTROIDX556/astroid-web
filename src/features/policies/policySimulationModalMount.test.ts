@@ -10,7 +10,8 @@ import type { PolicySimulationModalResult } from './types';
 
 const passedResult: PolicySimulationModalResult = {
   success: true,
-  summary: 'Simulation PASSED: Transaction complies with all active spending guardrails.',
+  summary:
+    'Simulation PASSED: Transaction complies with all active spending guardrails.',
   logs: [
     {
       ruleId: 'rule-01',
@@ -84,7 +85,10 @@ describe('Policy simulation preview modal mount lifecycle (#182)', () => {
   test('a full open → simulate → close → re-open cycle keeps the latest result', () => {
     let state: PolicySimulationModalMountState = initialPolicySimulationModalMountState;
     state = policySimulationModalMountReducer(state, { type: 'open' });
-    state = policySimulationModalMountReducer(state, { type: 'simulation-complete', result: passedResult });
+    state = policySimulationModalMountReducer(state, {
+      type: 'simulation-complete',
+      result: passedResult,
+    });
     state = policySimulationModalMountReducer(state, { type: 'close' });
     state = policySimulationModalMountReducer(state, { type: 'open' });
 
@@ -95,7 +99,11 @@ describe('Policy simulation preview modal mount lifecycle (#182)', () => {
       type: 'simulation-complete',
       result: blockedResult,
     });
-    assert.deepEqual(rerun.lastResult, blockedResult, 'latest run overwrites the previous result');
+    assert.deepEqual(
+      rerun.lastResult,
+      blockedResult,
+      'latest run overwrites the previous result',
+    );
   });
 
   test('unknown action is a no-op returning the same state', () => {

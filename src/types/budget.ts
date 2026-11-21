@@ -32,7 +32,9 @@ export function remainingBudget(allocated: number, spent: number): number {
   return allocated - spent;
 }
 
-export function departmentUtilizationPercent(row: Pick<DepartmentBudgetBreakdown, 'allocated' | 'spent'>): number {
+export function departmentUtilizationPercent(
+  row: Pick<DepartmentBudgetBreakdown, 'allocated' | 'spent'>,
+): number {
   if (row.allocated <= 0) return 0;
   return (row.spent / row.allocated) * 100;
 }

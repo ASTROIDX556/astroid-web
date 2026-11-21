@@ -119,7 +119,9 @@ export function useStellarAccount(
 
   const hasExplicitKey =
     typeof explicitPublicKey === 'string' && explicitPublicKey.trim().length > 0;
-  const publicKey = (hasExplicitKey ? explicitPublicKey : connectedPublicKey ?? '').trim();
+  const publicKey = (
+    hasExplicitKey ? explicitPublicKey : (connectedPublicKey ?? '')
+  ).trim();
   const hasAccount = publicKey.length > 0;
 
   // An explicit address is viewable on its own; the implicit address must
@@ -129,7 +131,8 @@ export function useStellarAccount(
 
   const query = useQuery<StellarAccountSnapshot, Error>({
     queryKey: queryKeys.walletAccount(publicKey),
-    queryFn: ({ signal }) => fetchStellarAccountSnapshot(publicKey, { signal, timeoutMs }),
+    queryFn: ({ signal }) =>
+      fetchStellarAccountSnapshot(publicKey, { signal, timeoutMs }),
     enabled: canQuery,
     staleTime: staleTimeMs,
     gcTime: QUERY_CACHE.live.gcTime,

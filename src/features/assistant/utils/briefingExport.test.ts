@@ -5,7 +5,8 @@ import { formatBriefingContent } from './briefingExport';
 
 const MOCK_BRIEFING: AiBriefing = {
   greeting: 'Daily Treasury Briefing',
-  summary: 'Fleet spending remained 12% below weekly allocation across 8 active agents.',
+  summary:
+    'Fleet spending remained 12% below weekly allocation across 8 active agents.',
   generatedAt: '2026-11-15T08:00:00Z',
   insights: [
     {

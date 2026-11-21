@@ -1,5 +1,9 @@
 /** The API response describes a preview, not an authorization to sign. */
-export type PolicyRuleKind = 'daily_limit' | 'recipient_whitelist' | 'multi_sig' | 'custom';
+export type PolicyRuleKind =
+  | 'daily_limit'
+  | 'recipient_whitelist'
+  | 'multi_sig'
+  | 'custom';
 export type PolicyRuleStatus = 'pass' | 'fail' | 'warning';
 export type PolicySimulationStatus = 'pass' | 'fail';
 

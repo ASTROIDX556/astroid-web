@@ -45,7 +45,7 @@ function BalanceCardsSkeleton() {
     >
       <Card className="p-5">
         <div className="flex items-baseline justify-between gap-3">
-          <Skeleton className="h-3 w-32" />
+          <Skeleton className="w-32 h-3" />
           <Skeleton className="h-2.5 w-24" />
         </div>
         <div className="mt-4 flex h-[240px] items-center justify-center">
@@ -58,11 +58,11 @@ function BalanceCardsSkeleton() {
         </div>
       </Card>
       <Card className="p-5">
-        <Skeleton className="h-3 w-24" />
+        <Skeleton className="w-24 h-3" />
         <Skeleton className="mt-2 h-8 w-2/3" />
-        <div className="mt-4 flex gap-1.5">
+        <div className="gap-1.5 mt-4 flex">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-7 w-24" />
+            <Skeleton key={i} className="w-24 h-7" />
           ))}
         </div>
         <div className="mt-4 divide-y divide-border">
@@ -74,11 +74,11 @@ function BalanceCardsSkeleton() {
               <div className="flex items-center gap-3">
                 <Skeleton className="h-8 w-8" rounded="full" />
                 <div className="space-y-1.5">
-                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="w-24 h-3" />
                   <Skeleton className="h-2.5 w-16" />
                 </div>
               </div>
-              <Skeleton className="h-3 w-14" />
+              <Skeleton className="w-14 h-3" />
             </div>
           ))}
         </div>
@@ -122,11 +122,7 @@ export function WalletBalanceCards({ walletId }: WalletBalanceCardsProps) {
                 {balanceCardsErrorMessage(balances.error)}
               </p>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => balances.refetch()}
-            >
+            <Button variant="secondary" size="sm" onClick={() => balances.refetch()}>
               Retry
             </Button>
           </div>

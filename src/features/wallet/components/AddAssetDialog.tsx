@@ -13,11 +13,7 @@ interface AddAssetDialogProps {
   onAdd: (code: string, issuer: string) => void;
 }
 
-export function AddAssetDialog({
-  open,
-  onClose,
-  onAdd,
-}: AddAssetDialogProps) {
+export function AddAssetDialog({ open, onClose, onAdd }: AddAssetDialogProps) {
   const {
     register,
     handleSubmit,

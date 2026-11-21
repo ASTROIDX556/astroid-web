@@ -1,6 +1,12 @@
 'use client';
 
-import { ArrowDownLeft, ArrowUpRight, Clock3, Shield, Wallet as WalletIcon } from 'lucide-react';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Clock3,
+  Shield,
+  Wallet as WalletIcon,
+} from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
@@ -15,7 +21,11 @@ interface TransactionDetailDrawerProps {
   onClose: () => void;
 }
 
-export function TransactionDetailDrawer({ transaction, open, onClose }: TransactionDetailDrawerProps) {
+export function TransactionDetailDrawer({
+  transaction,
+  open,
+  onClose,
+}: TransactionDetailDrawerProps) {
   if (!transaction) return null;
 
   const status = transactionStatus(transaction.status);
@@ -23,19 +33,27 @@ export function TransactionDetailDrawer({ transaction, open, onClose }: Transact
   const Icon = outbound ? ArrowUpRight : ArrowDownLeft;
 
   return (
-    <Dialog open={open} onClose={onClose} title="Transaction details" description="Audit trail and execution metadata" size="lg">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="Transaction details"
+      description="Audit trail and execution metadata"
+      size="lg"
+    >
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
           <div className="flex items-center gap-3">
             <span
               className={`grid h-10 w-10 place-items-center rounded-md ${
-                outbound ? 'bg-surface-secondary text-foreground' : 'bg-success-soft text-success'
+                outbound
+                  ? 'bg-surface-secondary text-foreground'
+                  : 'bg-success-soft text-success'
               }`}
             >
               <Icon className="h-5 w-5" aria-hidden />
             </span>
             <div>
-              <p className="font-display text-2xl font-semibold tracking-tight tabular">
+              <p className="tabular font-display text-2xl font-semibold tracking-tight">
                 {outbound ? '−' : '+'}
                 {formatCurrency(transaction.amount, transaction.asset)}
               </p>
@@ -58,14 +76,20 @@ export function TransactionDetailDrawer({ transaction, open, onClose }: Transact
             {truncateHash(transaction.counterpartyAddress, 6, 6)}
           </KeyValue>
           <KeyValue label="Purpose">{transaction.purpose}</KeyValue>
-          <KeyValue label="Agent">{transaction.agentName ?? 'Unassigned agent'}</KeyValue>
+          <KeyValue label="Agent">
+            {transaction.agentName ?? 'Unassigned agent'}
+          </KeyValue>
           <KeyValue label="Asset">{transaction.asset}</KeyValue>
-          <KeyValue label="USD value">{formatCurrency(transaction.usdValue, 'USDC')}</KeyValue>
+          <KeyValue label="USD value">
+            {formatCurrency(transaction.usdValue, 'USDC')}
+          </KeyValue>
           <KeyValue label="Created">{formatDateTime(transaction.createdAt)}</KeyValue>
           <KeyValue label="Policy state">
-            <span className="inline-flex items-center gap-1.5">
+            <span className="gap-1.5 inline-flex items-center">
               <Shield className="h-3.5 w-3.5 text-gold" aria-hidden />
-              {transaction.policyId ? `Policy #${transaction.policyId}` : 'No policy snapshot'}
+              {transaction.policyId
+                ? `Policy #${transaction.policyId}`
+                : 'No policy snapshot'}
             </span>
           </KeyValue>
           {transaction.stellarHash && (
@@ -92,14 +116,14 @@ export function TransactionDetailDrawer({ transaction, open, onClose }: Transact
             </li>
             <li className="flex items-center justify-between gap-3 border-b border-border pb-2">
               <span className="text-foreground-secondary">Wallet</span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="gap-1.5 inline-flex items-center font-medium">
                 <WalletIcon className="h-3.5 w-3.5 text-gold" aria-hidden />
                 {transaction.walletId}
               </span>
             </li>
             <li className="flex items-center justify-between gap-3">
               <span className="text-foreground-secondary">Amount</span>
-              <span className="font-medium tabular">
+              <span className="tabular font-medium">
                 {formatCurrency(transaction.amount, transaction.asset)}
               </span>
             </li>

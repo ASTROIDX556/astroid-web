@@ -11,10 +11,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dropdown, type DropdownItem } from '@/components/ui/dropdown';
-import {
-  STELLAR_NETWORKS,
-  type StellarNetworkId,
-} from '@/stores/freighter-store';
+import { STELLAR_NETWORKS, type StellarNetworkId } from '@/stores/freighter-store';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { cn } from '@/lib/cn';
 
@@ -44,7 +41,7 @@ export function WalletNetworkSwitcher() {
       <div
         role="status"
         aria-label="Freighter wallet: connecting"
-        className="flex items-center gap-2 rounded-button border border-border bg-surface px-2.5 py-1 text-2xs text-foreground-muted"
+        className="px-2.5 flex items-center gap-2 rounded-button border border-border bg-surface py-1 text-2xs text-foreground-muted"
       >
         <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" aria-hidden />
         <span>Connecting…</span>
@@ -59,13 +56,17 @@ export function WalletNetworkSwitcher() {
         type="button"
         onClick={() => void wallet.connect()}
         className={cn(
-          'flex items-center gap-2 rounded-button border px-2.5 py-1.5 text-2xs font-medium transition-colors',
+          'px-2.5 py-1.5 flex items-center gap-2 rounded-button border text-2xs font-medium transition-colors',
           failed
             ? 'border-danger/40 bg-danger-soft/20 text-danger hover:bg-danger-soft/30'
             : 'border-border bg-surface text-foreground-secondary hover:border-gold hover:bg-surface-secondary hover:text-foreground',
           WIDGET_FOCUS,
         )}
-        aria-label={failed ? `Freighter wallet: ${wallet.error} Click to retry connection.` : 'Connect Freighter wallet'}
+        aria-label={
+          failed
+            ? `Freighter wallet: ${wallet.error} Click to retry connection.`
+            : 'Connect Freighter wallet'
+        }
         title={wallet.error ?? 'Connect the Freighter wallet'}
       >
         {failed ? (
@@ -73,7 +74,9 @@ export function WalletNetworkSwitcher() {
         ) : (
           <Plug className="h-3.5 w-3.5" aria-hidden />
         )}
-        <span className="font-mono">{failed ? 'Wallet error' : 'Connect Freighter'}</span>
+        <span className="font-mono">
+          {failed ? 'Wallet error' : 'Connect Freighter'}
+        </span>
       </button>
     );
   }
@@ -82,13 +85,23 @@ export function WalletNetworkSwitcher() {
     ...NETWORK_IDS.map((id) => ({
       label: STELLAR_NETWORKS[id].label,
       icon:
-        id === wallet.targetNetwork ? <Check className="h-3.5 w-3.5 text-gold" aria-hidden /> : undefined,
+        id === wallet.targetNetwork ? (
+          <Check className="h-3.5 w-3.5 text-gold" aria-hidden />
+        ) : undefined,
       onSelect: () => void wallet.switchNetwork(id),
     })),
     'separator' as const,
     {
       label: 'Sync with Freighter',
-      icon: <RefreshCw className={cn('h-3.5 w-3.5', wallet.isSwitching ? 'animate-spin text-gold' : 'text-foreground-muted')} aria-hidden />,
+      icon: (
+        <RefreshCw
+          className={cn(
+            'h-3.5 w-3.5',
+            wallet.isSwitching ? 'animate-spin text-gold' : 'text-foreground-muted',
+          )}
+          aria-hidden
+        />
+      ),
       onSelect: () => void wallet.refreshNetwork(),
     },
     'separator' as const,
@@ -108,7 +121,7 @@ export function WalletNetworkSwitcher() {
         WIDGET_FOCUS,
       )}
       trigger={
-        <span className="flex items-center gap-2 px-2.5 py-1.5 text-2xs font-medium text-foreground-secondary">
+        <span className="px-2.5 py-1.5 flex items-center gap-2 text-2xs font-medium text-foreground-secondary">
           <span className="relative flex h-2 w-2" aria-hidden>
             <span
               className={cn(
@@ -124,11 +137,13 @@ export function WalletNetworkSwitcher() {
             />
           </span>
           <Wallet2 className="h-3.5 w-3.5 text-gold" aria-hidden />
-          <span className="hidden font-mono sm:inline-block">{wallet.truncatedPublicKey}</span>
+          <span className="hidden font-mono sm:inline-block">
+            {wallet.truncatedPublicKey}
+          </span>
           <Badge
             variant={wallet.networkMismatch ? 'danger' : 'success'}
             size="sm"
-            className="text-3xs py-0 px-1.5"
+            className="text-3xs px-1.5 py-0"
           >
             {badgeLabel}
           </Badge>

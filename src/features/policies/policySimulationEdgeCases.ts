@@ -89,7 +89,9 @@ export interface AssetOperationRecord {
  * heuristic. Base64 XDR never contains commas, so this path cannot hijack
  * existing XDR input.
  */
-export function parseAssetOperationList(payload: string): AssetOperationRecord[] | null {
+export function parseAssetOperationList(
+  payload: string,
+): AssetOperationRecord[] | null {
   const compact = payload.trim().replace(/\s+/g, '');
   if (!compact.includes(',')) {
     return null;
@@ -133,7 +135,10 @@ export function parseAssetOperationList(payload: string): AssetOperationRecord[]
  * Whether an operation asset passes an `allowed_assets` rule, treating the
  * native asset alias as a first-class code alongside trustlines.
  */
-export function isAssetAllowed(asset: string, allowedAssets: readonly string[]): boolean {
+export function isAssetAllowed(
+  asset: string,
+  allowedAssets: readonly string[],
+): boolean {
   return allowedAssets.includes(asset);
 }
 
@@ -171,7 +176,9 @@ export interface FeeSufficiencyResult {
  * All fields share one unit (documented on {@link FeeSufficiencyInput}); for
  * XLM operations that unit is stroops.
  */
-export function evaluateFeeSufficiency(input: FeeSufficiencyInput): FeeSufficiencyResult {
+export function evaluateFeeSufficiency(
+  input: FeeSufficiencyInput,
+): FeeSufficiencyResult {
   const { availableBalance, transactionAmount, networkFee } = input;
 
   if (
@@ -237,7 +244,9 @@ export interface FeeRiskBadgeDescriptor {
  * `FeeBadge` primitive. Returns `null` for `sufficient`/`invalid` verdicts so
  * the badge stays hidden when there is nothing to warn about.
  */
-export function feeRiskBadgeDescriptor(result: FeeSufficiencyResult): FeeRiskBadgeDescriptor | null {
+export function feeRiskBadgeDescriptor(
+  result: FeeSufficiencyResult,
+): FeeRiskBadgeDescriptor | null {
   switch (result.status) {
     case 'insufficient':
       return { level: 'danger', label: 'Balance below fees' };

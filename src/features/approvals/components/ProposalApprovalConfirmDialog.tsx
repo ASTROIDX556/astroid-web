@@ -215,33 +215,50 @@ export function ProposalApprovalConfirmDialog({
 
         <dl className="grid gap-x-4 gap-y-3 rounded-card border border-border bg-surface-secondary/40 p-4 text-xs sm:grid-cols-2">
           <div className="min-w-0">
-            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">Recipient</dt>
-            <dd className="mt-0.5 truncate font-medium text-foreground" title={proposal.counterparty}>
+            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">
+              Recipient
+            </dt>
+            <dd
+              className="mt-0.5 truncate font-medium text-foreground"
+              title={proposal.counterparty}
+            >
               {proposal.counterparty}
             </dd>
           </div>
           <div>
-            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">Amount</dt>
-            <dd className="mt-0.5 font-medium tabular text-foreground">
+            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">
+              Amount
+            </dt>
+            <dd className="mt-0.5 tabular font-medium text-foreground">
               {formatCurrency(proposal.amount, proposal.asset)}
             </dd>
           </div>
           <div className="min-w-0">
-            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">Agent</dt>
-            <dd className="mt-0.5 truncate font-medium text-foreground">{proposal.agentName}</dd>
+            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">
+              Agent
+            </dt>
+            <dd className="mt-0.5 truncate font-medium text-foreground">
+              {proposal.agentName}
+            </dd>
           </div>
           <div>
-            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">Risk score</dt>
+            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">
+              Risk score
+            </dt>
             <dd className="mt-0.5">
               <RiskBadge score={proposal.riskScore} showScore />
             </dd>
           </div>
           <div>
-            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">Quorum</dt>
+            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">
+              Quorum
+            </dt>
             <dd className="mt-0.5 font-medium text-foreground">{quorumLabel}</dd>
           </div>
           <div>
-            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">Expires</dt>
+            <dt className="text-2xs uppercase tracking-wide text-foreground-muted">
+              Expires
+            </dt>
             <dd className="mt-0.5 font-medium text-foreground">
               {formatRelativeTime(proposal.expiresAt)}
             </dd>
@@ -254,7 +271,10 @@ export function ProposalApprovalConfirmDialog({
             {xdr ? (
               isConnected ? (
                 <>
-                  <Wallet className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden />
+                  <Wallet
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success"
+                    aria-hidden
+                  />
                   <span>
                     Freighter wallet connected — confirming will prompt you to sign the
                     transaction envelope before the approval is recorded.
@@ -262,16 +282,22 @@ export function ProposalApprovalConfirmDialog({
                 </>
               ) : (
                 <>
-                  <Wallet className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
+                  <Wallet
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning"
+                    aria-hidden
+                  />
                   <span>
-                    This approval requires a wallet signature, but no Freighter wallet is
-                    connected. Connect the extension to sign.
+                    This approval requires a wallet signature, but no Freighter wallet
+                    is connected. Connect the extension to sign.
                   </span>
                 </>
               )
             ) : (
               <>
-                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" aria-hidden />
+                <ShieldCheck
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold"
+                  aria-hidden
+                />
                 <span>
                   Recording this approval adds your weight to the quorum. An on-chain
                   signature is requested separately once the threshold is met.
@@ -290,8 +316,8 @@ export function ProposalApprovalConfirmDialog({
           >
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
             <span>
-              High-risk proposal (score {proposal.riskScore}). Double-check the recipient and
-              amount before confirming.
+              High-risk proposal (score {proposal.riskScore}). Double-check the
+              recipient and amount before confirming.
             </span>
           </p>
         )}
@@ -308,7 +334,7 @@ export function ProposalApprovalConfirmDialog({
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="gap-1.5 flex flex-wrap items-center">
           <Badge variant="outline" size="sm" className="capitalize">
             {proposal.kind} approval
           </Badge>

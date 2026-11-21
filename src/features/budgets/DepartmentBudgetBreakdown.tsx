@@ -2,15 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import {
-  Cell,
-  Pie,
-  PieChart,
-  Tooltip as RechartsTooltip,
-} from 'recharts';
+import { Cell, Pie, PieChart, Tooltip as RechartsTooltip } from 'recharts';
 import { ChartFrame } from '@/components/charts/chart-frame';
 import { PieChart as PieChartIcon } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { CATEGORICAL } from '@/components/charts';
 import { formatCurrency, formatPercent } from '@/lib/format';
@@ -59,7 +60,9 @@ function AllocationTooltip({
 
   return (
     <div className="min-w-[200px] rounded-md border border-border bg-surface-primary px-3 py-2 text-xs shadow-soft-2">
-      <p className="mb-1.5 border-b border-border pb-1 font-medium text-foreground">{slice.name}</p>
+      <p className="mb-1.5 border-b border-border pb-1 font-medium text-foreground">
+        {slice.name}
+      </p>
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-4">
           <span className="text-foreground-secondary">Allocated</span>
@@ -86,7 +89,9 @@ function AllocationTooltip({
         </div>
         <div className="flex items-center justify-between gap-4 border-t border-border pt-1">
           <span className="text-foreground-secondary">Utilization</span>
-          <span className="tabular font-medium text-foreground">{formatPercent(utilization)}</span>
+          <span className="tabular font-medium text-foreground">
+            {formatPercent(utilization)}
+          </span>
         </div>
       </div>
     </div>
@@ -133,12 +138,15 @@ export function DepartmentBudgetBreakdown({
               style={{
                 backgroundColor:
                   CATEGORICAL[
-                    data.findIndex((item) => item.id === row.original.id) % CATEGORICAL.length
+                    data.findIndex((item) => item.id === row.original.id) %
+                      CATEGORICAL.length
                   ] ?? 'rgb(var(--chart-1))',
               }}
               aria-hidden
             />
-            <span className="font-medium text-foreground">{row.original.department}</span>
+            <span className="font-medium text-foreground">
+              {row.original.department}
+            </span>
           </div>
         ),
       },
@@ -203,7 +211,11 @@ export function DepartmentBudgetBreakdown({
       </CardHeader>
       <CardContent className="pt-6">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
-          <div className="h-80 w-full" role="img" aria-label="Department budget allocation donut chart">
+          <div
+            className="h-80 w-full"
+            role="img"
+            aria-label="Department budget allocation donut chart"
+          >
             {!mounted ? (
               <div className="skeleton h-full w-full rounded-md" />
             ) : (
@@ -228,7 +240,7 @@ export function DepartmentBudgetBreakdown({
                     </PieChart>
                   </ChartFrame>
                   <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="font-display text-xl font-semibold tracking-tight tabular text-foreground">
+                    <span className="tabular font-display text-xl font-semibold tracking-tight text-foreground">
                       {formatCurrency(totalAllocated, currency, { compact: true })}
                     </span>
                     <span className="text-2xs uppercase tracking-wide text-foreground-secondary">
@@ -238,7 +250,10 @@ export function DepartmentBudgetBreakdown({
                 </div>
                 <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
                   {chartData.map((slice) => (
-                    <li key={slice.departmentKey} className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                    <li
+                      key={slice.departmentKey}
+                      className="gap-1.5 flex items-center text-xs text-foreground-secondary"
+                    >
                       <span
                         className="h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: slice.fill }}

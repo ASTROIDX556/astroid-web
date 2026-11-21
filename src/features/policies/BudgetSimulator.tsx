@@ -10,7 +10,13 @@ import {
   RotateCcw,
   Sparkles,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 import { formatCurrency } from '@/lib/format';
@@ -31,7 +37,7 @@ export interface BudgetSimulatorProps {
 export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulatorProps) {
   const mergedConfig = useMemo<BudgetLimitConfig>(
     () => ({ ...DEFAULT_CONFIG, ...config }),
-    [config]
+    [config],
   );
 
   const [assetAmount, setAssetAmount] = useState<string>('1500');
@@ -56,7 +62,7 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
   return (
     <Card className={`overflow-hidden ${className}`}>
       <CardHeader className="border-b border-border bg-surface-primary/60 pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Calculator className="h-5 w-5 text-gold" aria-hidden="true" />
@@ -65,16 +71,20 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
               </CardTitle>
             </div>
             <CardDescription className="text-xs">
-              Simulate proposed transaction impact against organizational spend limits before requesting signers.
+              Simulate proposed transaction impact against organizational spend limits
+              before requesting signers.
             </CardDescription>
           </div>
 
           <button
             onClick={handleReset}
-            className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+            className="gap-1.5 px-2.5 py-1.5 inline-flex items-center self-start rounded-md border border-border text-xs font-medium text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:self-auto"
             aria-label="Reset simulation inputs"
           >
-            <RotateCcw className="h-3.5 w-3.5 text-foreground-secondary" aria-hidden="true" />
+            <RotateCcw
+              className="h-3.5 w-3.5 text-foreground-secondary"
+              aria-hidden="true"
+            />
             <span>Reset Simulator</span>
           </button>
         </div>
@@ -85,7 +95,7 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
           <div className="space-y-1.5">
             <label
               htmlFor="sim-asset-amount"
-              className="text-xs font-medium text-foreground-secondary flex items-center justify-between"
+              className="flex items-center justify-between text-xs font-medium text-foreground-secondary"
             >
               <span>Proposed Amount</span>
               <span className="text-2xs text-foreground-muted">Asset Value</span>
@@ -98,12 +108,15 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
               value={assetAmount}
               onChange={(e) => setAssetAmount(e.target.value)}
               placeholder="e.g. 1000"
-              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 text-xs font-mono text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 font-mono text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="sim-asset-symbol" className="text-xs font-medium text-foreground-secondary">
+            <label
+              htmlFor="sim-asset-symbol"
+              className="text-xs font-medium text-foreground-secondary"
+            >
               Asset Type
             </label>
             <select
@@ -121,7 +134,10 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="sim-network-fee" className="text-xs font-medium text-foreground-secondary flex items-center justify-between">
+            <label
+              htmlFor="sim-network-fee"
+              className="flex items-center justify-between text-xs font-medium text-foreground-secondary"
+            >
               <span>Estimated Network Fee</span>
               <span className="text-2xs text-foreground-muted">XLM</span>
             </label>
@@ -132,21 +148,26 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
               step="0.00001"
               value={customFeeXlm}
               onChange={(e) => setCustomFeeXlm(e.target.value)}
-              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 text-xs font-mono text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 font-mono text-xs text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/80 bg-surface-secondary/40 p-3.5 text-xs">
+        <div className="p-3.5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/80 bg-surface-secondary/40 text-xs">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-gold shrink-0" aria-hidden="true" />
-            <span className="text-foreground-secondary">Simulated Market Conversion:</span>
+            <Sparkles className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
+            <span className="text-foreground-secondary">
+              Simulated Market Conversion:
+            </span>
             <span className="tabular font-semibold text-foreground">
-              {simulation.assetAmount} {simulation.assetSymbol} ≈ {formatCurrency(simulation.amountUsd, 'USD')}
+              {simulation.assetAmount} {simulation.assetSymbol} ≈{' '}
+              {formatCurrency(simulation.amountUsd, 'USD')}
             </span>
           </div>
           <div className="text-2xs text-foreground-muted">
-            Fee: {simulation.networkFeeXlm} XLM ({formatCurrency(simulation.networkFeeUsd, 'USD')}) · Total: {formatCurrency(simulation.totalCostUsd, 'USD')}
+            Fee: {simulation.networkFeeXlm} XLM (
+            {formatCurrency(simulation.networkFeeUsd, 'USD')}) · Total:{' '}
+            {formatCurrency(simulation.totalCostUsd, 'USD')}
           </div>
         </div>
 
@@ -155,20 +176,22 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
             {simulation.warnings.map((warning, i) => (
               <div
                 key={i}
-                className={`flex items-start gap-2.5 rounded-md border p-3 text-xs ${
+                className={`gap-2.5 flex items-start rounded-md border p-3 text-xs ${
                   simulation.isPolicyViolation
                     ? 'border-danger/30 bg-danger-soft/30 text-danger'
                     : 'border-warning/30 bg-warning-soft/30 text-warning'
                 }`}
               >
                 {simulation.isPolicyViolation ? (
-                  <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                 ) : (
-                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 )}
                 <div className="space-y-0.5">
                   <p className="font-semibold">
-                    {simulation.isPolicyViolation ? 'Policy Violation Detected' : 'Threshold Warning'}
+                    {simulation.isPolicyViolation
+                      ? 'Policy Violation Detected'
+                      : 'Threshold Warning'}
                   </p>
                   <p className="text-foreground-secondary">{warning}</p>
                 </div>
@@ -179,24 +202,33 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
 
         <div className="space-y-4 rounded-lg border border-border bg-surface-primary p-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <h4 className="gap-1.5 flex items-center text-xs font-semibold uppercase tracking-wider text-foreground">
               <TrendingUp className="h-4 w-4 text-gold" aria-hidden="true" />
               Before vs. After Budget Impact Preview
             </h4>
-            <Badge variant={simulation.isPolicyViolation ? 'danger' : 'outline'} size="sm">
+            <Badge
+              variant={simulation.isPolicyViolation ? 'danger' : 'outline'}
+              size="sm"
+            >
               {simulation.isPolicyViolation ? 'Violates Limit' : 'Within Budget Policy'}
             </Badge>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 rounded-md border border-border/60 bg-surface-secondary/20 p-3">
-              <div className="flex justify-between items-baseline text-xs">
-                <span className="text-foreground-secondary font-medium">Current Utilization</span>
+              <div className="flex items-baseline justify-between text-xs">
+                <span className="font-medium text-foreground-secondary">
+                  Current Utilization
+                </span>
                 <span className="tabular font-bold text-foreground">
                   {Math.round(simulation.currentUtilizationPct)}%
                 </span>
               </div>
-              <ProgressBar value={simulation.currentUtilizationPct} label="Current utilization" className="h-2" />
+              <ProgressBar
+                value={simulation.currentUtilizationPct}
+                label="Current utilization"
+                className="h-2"
+              />
               <div className="flex justify-between text-2xs text-foreground-muted">
                 <span>Spent: {formatCurrency(simulation.currentSpentUsd, 'USD')}</span>
                 <span>Cap: {formatCurrency(simulation.dailyLimitUsd, 'USD')}</span>
@@ -210,8 +242,8 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
                   : 'border-gold/40 bg-gold-soft/20'
               }`}
             >
-              <div className="flex justify-between items-baseline text-xs">
-                <span className="text-foreground-secondary font-medium flex items-center gap-1">
+              <div className="flex items-baseline justify-between text-xs">
+                <span className="flex items-center gap-1 font-medium text-foreground-secondary">
                   <span>Simulated Utilization</span>
                   <ArrowRight className="h-3 w-3 text-gold" />
                 </span>
@@ -229,35 +261,42 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
                 className="h-2"
               />
               <div className="flex justify-between text-2xs text-foreground-muted">
-                <span>New Spent: {formatCurrency(simulation.updatedSpentUsd, 'USD')}</span>
+                <span>
+                  New Spent: {formatCurrency(simulation.updatedSpentUsd, 'USD')}
+                </span>
                 <span>Cap: {formatCurrency(simulation.dailyLimitUsd, 'USD')}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-2xs">
-          <div className="rounded-md border border-border p-2.5 bg-surface-secondary/20">
-            <span className="text-foreground-muted block">Daily Envelope Limit</span>
-            <span className="font-semibold text-foreground tabular">
+        <div className="grid grid-cols-2 gap-3 text-2xs sm:grid-cols-4">
+          <div className="p-2.5 rounded-md border border-border bg-surface-secondary/20">
+            <span className="block text-foreground-muted">Daily Envelope Limit</span>
+            <span className="tabular font-semibold text-foreground">
               {formatCurrency(mergedConfig.dailyLimitUsd, 'USD')}
             </span>
           </div>
-          <div className="rounded-md border border-border p-2.5 bg-surface-secondary/20">
-            <span className="text-foreground-muted block">Single Tx Ceiling</span>
-            <span className="font-semibold text-foreground tabular">
+          <div className="p-2.5 rounded-md border border-border bg-surface-secondary/20">
+            <span className="block text-foreground-muted">Single Tx Ceiling</span>
+            <span className="tabular font-semibold text-foreground">
               {formatCurrency(mergedConfig.singleTxCeilingUsd, 'USD')}
             </span>
           </div>
-          <div className="rounded-md border border-border p-2.5 bg-surface-secondary/20">
-            <span className="text-foreground-muted block">Remaining Capacity</span>
-            <span className="font-semibold text-success tabular">
-              {formatCurrency(Math.max(0, simulation.dailyLimitUsd - simulation.updatedSpentUsd), 'USD')}
+          <div className="p-2.5 rounded-md border border-border bg-surface-secondary/20">
+            <span className="block text-foreground-muted">Remaining Capacity</span>
+            <span className="tabular font-semibold text-success">
+              {formatCurrency(
+                Math.max(0, simulation.dailyLimitUsd - simulation.updatedSpentUsd),
+                'USD',
+              )}
             </span>
           </div>
-          <div className="rounded-md border border-border p-2.5 bg-surface-secondary/20">
-            <span className="text-foreground-muted block">Policy Status</span>
-            <span className={`font-semibold ${simulation.isPolicyViolation ? 'text-danger' : 'text-success'}`}>
+          <div className="p-2.5 rounded-md border border-border bg-surface-secondary/20">
+            <span className="block text-foreground-muted">Policy Status</span>
+            <span
+              className={`font-semibold ${simulation.isPolicyViolation ? 'text-danger' : 'text-success'}`}
+            >
               {simulation.isPolicyViolation ? 'Blocked' : 'Approved'}
             </span>
           </div>
@@ -268,4 +307,3 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
 }
 
 export default BudgetSimulator;
-

@@ -18,7 +18,9 @@ export interface BalanceCardsQueryFlags {
  * first fetch wins (skeleton), then an errored fetch (error card with retry),
  * otherwise the ready content.
  */
-export function resolveBalanceCardsState(flags: BalanceCardsQueryFlags): BalanceCardsViewState {
+export function resolveBalanceCardsState(
+  flags: BalanceCardsQueryFlags,
+): BalanceCardsViewState {
   if (flags.isPending) return 'loading';
   if (flags.isError) return 'error';
   return 'ready';

@@ -34,7 +34,14 @@ const ITEM_FOCUS =
  * support: ArrowUp/ArrowDown move between items, Home/End jump to the first or
  * last item, Enter/Space activate, and Tab closes without trapping focus.
  */
-export function Dropdown({ trigger, items, align = 'end', className, triggerClassName, 'aria-label': ariaLabel }: DropdownProps) {
+export function Dropdown({
+  trigger,
+  items,
+  align = 'end',
+  className,
+  triggerClassName,
+  'aria-label': ariaLabel,
+}: DropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -62,7 +69,9 @@ export function Dropdown({ trigger, items, align = 'end', className, triggerClas
   const onMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
     const focusables = Array.from(
-      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])') ?? [],
+      menuRef.current?.querySelectorAll<HTMLElement>(
+        '[role="menuitem"]:not([disabled])',
+      ) ?? [],
     );
     if (focusables.length === 0) return;
 
@@ -73,7 +82,10 @@ export function Dropdown({ trigger, items, align = 'end', className, triggerClas
         nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % focusables.length;
         break;
       case 'ArrowUp':
-        nextIndex = currentIndex < 0 ? focusables.length - 1 : (currentIndex - 1 + focusables.length) % focusables.length;
+        nextIndex =
+          currentIndex < 0
+            ? focusables.length - 1
+            : (currentIndex - 1 + focusables.length) % focusables.length;
         break;
       case 'Home':
         nextIndex = 0;
@@ -119,19 +131,27 @@ export function Dropdown({ trigger, items, align = 'end', className, triggerClas
           aria-label={ariaLabel ? `${ariaLabel} options` : undefined}
           onKeyDown={onMenuKeyDown}
           className={cn(
-            'glass absolute top-full z-50 mt-2 min-w-[200px] animate-fade-in overflow-hidden rounded-md p-1.5 shadow-soft-2',
+            'glass p-1.5 absolute top-full z-50 mt-2 min-w-[200px] animate-fade-in overflow-hidden rounded-md shadow-soft-2',
             align === 'end' ? 'right-0' : 'left-0',
             className,
           )}
         >
           {items.map((item, i) => {
             if (item === 'separator') {
-              return <div key={`sep-${i}`} className="my-1 h-px bg-border" role="separator" />;
+              return (
+                <div
+                  key={`sep-${i}`}
+                  className="my-1 h-px bg-border"
+                  role="separator"
+                />
+              );
             }
             const content = (
-              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <div className="gap-2.5 flex min-w-0 flex-1 items-center">
                 {item.icon && (
-                  <span className="shrink-0 text-foreground-secondary">{item.icon}</span>
+                  <span className="shrink-0 text-foreground-secondary">
+                    {item.icon}
+                  </span>
                 )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{item.label}</span>
@@ -145,7 +165,7 @@ export function Dropdown({ trigger, items, align = 'end', className, triggerClas
               </div>
             );
             const classes = cn(
-              'flex w-full items-center rounded-sm px-2.5 py-2 text-left text-xs font-medium transition-colors duration-fast',
+              'px-2.5 flex w-full items-center rounded-sm py-2 text-left text-xs font-medium transition-colors duration-fast',
               item.destructive
                 ? 'text-danger hover:bg-danger-soft'
                 : 'text-foreground hover:bg-surface-secondary',
@@ -154,7 +174,12 @@ export function Dropdown({ trigger, items, align = 'end', className, triggerClas
             );
             if (item.href) {
               return (
-                <a key={item.label} href={item.href} role="menuitem" className={classes}>
+                <a
+                  key={item.label}
+                  href={item.href}
+                  role="menuitem"
+                  className={classes}
+                >
                   {content}
                 </a>
               );

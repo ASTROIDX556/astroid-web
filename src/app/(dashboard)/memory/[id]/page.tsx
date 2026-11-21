@@ -21,11 +21,30 @@ import type { MemoryStepKind } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { cn } from '@/lib/cn';
 
-const stepStyle: Record<MemoryStepKind, { icon: LucideIcon; ring: string; tone: string }> = {
-  conversation: { icon: MessagesSquare, ring: 'bg-info-soft text-info', tone: 'text-info' },
-  decision: { icon: BrainCircuit, ring: 'bg-gold-soft text-gold-strong', tone: 'text-gold-strong' },
-  policy: { icon: ShieldCheck, ring: 'bg-warning-soft text-warning', tone: 'text-warning' },
-  approval: { icon: UserCheck, ring: 'bg-success-soft text-success', tone: 'text-success' },
+const stepStyle: Record<
+  MemoryStepKind,
+  { icon: LucideIcon; ring: string; tone: string }
+> = {
+  conversation: {
+    icon: MessagesSquare,
+    ring: 'bg-info-soft text-info',
+    tone: 'text-info',
+  },
+  decision: {
+    icon: BrainCircuit,
+    ring: 'bg-gold-soft text-gold-strong',
+    tone: 'text-gold-strong',
+  },
+  policy: {
+    icon: ShieldCheck,
+    ring: 'bg-warning-soft text-warning',
+    tone: 'text-warning',
+  },
+  approval: {
+    icon: UserCheck,
+    ring: 'bg-success-soft text-success',
+    tone: 'text-success',
+  },
   blockchain: {
     icon: Boxes,
     ring: 'bg-surface-secondary text-foreground',
@@ -64,7 +83,10 @@ export default function MemoryDetailPage({ params }: { params: { id: string } })
             />
 
             <Card elevation="soft" className="relative overflow-hidden">
-              <div className="pointer-events-none absolute inset-0 bg-gold-sheen" aria-hidden />
+              <div
+                className="pointer-events-none absolute inset-0 bg-gold-sheen"
+                aria-hidden
+              />
               <CardHeader className="relative">
                 <CardTitle className="flex items-center gap-2">
                   <BrainCircuit className="h-4 w-4 text-gold" aria-hidden />
@@ -85,7 +107,10 @@ export default function MemoryDetailPage({ params }: { params: { id: string } })
                     {data.reason}
                   </KeyValue>
                   <KeyValue label="Amount">
-                    <AnimatedNumber value={data.amount} formatter={(v) => formatCurrency(v, data.asset)} />
+                    <AnimatedNumber
+                      value={data.amount}
+                      formatter={(v) => formatCurrency(v, data.asset)}
+                    />
                   </KeyValue>
                   <KeyValue label="Policy used">{data.policyUsed}</KeyValue>
                   <KeyValue label="Approved by">
@@ -145,7 +170,9 @@ export default function MemoryDetailPage({ params }: { params: { id: string } })
                       </div>
                       <div className="flex-1 pb-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-medium text-foreground">{step.title}</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {step.title}
+                          </p>
                           <span
                             className={cn(
                               'text-2xs font-medium uppercase tracking-wide',
@@ -162,11 +189,11 @@ export default function MemoryDetailPage({ params }: { params: { id: string } })
                           {step.actor} · {formatDateTime(step.timestamp)}
                         </p>
                         {meta.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
+                          <div className="gap-1.5 mt-2 flex flex-wrap">
                             {meta.map(([key, value]) => (
                               <span
                                 key={key}
-                                className="inline-flex items-center gap-1 rounded-xs border border-border bg-surface px-2 py-0.5 text-2xs text-foreground-secondary"
+                                className="py-0.5 inline-flex items-center gap-1 rounded-xs border border-border bg-surface px-2 text-2xs text-foreground-secondary"
                               >
                                 <span className="text-foreground-muted">{key}</span>
                                 <span className="tabular">{value}</span>

@@ -1,13 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  Area,
-  AreaChart,
-  Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Area, AreaChart, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {

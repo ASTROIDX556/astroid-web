@@ -24,7 +24,11 @@ export interface PaginatedResult<T> {
 /** Coerce a value to something searchable/sortable without stringifying objects nested twice. */
 function comparable(value: unknown): string | number | boolean | null {
   if (value === null || value === undefined) return null;
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
     return value;
   }
   return JSON.stringify(value) ?? null;
@@ -96,7 +100,8 @@ function readLimit(value: number | undefined, total: number): number {
  */
 export function paginate<T>(items: T[], query: ListQuery = {}): PaginatedResult<T> {
   const filtered = items.filter(
-    (item) => matchesSearch(item, query.search ?? '') && matchesFilter(item, query.filter),
+    (item) =>
+      matchesSearch(item, query.search ?? '') && matchesFilter(item, query.filter),
   );
   const sorted = sortItems(filtered, query.sort, query.order);
 

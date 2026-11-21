@@ -4,21 +4,22 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/cn';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-button font-sans font-medium transition-all duration-base ease-astroid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-button font-sans font-medium transition-all duration-base ease-astroid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
         primary:
-          'bg-foreground text-background shadow-soft-1 hover:shadow-soft-2 hover:-translate-y-px',
-        gold: 'bg-gold text-accent-foreground shadow-soft-1 hover:shadow-gold hover:-translate-y-px',
+          'bg-foreground text-background shadow-soft-1 hover:-translate-y-px hover:shadow-soft-2',
+        gold: 'bg-gold text-accent-foreground shadow-soft-1 hover:-translate-y-px hover:shadow-gold',
         secondary:
-          'bg-surface text-foreground border border-border shadow-soft-1 hover:bg-surface-secondary hover:-translate-y-px',
+          'border border-border bg-surface text-foreground shadow-soft-1 hover:-translate-y-px hover:bg-surface-secondary',
         outline:
           'border border-border-strong bg-transparent text-foreground hover:bg-surface-secondary',
-        ghost: 'text-foreground-secondary hover:bg-surface-secondary hover:text-foreground',
+        ghost:
+          'text-foreground-secondary hover:bg-surface-secondary hover:text-foreground',
         danger:
-          'bg-danger text-foreground-primary shadow-soft-1 hover:brightness-105 hover:-translate-y-px',
-        link: 'text-foreground underline-offset-4 hover:underline hover:text-gold-strong',
+          'bg-danger text-foreground-primary shadow-soft-1 hover:-translate-y-px hover:brightness-105',
+        link: 'text-foreground underline-offset-4 hover:text-gold-strong hover:underline',
       },
       size: {
         sm: 'h-8 px-3 text-xs',
@@ -42,7 +43,17 @@ export interface ButtonProps
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant, size, loading, leftIcon, rightIcon, children, disabled, ...props },
+    {
+      className,
+      variant,
+      size,
+      loading,
+      leftIcon,
+      rightIcon,
+      children,
+      disabled,
+      ...props
+    },
     ref,
   ) => {
     return (
@@ -52,11 +63,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled ?? loading}
         {...props}
       >
-        {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-        ) : (
-          leftIcon
-        )}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : leftIcon}
         {children}
         {!loading && rightIcon}
       </button>

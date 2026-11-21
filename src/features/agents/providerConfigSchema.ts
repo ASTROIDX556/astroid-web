@@ -42,7 +42,12 @@ const baseFields = {
 export const agentProviderConfigSchema = z
   .object({
     ...baseFields,
-    endpointUrl: z.string().trim().url('Enter a valid URL.').optional().or(z.literal('')),
+    endpointUrl: z
+      .string()
+      .trim()
+      .url('Enter a valid URL.')
+      .optional()
+      .or(z.literal('')),
     apiKey: z.string().trim().max(200).optional().or(z.literal('')),
   })
   .superRefine((values, ctx) => {
@@ -65,7 +70,11 @@ export const agentProviderConfigSchema = z
         message: 'An API key is required for this provider.',
       });
     }
-    if (needsApiKey && values.apiKey && !apiKeyPatterns[values.provider]?.test(values.apiKey)) {
+    if (
+      needsApiKey &&
+      values.apiKey &&
+      !apiKeyPatterns[values.provider]?.test(values.apiKey)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['apiKey'],

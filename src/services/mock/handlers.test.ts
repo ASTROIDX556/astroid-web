@@ -35,9 +35,8 @@ test('mock provider — agents: returns 404 for an unknown agent id', async () =
 });
 
 test('mock provider — wallets: returns the wallet collection with balances', async () => {
-  const { data } = await request<{ id: string; name: string; balances: unknown[] }[]>(
-    '/wallets',
-  );
+  const { data } =
+    await request<{ id: string; name: string; balances: unknown[] }[]>('/wallets');
 
   assert.ok(data.length > 0);
   for (const wallet of data) {
@@ -72,14 +71,15 @@ test('mock provider — transactions: supports pagination', async () => {
 });
 
 test('mock provider — transactions: supports case-insensitive search', async () => {
-  const { data } = await request<{ id: string; counterparty: string }[]>('/transactions', {
-    query: { search: 'openai' },
-  });
+  const { data } = await request<{ id: string; counterparty: string }[]>(
+    '/transactions',
+    {
+      query: { search: 'openai' },
+    },
+  );
 
   assert.ok(data.length > 0);
-  assert.ok(
-    data.every((tx) => tx.counterparty.toLowerCase().includes('openai')),
-  );
+  assert.ok(data.every((tx) => tx.counterparty.toLowerCase().includes('openai')));
 });
 
 test('mock provider — transactions: supports exact-match filters', async () => {
@@ -96,7 +96,8 @@ test('mock provider — transactions: returns 404 for an unknown transaction id'
 });
 
 test('mock provider — policies: returns the policy collection', async () => {
-  const { data } = await request<{ id: string; name: string; type: string }[]>('/policies');
+  const { data } =
+    await request<{ id: string; name: string; type: string }[]>('/policies');
 
   assert.ok(data.length > 0);
   for (const policy of data) {

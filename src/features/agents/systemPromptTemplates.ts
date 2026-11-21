@@ -85,11 +85,15 @@ Reliability and on-time execution are paramount. Log all payment attempts with c
   },
 ];
 
-export function getSystemPromptTemplateById(id: string): SystemPromptTemplate | undefined {
+export function getSystemPromptTemplateById(
+  id: string,
+): SystemPromptTemplate | undefined {
   return SYSTEM_PROMPT_TEMPLATES.find((t) => t.id === id);
 }
 
-export function getSystemPromptTemplatesByCategory(category: string): SystemPromptTemplate[] {
+export function getSystemPromptTemplatesByCategory(
+  category: string,
+): SystemPromptTemplate[] {
   return SYSTEM_PROMPT_TEMPLATES.filter((t) => t.category === category);
 }
 

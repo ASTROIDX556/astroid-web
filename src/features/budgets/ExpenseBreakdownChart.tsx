@@ -14,7 +14,13 @@ import {
 } from 'recharts';
 import { ReceiptText } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { CATEGORICAL, ChartTooltipShell } from '@/components/charts';
 import { formatCurrency } from '@/lib/format';
@@ -37,7 +43,11 @@ const TEXT = 'rgb(var(--text-muted))';
 
 interface SeriesTooltipProps {
   active?: boolean;
-  payload?: Array<{ name?: string | number; value?: number | string; payload?: ExpenseSeriesPoint }>;
+  payload?: Array<{
+    name?: string | number;
+    value?: number | string;
+    payload?: ExpenseSeriesPoint;
+  }>;
   asset: string;
 }
 
@@ -103,12 +113,19 @@ export function ExpenseBreakdownChart({
   const hasData = useMemo(() => series.some((point) => point.spent > 0), [series]);
 
   const chart = (
-    <div className="h-72 w-full" role="img" aria-label={`Expense breakdown for ${subjectName}`}>
+    <div
+      className="h-72 w-full"
+      role="img"
+      aria-label={`Expense breakdown for ${subjectName}`}
+    >
       {!mounted ? (
         <div className="skeleton h-full w-full rounded-md" />
       ) : (
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={series} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+          <ComposedChart
+            data={series}
+            margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+          >
             <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="bucketLabel"
@@ -124,7 +141,9 @@ export function ExpenseBreakdownChart({
               axisLine={false}
               width={64}
               tick={{ fill: TEXT, fontSize: 11 }}
-              tickFormatter={(value: number) => formatCurrency(value, asset, { compact: true })}
+              tickFormatter={(value: number) =>
+                formatCurrency(value, asset, { compact: true })
+              }
             />
             <RechartsTooltip content={<SeriesTooltip asset={asset} />} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -152,7 +171,11 @@ export function ExpenseBreakdownChart({
   );
 
   if (bare) {
-    return <div className={cn('w-full', className)}>{hasData ? chart : <ZeroState subjectName={subjectName} />}</div>;
+    return (
+      <div className={cn('w-full', className)}>
+        {hasData ? chart : <ZeroState subjectName={subjectName} />}
+      </div>
+    );
   }
 
   return (

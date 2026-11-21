@@ -77,7 +77,9 @@ export default function MemoryPage() {
                       </div>
                       <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end">
                         <span className="tabular font-display text-lg font-semibold">
-                          {formatCurrency(record.amount, record.asset, { compact: true })}
+                          {formatCurrency(record.amount, record.asset, {
+                            compact: true,
+                          })}
                         </span>
                         <ArrowUpRight
                           className="h-4 w-4 text-foreground-muted"

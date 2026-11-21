@@ -1,11 +1,4 @@
-import type {
-  Agent,
-  Budget,
-  Organization,
-  Policy,
-  User,
-  Wallet,
-} from '@/types/domain';
+import type { Agent, Budget, Organization, Policy, User, Wallet } from '@/types/domain';
 
 export const organizations: Organization[] = [
   {

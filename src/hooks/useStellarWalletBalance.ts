@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useQuery, type QueryObserverResult, type RefetchOptions } from '@tanstack/react-query';
+import {
+  useQuery,
+  type QueryObserverResult,
+  type RefetchOptions,
+} from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { queryKeys } from '@/services/query-keys';
@@ -34,7 +38,8 @@ import {
 export const STELLAR_MAINNET_HORIZON_URL = 'https://horizon.stellar.org';
 
 /** Demo account used when the app runs in mock-data mode (no wallet needed). */
-export const MOCK_STELLAR_PUBLIC_KEY = 'GAMockWalletAccountXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXA';
+export const MOCK_STELLAR_PUBLIC_KEY =
+  'GAMockWalletAccountXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXA';
 
 const BALANCE_STALE_TIME_MS = 30_000;
 const BALANCE_GC_TIME_MS = 5 * 60_000;
@@ -98,7 +103,11 @@ interface HorizonAccountResponse {
   }>;
 }
 
-function toBalanceSnapshot(account: HorizonAccountResponse, publicKey: string, networkUrl: string): StellarWalletBalanceSnapshot {
+function toBalanceSnapshot(
+  account: HorizonAccountResponse,
+  publicKey: string,
+  networkUrl: string,
+): StellarWalletBalanceSnapshot {
   const assets: StellarAssetBalance[] = (account.balances ?? [])
     .filter((row) => row.asset_type !== 'native')
     .map((row) => ({
@@ -120,15 +129,28 @@ function toBalanceSnapshot(account: HorizonAccountResponse, publicKey: string, n
   };
 }
 
-function mockBalanceSnapshot(publicKey: string, networkUrl: string): StellarWalletBalanceSnapshot {
+function mockBalanceSnapshot(
+  publicKey: string,
+  networkUrl: string,
+): StellarWalletBalanceSnapshot {
   return {
     publicKey,
     networkUrl,
     funded: true,
     totalXlm: 4182.3550016,
     assets: [
-      { assetType: 'credit_alphanum4', assetCode: 'USDC', balance: '12500.4200000', amount: 12500.42 },
-      { assetType: 'credit_alphanum4', assetCode: 'ASTRO', balance: '98000.0000000', amount: 98000 },
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        balance: '12500.4200000',
+        amount: 12500.42,
+      },
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'ASTRO',
+        balance: '98000.0000000',
+        amount: 98000,
+      },
     ],
     isMock: true,
     fetchedAt: Date.now(),
@@ -219,7 +241,9 @@ export interface UseStellarWalletBalanceResult {
   isConnected: boolean;
   /** True when no wallet is connected but balances cannot be requested. */
   isAwaitingWallet: boolean;
-  refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<StellarWalletBalanceSnapshot, FreighterWalletError>>;
+  refetch: (
+    options?: RefetchOptions,
+  ) => Promise<QueryObserverResult<StellarWalletBalanceSnapshot, FreighterWalletError>>;
 }
 
 /**
@@ -250,7 +274,9 @@ export function useStellarWalletBalance(
     queryKey: queryKeys.stellarBalance(publicKey ?? 'anonymous', networkUrl),
     queryFn: () => {
       if (isMockMode) {
-        return Promise.resolve(mockBalanceSnapshot(MOCK_STELLAR_PUBLIC_KEY, networkUrl));
+        return Promise.resolve(
+          mockBalanceSnapshot(MOCK_STELLAR_PUBLIC_KEY, networkUrl),
+        );
       }
       if (!publicKey) {
         return Promise.reject(
@@ -301,10 +327,14 @@ export function useStellarWalletBalance(
     const key = `wallet:${wallet.status}`;
     if (lastToastKeyRef.current === key) return;
     lastToastKeyRef.current = key;
-    const message = wallet.status === 'missing' ? 'Freighter is not installed.' : 'Freighter could not connect.';
-    const hint = wallet.status === 'missing'
-      ? 'Install the Freighter extension to load wallet balances.'
-      : 'Reconnect Freighter to refresh balances.';
+    const message =
+      wallet.status === 'missing'
+        ? 'Freighter is not installed.'
+        : 'Freighter could not connect.';
+    const hint =
+      wallet.status === 'missing'
+        ? 'Install the Freighter extension to load wallet balances.'
+        : 'Reconnect Freighter to refresh balances.';
     toast.error(message, { description: hint, duration: 6_000, id: BALANCE_TOAST_ID });
   }, [enabled, balanceEnabled, wallet.status]);
 

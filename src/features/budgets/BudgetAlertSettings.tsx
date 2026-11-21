@@ -23,9 +23,24 @@ export function BudgetAlertSettings({
 
   const settings = useMemo(
     () => [
-      { value: 70, label: 'Monitor', tone: 'text-amber-300', accent: 'bg-amber-500/10 border-amber-500/30' },
-      { value: 90, label: 'Escalate', tone: 'text-orange-300', accent: 'bg-orange-500/10 border-orange-500/30' },
-      { value: 100, label: 'Critical', tone: 'text-rose-300', accent: 'bg-rose-500/10 border-rose-500/30' },
+      {
+        value: 70,
+        label: 'Monitor',
+        tone: 'text-amber-300',
+        accent: 'bg-amber-500/10 border-amber-500/30',
+      },
+      {
+        value: 90,
+        label: 'Escalate',
+        tone: 'text-orange-300',
+        accent: 'bg-orange-500/10 border-orange-500/30',
+      },
+      {
+        value: 100,
+        label: 'Critical',
+        tone: 'text-rose-300',
+        accent: 'bg-rose-500/10 border-rose-500/30',
+      },
     ],
     [],
   );
@@ -63,7 +78,9 @@ export function BudgetAlertSettings({
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Gauge className={`h-4 w-4 ${setting.tone}`} aria-hidden />
-                  <span className="text-sm font-medium text-foreground">{setting.label}</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {setting.label}
+                  </span>
                 </div>
                 <span className={`text-xs font-semibold ${setting.tone}`}>
                   {currentValue}%
@@ -77,11 +94,18 @@ export function BudgetAlertSettings({
                   max={110}
                   step={5}
                   value={currentValue}
-                  onChange={(event) => updateThreshold(setting.value, Number(event.target.value))}
+                  onChange={(event) =>
+                    updateThreshold(setting.value, Number(event.target.value))
+                  }
                   className="h-2 w-full accent-current"
                   aria-label={`${setting.label} threshold`}
                 />
-                <Button type="button" variant="ghost" size="sm" className="shrink-0 px-2 text-2xs">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 px-2 text-2xs"
+                >
                   {currentValue > 0 ? 'Active' : 'Off'}
                 </Button>
               </div>
@@ -90,7 +114,7 @@ export function BudgetAlertSettings({
         })}
 
         <div className="flex items-center justify-between rounded-card border border-border bg-surface-secondary/50 p-3 text-xs text-foreground-secondary">
-          <span className="inline-flex items-center gap-1.5">
+          <span className="gap-1.5 inline-flex items-center">
             <ShieldCheck className="h-3.5 w-3.5 text-success" aria-hidden />
             Alert workflow enabled
           </span>

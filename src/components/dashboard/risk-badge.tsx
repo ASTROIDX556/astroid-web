@@ -34,7 +34,10 @@ interface ProgressBarProps {
   label?: string;
 }
 
-const toneFill: Record<Exclude<ProgressBarProps['tone'], undefined | 'auto'>, string> = {
+const toneFill: Record<
+  Exclude<ProgressBarProps['tone'], undefined | 'auto'>,
+  string
+> = {
   gold: 'bg-gold',
   success: 'bg-success',
   warning: 'bg-warning',
@@ -42,7 +45,12 @@ const toneFill: Record<Exclude<ProgressBarProps['tone'], undefined | 'auto'>, st
 };
 
 /** Slim utilization bar used for budgets and quota displays. */
-export function ProgressBar({ value, className, tone = 'auto', label }: ProgressBarProps) {
+export function ProgressBar({
+  value,
+  className,
+  tone = 'auto',
+  label,
+}: ProgressBarProps) {
   const pct = Math.max(0, Math.min(100, value));
   const resolved =
     tone === 'auto' ? (pct >= 90 ? 'danger' : pct >= 75 ? 'warning' : 'gold') : tone;
@@ -54,10 +62,16 @@ export function ProgressBar({ value, className, tone = 'auto', label }: Progress
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={label}
-      className={cn('h-1.5 w-full overflow-hidden rounded-full bg-surface-secondary', className)}
+      className={cn(
+        'h-1.5 w-full overflow-hidden rounded-full bg-surface-secondary',
+        className,
+      )}
     >
       <div
-        className={cn('h-full rounded-full transition-all duration-slow ease-astroid', toneFill[resolved])}
+        className={cn(
+          'h-full rounded-full transition-all duration-slow ease-astroid',
+          toneFill[resolved],
+        )}
         style={{ width: `${pct}%` }}
       />
     </div>

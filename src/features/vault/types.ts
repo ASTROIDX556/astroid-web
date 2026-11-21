@@ -1,4 +1,8 @@
-export type CredentialType = 'api_key' | 'secret_key' | 'bearer_token' | 'webhook_secret';
+export type CredentialType =
+  | 'api_key'
+  | 'secret_key'
+  | 'bearer_token'
+  | 'webhook_secret';
 
 export interface AgentCredential {
   id: string;

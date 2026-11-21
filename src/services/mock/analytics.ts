@@ -35,11 +35,41 @@ export const analyticsOverview: AnalyticsOverview = {
     { category: 'Data labeling', amount: 18_540 },
   ],
   agentSpend: [
-    { agentId: 'agt_orion', agentName: 'Orion', role: 'operations', spent: 72_340, transactions: 48 },
-    { agentId: 'agt_atlas', agentName: 'Atlas', role: 'finance', spent: 168_420, transactions: 96 },
-    { agentId: 'agt_kepler', agentName: 'Kepler', role: 'research', spent: 41_120, transactions: 61 },
-    { agentId: 'agt_vega', agentName: 'Vega', role: 'procurement', spent: 12_900, transactions: 14 },
-    { agentId: 'agt_lyra', agentName: 'Lyra', role: 'custom', spent: 210, transactions: 3 },
+    {
+      agentId: 'agt_orion',
+      agentName: 'Orion',
+      role: 'operations',
+      spent: 72_340,
+      transactions: 48,
+    },
+    {
+      agentId: 'agt_atlas',
+      agentName: 'Atlas',
+      role: 'finance',
+      spent: 168_420,
+      transactions: 96,
+    },
+    {
+      agentId: 'agt_kepler',
+      agentName: 'Kepler',
+      role: 'research',
+      spent: 41_120,
+      transactions: 61,
+    },
+    {
+      agentId: 'agt_vega',
+      agentName: 'Vega',
+      role: 'procurement',
+      spent: 12_900,
+      transactions: 14,
+    },
+    {
+      agentId: 'agt_lyra',
+      agentName: 'Lyra',
+      role: 'custom',
+      spent: 210,
+      transactions: 3,
+    },
   ],
   riskDistribution: [
     { level: 'low', count: 214 },
@@ -97,9 +127,18 @@ export const aiBriefing: AiBriefing = {
     },
   ],
   suggestedActions: [
-    { label: 'Prepare month-end treasury report', prompt: 'Prepare a month-end treasury report' },
-    { label: 'Reallocate Marketing → Operations', prompt: 'Move 15,000 USDC from Marketing to Operations' },
-    { label: 'Summarize agent spend this week', prompt: 'Summarize agent spend this week' },
+    {
+      label: 'Prepare month-end treasury report',
+      prompt: 'Prepare a month-end treasury report',
+    },
+    {
+      label: 'Reallocate Marketing → Operations',
+      prompt: 'Move 15,000 USDC from Marketing to Operations',
+    },
+    {
+      label: 'Summarize agent spend this week',
+      prompt: 'Summarize agent spend this week',
+    },
   ],
 };
 
@@ -233,7 +272,7 @@ export const agentSpendingCorrelations: AgentCorrelationPoint[] = [
       agt_atlas: 1.0,
       agt_kepler: 0.51,
       agt_vega: 0.78,
-      agt_lyra: 0.20,
+      agt_lyra: 0.2,
     },
   },
   {
@@ -266,7 +305,7 @@ export const agentSpendingCorrelations: AgentCorrelationPoint[] = [
     role: 'Custom',
     correlations: {
       agt_orion: 0.12,
-      agt_atlas: 0.20,
+      agt_atlas: 0.2,
       agt_kepler: 0.08,
       agt_vega: 0.15,
       agt_lyra: 1.0,

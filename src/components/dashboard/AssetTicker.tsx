@@ -28,7 +28,7 @@ function ChangeIndicator({ change24h }: { change24h: number }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-0.5 text-2xs font-medium tabular',
+        'gap-0.5 tabular inline-flex items-center text-2xs font-medium',
         isPositive && 'text-success',
         !isPositive && !isNeutral && 'text-danger',
         isNeutral && 'text-foreground-muted',
@@ -48,7 +48,8 @@ function ChangeIndicator({ change24h }: { change24h: number }) {
 }
 
 function RateRow({ rate }: { rate: AssetRate }) {
-  const colorClass = assetColors[rate.asset] ?? 'bg-surface-secondary text-foreground-secondary';
+  const colorClass =
+    assetColors[rate.asset] ?? 'bg-surface-secondary text-foreground-secondary';
 
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-secondary/50">
@@ -64,12 +65,10 @@ function RateRow({ rate }: { rate: AssetRate }) {
         </span>
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">{rate.asset}</p>
-          <p className="text-2xs text-foreground-muted">
-            {rate.source}
-          </p>
+          <p className="text-2xs text-foreground-muted">{rate.source}</p>
         </div>
       </div>
-      <div className="flex items-center gap-4 tabular">
+      <div className="tabular flex items-center gap-4">
         <div className="text-right">
           <p className="text-sm font-semibold text-foreground">
             {formatStellarPrice(rate.priceUsd)}
@@ -89,13 +88,13 @@ function RateRowSkeleton() {
       <div className="flex items-center gap-3">
         <Skeleton className="h-8 w-8" rounded="md" />
         <div className="space-y-1.5">
-          <Skeleton className="h-3 w-12" />
+          <Skeleton className="w-12 h-3" />
           <Skeleton className="h-2.5 w-20" />
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <Skeleton className="h-4 w-16" />
-        <Skeleton className="h-3 w-14" />
+        <Skeleton className="w-16 h-4" />
+        <Skeleton className="w-14 h-3" />
       </div>
     </div>
   );
@@ -125,14 +124,13 @@ export function AssetTicker({ className }: AssetTickerProps) {
           <h2 className="font-display text-sm font-semibold tracking-tight text-foreground">
             Asset rates
           </h2>
-          <Badge variant="info" size="sm">Live</Badge>
+          <Badge variant="info" size="sm">
+            Live
+          </Badge>
         </div>
         <div className="flex items-center gap-2 text-2xs text-foreground-muted">
           <RefreshCw
-            className={cn(
-              'h-3 w-3',
-              rates.isFetching && 'animate-spin text-gold',
-            )}
+            className={cn('h-3 w-3', rates.isFetching && 'animate-spin text-gold')}
             aria-hidden
           />
           <span className="tabular">
@@ -151,8 +149,9 @@ export function AssetTicker({ className }: AssetTickerProps) {
             ))}
       </div>
 
-      <div className="border-t border-border px-4 py-2.5 text-center text-2xs text-foreground-muted">
-        Prices sourced from Stellar DEX &amp; off-chain oracles. 24h change is approximate.
+      <div className="py-2.5 border-t border-border px-4 text-center text-2xs text-foreground-muted">
+        Prices sourced from Stellar DEX &amp; off-chain oracles. 24h change is
+        approximate.
       </div>
     </Card>
   );

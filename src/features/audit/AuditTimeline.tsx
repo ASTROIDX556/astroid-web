@@ -35,7 +35,12 @@ import { Button } from '@/components/ui/button';
 import { useAuditEvents } from '@/hooks/use-queries';
 import { formatCurrency, formatRelativeTime, formatDateTime } from '@/lib/format';
 import { AuditExportMenu } from './AuditExportMenu';
-import type { AuditEvent, AuditEventType, AuditLogLevel, AuditTimeRange } from './types';
+import type {
+  AuditEvent,
+  AuditEventType,
+  AuditLogLevel,
+  AuditTimeRange,
+} from './types';
 
 const LEVEL_ICONS: Record<AuditLogLevel, React.ReactNode> = {
   info: <Info className="h-4 w-4 text-info" aria-hidden />,
@@ -44,7 +49,10 @@ const LEVEL_ICONS: Record<AuditLogLevel, React.ReactNode> = {
   error: <XCircle className="h-4 w-4 text-danger" aria-hidden />,
 };
 
-const LEVEL_BADGE_VARIANTS: Record<AuditLogLevel, 'info' | 'success' | 'warning' | 'danger'> = {
+const LEVEL_BADGE_VARIANTS: Record<
+  AuditLogLevel,
+  'info' | 'success' | 'warning' | 'danger'
+> = {
   info: 'info',
   success: 'success',
   warning: 'warning',
@@ -86,14 +94,23 @@ export function AuditTimeline() {
   // Audit events resolve through the mock provider / live API via TanStack
   // Query, so the same latency, caching, and error semantics apply here.
   const auditEvents = useAuditEvents();
-  const events = useMemo<AuditEvent[]>(() => auditEvents.data ?? [], [auditEvents.data]);
+  const events = useMemo<AuditEvent[]>(
+    () => auditEvents.data ?? [],
+    [auditEvents.data],
+  );
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEventType, setSelectedEventType] = useState<AuditEventType | 'all'>('all');
-  const [selectedLogLevel, setSelectedLogLevel] = useState<AuditLogLevel | 'all'>('all');
+  const [selectedEventType, setSelectedEventType] = useState<AuditEventType | 'all'>(
+    'all',
+  );
+  const [selectedLogLevel, setSelectedLogLevel] = useState<AuditLogLevel | 'all'>(
+    'all',
+  );
   const [selectedTimeRange, setSelectedTimeRange] = useState<AuditTimeRange>('all');
   const [selectedActorId, setSelectedActorId] = useState<string>('all');
   const [inspectEvent, setInspectEvent] = useState<AuditEvent | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'timestamp', desc: true }]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'timestamp', desc: true },
+  ]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 25 });
 
   const uniqueActors = useMemo(() => {
@@ -134,7 +151,14 @@ export function AuditTimeline() {
       }
       return true;
     });
-  }, [events, searchQuery, selectedEventType, selectedLogLevel, selectedTimeRange, selectedActorId]);
+  }, [
+    events,
+    searchQuery,
+    selectedEventType,
+    selectedLogLevel,
+    selectedTimeRange,
+    selectedActorId,
+  ]);
 
   const handleClearFilters = useCallback(() => {
     setSearchQuery('');
@@ -144,7 +168,12 @@ export function AuditTimeline() {
     setSelectedActorId('all');
   }, []);
 
-  const hasActiveFilters = searchQuery !== '' || selectedEventType !== 'all' || selectedLogLevel !== 'all' || selectedTimeRange !== 'all' || selectedActorId !== 'all';
+  const hasActiveFilters =
+    searchQuery !== '' ||
+    selectedEventType !== 'all' ||
+    selectedLogLevel !== 'all' ||
+    selectedTimeRange !== 'all' ||
+    selectedActorId !== 'all';
 
   const columns = useMemo<ColumnDef<AuditEvent, unknown>[]>(
     () => [
@@ -153,8 +182,12 @@ export function AuditTimeline() {
         header: 'Timestamp',
         cell: ({ row }) => (
           <div className="flex flex-col">
-            <span className="text-xs text-foreground font-medium">{formatDateTime(row.original.timestamp)}</span>
-            <span className="text-2xs text-foreground-muted">{formatRelativeTime(row.original.timestamp)}</span>
+            <span className="text-xs font-medium text-foreground">
+              {formatDateTime(row.original.timestamp)}
+            </span>
+            <span className="text-2xs text-foreground-muted">
+              {formatRelativeTime(row.original.timestamp)}
+            </span>
           </div>
         ),
         sortingFn: 'datetime',
@@ -166,7 +199,11 @@ export function AuditTimeline() {
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             {LEVEL_ICONS[row.original.level]}
-            <Badge variant={LEVEL_BADGE_VARIANTS[row.original.level]} size="sm" className="uppercase font-mono">
+            <Badge
+              variant={LEVEL_BADGE_VARIANTS[row.original.level]}
+              size="sm"
+              className="font-mono uppercase"
+            >
               {row.original.level}
             </Badge>
           </div>
@@ -205,8 +242,12 @@ export function AuditTimeline() {
                 <User className="h-3.5 w-3.5 text-info" aria-hidden />
               )}
               <div className="flex flex-col">
-                <span className="text-xs text-foreground font-medium">{evt.actorName}</span>
-                <span className="text-2xs text-foreground-muted font-mono">{evt.actorId}</span>
+                <span className="text-xs font-medium text-foreground">
+                  {evt.actorName}
+                </span>
+                <span className="font-mono text-2xs text-foreground-muted">
+                  {evt.actorId}
+                </span>
               </div>
             </div>
           );
@@ -220,8 +261,10 @@ export function AuditTimeline() {
           const evt = row.original;
           return (
             <div className="flex flex-col gap-1">
-              <span className="text-sm text-foreground font-medium">{evt.summary}</span>
-              <span className="text-xs text-foreground-secondary line-clamp-2">{evt.details}</span>
+              <span className="text-sm font-medium text-foreground">{evt.summary}</span>
+              <span className="line-clamp-2 text-xs text-foreground-secondary">
+                {evt.details}
+              </span>
               {evt.project && (
                 <Badge variant="neutral" size="sm" className="w-fit">
                   {evt.project}
@@ -239,7 +282,7 @@ export function AuditTimeline() {
           const evt = row.original;
           if (evt.amount && evt.asset) {
             return (
-              <span className="font-mono font-bold text-foreground bg-surface-secondary px-2 py-0.5 rounded-xs text-xs">
+              <span className="py-0.5 rounded-xs bg-surface-secondary px-2 font-mono text-xs font-bold text-foreground">
                 {formatCurrency(evt.amount, evt.asset)}
               </span>
             );
@@ -295,7 +338,7 @@ export function AuditTimeline() {
         aria-label="Agent Activity Audit Log Timeline"
         aria-busy="true"
       >
-        <div className="skeleton h-9 w-72 rounded-button" />
+        <div className="skeleton w-72 h-9 rounded-button" />
         <div className="skeleton h-[420px] w-full rounded-card" />
         <span className="sr-only">Loading audit log records…</span>
       </div>
@@ -304,9 +347,15 @@ export function AuditTimeline() {
 
   if (auditEvents.isError && events.length === 0) {
     return (
-      <div className="space-y-6" role="region" aria-label="Agent Activity Audit Log Timeline">
+      <div
+        className="space-y-6"
+        role="region"
+        aria-label="Agent Activity Audit Log Timeline"
+      >
         <Card className="flex flex-col items-start gap-3 p-6">
-          <p className="text-sm font-medium text-foreground">Unable to load the audit log</p>
+          <p className="text-sm font-medium text-foreground">
+            Unable to load the audit log
+          </p>
           <p className="text-xs text-foreground-secondary">
             The request to the audit service failed. Retry to fetch the latest records.
           </p>
@@ -324,13 +373,17 @@ export function AuditTimeline() {
   }
 
   return (
-    <div className="space-y-6" role="region" aria-label="Agent Activity Audit Log Timeline">
+    <div
+      className="space-y-6"
+      role="region"
+      aria-label="Agent Activity Audit Log Timeline"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
             Agent Activity Audit Log
           </h2>
-          <p className="text-sm text-foreground-secondary mt-1">
+          <p className="mt-1 text-sm text-foreground-secondary">
             Chronological timeline of all agent actions with advanced filtering
           </p>
         </div>
@@ -340,25 +393,32 @@ export function AuditTimeline() {
       </div>
 
       <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-3" role="search" aria-label="Audit log filters">
-          <div className="relative min-w-[240px] flex-1 max-w-sm">
+        <div
+          className="flex flex-wrap items-center gap-3"
+          role="search"
+          aria-label="Audit log filters"
+        >
+          <div className="relative min-w-[240px] max-w-sm flex-1">
             <label htmlFor="audit-search" className="sr-only">
               Search audit logs
             </label>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground-muted" aria-hidden />
+            <Search
+              className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted"
+              aria-hidden
+            />
             <input
               id="audit-search"
               type="search"
               placeholder="Search by actor, summary, project..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-9 rounded-button border border-border bg-surface pl-9 pr-8 py-1.5 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="py-1.5 h-9 w-full rounded-button border border-border bg-surface pl-9 pr-8 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                className="right-2.5 absolute top-1/2 -translate-y-1/2 rounded text-foreground-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Clear search"
               >
                 <X className="h-3.5 w-3.5" aria-hidden />
@@ -368,7 +428,9 @@ export function AuditTimeline() {
 
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-foreground-muted" aria-hidden />
-            <span className="text-xs text-foreground-secondary font-medium">Filters:</span>
+            <span className="text-xs font-medium text-foreground-secondary">
+              Filters:
+            </span>
           </div>
 
           <div className="relative">
@@ -378,8 +440,10 @@ export function AuditTimeline() {
             <select
               id="filter-event-type"
               value={selectedEventType}
-              onChange={(e) => setSelectedEventType(e.target.value as AuditEventType | 'all')}
-              className="h-9 appearance-none rounded-button border border-border bg-surface pl-3 pr-8 py-1.5 text-sm text-foreground font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              onChange={(e) =>
+                setSelectedEventType(e.target.value as AuditEventType | 'all')
+              }
+              className="py-1.5 h-9 appearance-none rounded-button border border-border bg-surface pl-3 pr-8 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <option value="all">All Event Types</option>
               <option value="action">Agent Action</option>
@@ -398,8 +462,10 @@ export function AuditTimeline() {
             <select
               id="filter-log-level"
               value={selectedLogLevel}
-              onChange={(e) => setSelectedLogLevel(e.target.value as AuditLogLevel | 'all')}
-              className="h-9 appearance-none rounded-button border border-border bg-surface pl-3 pr-8 py-1.5 text-sm text-foreground font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              onChange={(e) =>
+                setSelectedLogLevel(e.target.value as AuditLogLevel | 'all')
+              }
+              className="py-1.5 h-9 appearance-none rounded-button border border-border bg-surface pl-3 pr-8 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <option value="all">All Severity Levels</option>
               <option value="success">Success</option>
@@ -417,7 +483,7 @@ export function AuditTimeline() {
               id="filter-actor"
               value={selectedActorId}
               onChange={(e) => setSelectedActorId(e.target.value)}
-              className="h-9 appearance-none rounded-button border border-border bg-surface pl-3 pr-8 py-1.5 text-sm text-foreground font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="py-1.5 h-9 appearance-none rounded-button border border-border bg-surface pl-3 pr-8 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <option value="all">All Agents</option>
               {uniqueActors.map((actor) => (
@@ -432,14 +498,14 @@ export function AuditTimeline() {
             <label htmlFor="filter-time-range" className="sr-only">
               Filter by date range
             </label>
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
               <Calendar className="h-3.5 w-3.5 text-foreground-muted" aria-hidden />
             </span>
             <select
               id="filter-time-range"
               value={selectedTimeRange}
               onChange={(e) => setSelectedTimeRange(e.target.value as AuditTimeRange)}
-              className="h-9 appearance-none rounded-button border border-border bg-surface pl-9 pr-8 py-1.5 text-sm text-foreground font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="py-1.5 h-9 appearance-none rounded-button border border-border bg-surface pl-9 pr-8 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {Object.entries(TIME_RANGE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -463,42 +529,74 @@ export function AuditTimeline() {
         </div>
       </Card>
 
-      <div className="flex items-center justify-between text-sm text-foreground-muted" aria-live="polite" aria-atomic="true">
+      <div
+        className="flex items-center justify-between text-sm text-foreground-muted"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         <span>
           Showing {filteredEvents.length} of {events.length} audit trail records
         </span>
         {hasActiveFilters && (
-          <span className="text-xs text-gold font-medium">
-            Filters active
-          </span>
+          <span className="text-xs font-medium text-gold">Filters active</span>
         )}
       </div>
 
       <div className="overflow-hidden rounded-card border border-border bg-surface">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-full border-collapse text-left text-sm" role="grid" aria-label="Audit log timeline">
+          <table
+            className="w-full min-w-full border-collapse text-left text-sm"
+            role="grid"
+            aria-label="Audit log timeline"
+          >
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="border-b border-border bg-surface-secondary/40">
+                <tr
+                  key={headerGroup.id}
+                  className="border-b border-border bg-surface-secondary/40"
+                >
                   {headerGroup.headers.map((header) => {
-                    const meta = header.column.columnDef.meta as { className?: string } | undefined;
+                    const meta = header.column.columnDef.meta as
+                      | { className?: string }
+                      | undefined;
                     const canSort = header.column.getCanSort();
                     return (
                       <th
                         key={header.id}
                         scope="col"
                         className={`px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-foreground-secondary ${meta?.className ?? ''}`}
-                        aria-sort={canSort ? (header.column.getIsSorted() === 'asc' ? 'ascending' : header.column.getIsSorted() === 'desc' ? 'descending' : 'none') : undefined}
+                        aria-sort={
+                          canSort
+                            ? header.column.getIsSorted() === 'asc'
+                              ? 'ascending'
+                              : header.column.getIsSorted() === 'desc'
+                                ? 'descending'
+                                : 'none'
+                            : undefined
+                        }
                       >
                         {header.isPlaceholder ? null : (
                           <button
                             type="button"
-                            onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                            onClick={
+                              canSort
+                                ? header.column.getToggleSortingHandler()
+                                : undefined
+                            }
                             disabled={!canSort}
-                            className={`inline-flex items-center gap-1.5 text-left font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded ${!canSort ? 'cursor-default' : 'cursor-pointer'}`}
-                            aria-label={canSort ? `Sort by ${header.column.columnDef.header?.toString()}, ${header.column.getIsSorted() === 'asc' ? 'ascending' : header.column.getIsSorted() === 'desc' ? 'descending' : 'unsorted'}` : undefined}
+                            className={`gap-1.5 inline-flex items-center rounded text-left font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${!canSort ? 'cursor-default' : 'cursor-pointer'}`}
+                            aria-label={
+                              canSort
+                                ? `Sort by ${header.column.columnDef.header?.toString()}, ${header.column.getIsSorted() === 'asc' ? 'ascending' : header.column.getIsSorted() === 'desc' ? 'descending' : 'unsorted'}`
+                                : undefined
+                            }
                           >
-                            <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                            <span>
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                            </span>
                             {canSort && (
                               <span aria-hidden className="text-foreground-muted">
                                 {header.column.getIsSorted() === 'asc' ? (
@@ -522,16 +620,16 @@ export function AuditTimeline() {
               {table.getRowModel().rows.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length} className="p-8">
-                    <div className="flex min-h-24 items-center justify-center text-sm text-foreground-secondary">
+                    <div className="min-h-24 flex items-center justify-center text-sm text-foreground-secondary">
                       No audit log records match the current filter criteria.
                     </div>
                   </td>
-                                </tr>
+                </tr>
               ) : (
                 table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="transition-colors duration-fast hover:bg-surface-secondary/30 focus-within:bg-surface-secondary/30"
+                    className="transition-colors duration-fast focus-within:bg-surface-secondary/30 hover:bg-surface-secondary/30"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
@@ -549,7 +647,11 @@ export function AuditTimeline() {
         </div>
 
         {canPaginate && (
-          <div className="flex flex-col gap-3 border-t border-border bg-surface-secondary/20 px-4 py-3 text-sm text-foreground-secondary sm:flex-row sm:items-center sm:justify-between" role="navigation" aria-label="Audit log pagination">
+          <div
+            className="flex flex-col gap-3 border-t border-border bg-surface-secondary/20 px-4 py-3 text-sm text-foreground-secondary sm:flex-row sm:items-center sm:justify-between"
+            role="navigation"
+            aria-label="Audit log pagination"
+          >
             <p className="text-xs">
               Page {table.getState().pagination.pageIndex + 1} of {pageCount}
             </p>
@@ -575,7 +677,7 @@ export function AuditTimeline() {
               >
                 Prev
               </Button>
-              <span className="tabular-nums text-xs px-2" aria-live="polite">
+              <span className="px-2 text-xs tabular-nums" aria-live="polite">
                 {table.getState().pagination.pageIndex + 1} / {pageCount}
               </span>
               <Button
@@ -612,43 +714,60 @@ export function AuditTimeline() {
           size="lg"
         >
           <div className="space-y-4 pt-2">
-            <div className="grid gap-2 sm:grid-cols-2 text-xs bg-surface-secondary p-3 rounded-card border border-border">
+            <div className="grid gap-2 rounded-card border border-border bg-surface-secondary p-3 text-xs sm:grid-cols-2">
               <div>
                 <span className="text-foreground-muted">Event ID:</span>{' '}
-                <span className="font-mono font-semibold text-foreground">{inspectEvent.id}</span>
+                <span className="font-mono font-semibold text-foreground">
+                  {inspectEvent.id}
+                </span>
               </div>
               <div>
                 <span className="text-foreground-muted">Timestamp:</span>{' '}
-                <span className="font-mono text-foreground">{formatDateTime(inspectEvent.timestamp)}</span>
+                <span className="font-mono text-foreground">
+                  {formatDateTime(inspectEvent.timestamp)}
+                </span>
               </div>
               <div>
                 <span className="text-foreground-muted">Actor:</span>{' '}
-                <span className="font-semibold text-foreground">{inspectEvent.actorName} ({inspectEvent.actorId})</span>
+                <span className="font-semibold text-foreground">
+                  {inspectEvent.actorName} ({inspectEvent.actorId})
+                </span>
               </div>
               <div>
                 <span className="text-foreground-muted">Event Type:</span>{' '}
-                <span className="font-semibold text-foreground">{EVENT_TYPE_LABELS[inspectEvent.eventType]}</span>
+                <span className="font-semibold text-foreground">
+                  {EVENT_TYPE_LABELS[inspectEvent.eventType]}
+                </span>
               </div>
             </div>
 
             {inspectEvent.xdrHash && (
               <div className="space-y-1">
-                <label htmlFor="xdr-hash" className="text-2xs font-bold uppercase tracking-wider text-foreground-muted">
+                <label
+                  htmlFor="xdr-hash"
+                  className="text-2xs font-bold uppercase tracking-wider text-foreground-muted"
+                >
                   Stellar XDR Signature / Transaction Hash
                 </label>
-                <div id="xdr-hash" className="font-mono text-2xs bg-surface p-2.5 rounded-button border border-border break-all text-gold">
+                <div
+                  id="xdr-hash"
+                  className="p-2.5 break-all rounded-button border border-border bg-surface font-mono text-2xs text-gold"
+                >
                   {inspectEvent.xdrHash}
                 </div>
               </div>
             )}
 
             <div className="space-y-1">
-              <label htmlFor="raw-payload" className="text-2xs font-bold uppercase tracking-wider text-foreground-muted">
+              <label
+                htmlFor="raw-payload"
+                className="text-2xs font-bold uppercase tracking-wider text-foreground-muted"
+              >
                 Raw JSON Payload
               </label>
               <pre
                 id="raw-payload"
-                className="font-mono text-xs bg-surface-secondary text-success p-4 rounded-button overflow-x-auto max-h-72 border border-border"
+                className="max-h-72 overflow-x-auto rounded-button border border-border bg-surface-secondary p-4 font-mono text-xs text-success"
                 tabIndex={0}
               >
                 {JSON.stringify(inspectEvent.rawPayload, null, 2)}

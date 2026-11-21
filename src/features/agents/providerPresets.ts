@@ -109,6 +109,8 @@ export const AGENT_PROVIDER_PRESETS: readonly AgentProviderPreset[] = [
   },
 ] as const;
 
-export function getProviderPreset(id: AgentProviderId): AgentProviderPreset | undefined {
+export function getProviderPreset(
+  id: AgentProviderId,
+): AgentProviderPreset | undefined {
   return AGENT_PROVIDER_PRESETS.find((preset) => preset.id === id);
 }

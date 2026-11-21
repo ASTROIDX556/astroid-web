@@ -21,7 +21,12 @@ export const DEFAULT_AGENT_FILTERS: AgentFilterState = {
   status: 'all',
 };
 
-const STATUS_OPTIONS: readonly AgentStatus[] = ['active', 'paused', 'suspended', 'archived'];
+const STATUS_OPTIONS: readonly AgentStatus[] = [
+  'active',
+  'paused',
+  'suspended',
+  'archived',
+];
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -62,18 +67,25 @@ export interface AgentListFiltersProps {
  * and provider + status filter dropdowns, with a clear action and a live
  * result count. Collapses to a single column on small screens.
  */
-export function AgentListFilters({ filters, onChange, agents, resultCount }: AgentListFiltersProps) {
+export function AgentListFilters({
+  filters,
+  onChange,
+  agents,
+  resultCount,
+}: AgentListFiltersProps) {
   const providers = useMemo(
     () => Array.from(new Set(agents.map((agent) => agent.provider))).sort(),
     [agents],
   );
 
   const isFiltered =
-    filters.search.trim() !== '' || filters.provider !== 'all' || filters.status !== 'all';
+    filters.search.trim() !== '' ||
+    filters.provider !== 'all' ||
+    filters.status !== 'all';
 
   return (
     <div className="flex flex-col gap-3 rounded-card border border-border bg-surface p-4 sm:flex-row sm:items-end">
-      <label className="flex min-w-0 flex-[2] flex-col gap-1.5 text-xs font-medium text-foreground">
+      <label className="gap-1.5 flex min-w-0 flex-[2] flex-col text-xs font-medium text-foreground">
         <span>Search agents</span>
         <Input
           type="search"
@@ -85,7 +97,7 @@ export function AgentListFilters({ filters, onChange, agents, resultCount }: Age
         />
       </label>
 
-      <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-foreground">
+      <label className="gap-1.5 flex min-w-0 flex-1 flex-col text-xs font-medium text-foreground">
         <span>Provider</span>
         <Select
           aria-label="Filter by AI provider"
@@ -101,7 +113,7 @@ export function AgentListFilters({ filters, onChange, agents, resultCount }: Age
         </Select>
       </label>
 
-      <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-foreground">
+      <label className="gap-1.5 flex min-w-0 flex-1 flex-col text-xs font-medium text-foreground">
         <span>Status</span>
         <Select
           aria-label="Filter by operational status"
@@ -122,7 +134,7 @@ export function AgentListFilters({ filters, onChange, agents, resultCount }: Age
           type="button"
           variant="ghost"
           size="sm"
-          className="self-start sm:self-auto sm:mb-0.5"
+          className="sm:mb-0.5 self-start sm:self-auto"
           leftIcon={<X className="h-3.5 w-3.5" aria-hidden />}
           onClick={() => onChange(DEFAULT_AGENT_FILTERS)}
         >
@@ -133,7 +145,7 @@ export function AgentListFilters({ filters, onChange, agents, resultCount }: Age
       <p
         role="status"
         aria-live="polite"
-        className="self-start text-2xs tabular text-foreground-secondary sm:mb-1 sm:self-auto sm:ml-auto"
+        className="tabular self-start text-2xs text-foreground-secondary sm:mb-1 sm:ml-auto sm:self-auto"
       >
         {resultCount} of {agents.length} agents
       </p>

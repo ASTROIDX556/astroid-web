@@ -3,7 +3,16 @@
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Activity, Bot, CalendarDays, Coins, Cpu, Gauge, Link2, Sparkles } from 'lucide-react';
+import {
+  Activity,
+  Bot,
+  CalendarDays,
+  Coins,
+  Cpu,
+  Gauge,
+  Link2,
+  Sparkles,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -101,7 +110,7 @@ export function AgentConfigForm() {
         className="space-y-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-          <div className="flex items-center gap-2.5">
+          <div className="gap-2.5 flex items-center">
             <span className="grid h-8 w-8 place-items-center rounded-button bg-gold-soft text-gold-strong">
               <Bot className="h-4 w-4" aria-hidden />
             </span>

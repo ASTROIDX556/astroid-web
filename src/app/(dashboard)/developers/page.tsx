@@ -133,9 +133,11 @@ export default function DevelopersPage() {
                           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-surface-secondary text-foreground-secondary">
                             <WebhookIcon className="h-4 w-4" aria-hidden />
                           </span>
-                          <p className="truncate font-mono text-xs text-foreground">{hook.url}</p>
+                          <p className="truncate font-mono text-xs text-foreground">
+                            {hook.url}
+                          </p>
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="gap-1.5 flex flex-wrap">
                           {hook.events.map((event) => (
                             <Badge key={event} variant="outline" size="sm">
                               {event}
@@ -144,7 +146,11 @@ export default function DevelopersPage() {
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
-                        <Badge variant={hook.enabled ? 'success' : 'neutral'} size="sm" dot>
+                        <Badge
+                          variant={hook.enabled ? 'success' : 'neutral'}
+                          size="sm"
+                          dot
+                        >
                           {hook.enabled ? 'Enabled' : 'Disabled'}
                         </Badge>
                         <span className="text-2xs text-foreground-muted">

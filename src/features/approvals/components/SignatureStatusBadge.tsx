@@ -19,7 +19,11 @@ export interface SignatureStatusBadgeProps {
  * queue cards and any other surface that shows signature progress consume
  * this instead of duplicating the string.
  */
-export function SignatureStatusBadge({ approved, required, className }: SignatureStatusBadgeProps) {
+export function SignatureStatusBadge({
+  approved,
+  required,
+  className,
+}: SignatureStatusBadgeProps) {
   const meetsThreshold = approved >= required;
 
   return (

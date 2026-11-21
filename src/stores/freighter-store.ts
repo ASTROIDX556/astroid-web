@@ -5,7 +5,11 @@ import type { StateCreator } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeLocalStorage } from './safe-storage';
 
-export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'locked';
+export type FreighterConnectionStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'locked';
 
 /**
  * Stellar networks the app can target. Freighter itself owns the extension's
@@ -44,12 +48,16 @@ export const STELLAR_NETWORKS: Record<StellarNetworkId, StellarNetworkDescriptor
 };
 
 /** Passphrase for an app-side target network id (never null for known ids). */
-export function resolveExpectedPassphrase(target: StellarNetworkId | null): string | null {
-  return target ? STELLAR_NETWORKS[target]?.passphrase ?? null : null;
+export function resolveExpectedPassphrase(
+  target: StellarNetworkId | null,
+): string | null {
+  return target ? (STELLAR_NETWORKS[target]?.passphrase ?? null) : null;
 }
 
 /** Reverse map a wallet passphrase back to a known network id, if recognized. */
-export function networkIdForPassphrase(passphrase: string | null): StellarNetworkId | null {
+export function networkIdForPassphrase(
+  passphrase: string | null,
+): StellarNetworkId | null {
   if (!passphrase) return null;
   const entry = (Object.values(STELLAR_NETWORKS) as StellarNetworkDescriptor[]).find(
     (network) => network.passphrase === passphrase,
@@ -213,7 +221,9 @@ export interface FreighterWalletState {
   /** Re-reads the extension's active network + passphrase into state. */
   refreshNetwork: () => Promise<void>;
   /** Sets the expected network and re-syncs against the wallet. */
-  switchNetwork: (target: StellarNetworkId | 'mainnet') => Promise<{ matched: boolean } | boolean>;
+  switchNetwork: (
+    target: StellarNetworkId | 'mainnet',
+  ) => Promise<{ matched: boolean } | boolean>;
   /** Subscribes to Freighter account/network change events (WatchWalletChanges). */
   startWalletWatch: () => void;
   stopWalletWatch: () => void;
@@ -226,7 +236,10 @@ export interface FreighterWalletState {
   adoptConnection: (publicKey: string | null) => void;
   /** Compatibility setter retained for consumers of the original wallet API. */
   updatePublicKey: (publicKey: string) => void;
-  requestSignature: (xdr: string, options?: { networkPassphrase?: string }) => Promise<string>;
+  requestSignature: (
+    xdr: string,
+    options?: { networkPassphrase?: string },
+  ) => Promise<string>;
   hydrate: () => Promise<void>;
 }
 
@@ -327,7 +340,9 @@ const isValidStellarAddress = (value: string | null | undefined): value is strin
 const resolveWalletAddress = (value: unknown): string | null => {
   if (typeof value === 'string') return isValidStellarAddress(value) ? value : null;
   if (value && typeof value === 'object') {
-    const candidate = (value as { address?: string; publicKey?: string }).address ?? (value as { address?: string; publicKey?: string }).publicKey;
+    const candidate =
+      (value as { address?: string; publicKey?: string }).address ??
+      (value as { address?: string; publicKey?: string }).publicKey;
     return isValidStellarAddress(candidate) ? candidate : null;
   }
   return null;
@@ -628,15 +643,22 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
           }
 
           const state = get();
-          const patch: Partial<Pick<FreighterWalletState, 'status' | 'isInstalled' | 'publicKey' | 'network' | 'networkPassphrase'>> = {};
+          const patch: Partial<
+            Pick<
+              FreighterWalletState,
+              'status' | 'isInstalled' | 'publicKey' | 'network' | 'networkPassphrase'
+            >
+          > = {};
           if (state.publicKey !== address) {
             patch.publicKey = address;
             patch.status = 'connected';
             patch.isInstalled = true;
           }
           if (network && state.network !== network) patch.network = network;
-          const nextPassphrase = networkPassphrase && networkPassphrase.trim() ? networkPassphrase : null;
-          if (state.networkPassphrase !== nextPassphrase) patch.networkPassphrase = nextPassphrase;
+          const nextPassphrase =
+            networkPassphrase && networkPassphrase.trim() ? networkPassphrase : null;
+          if (state.networkPassphrase !== nextPassphrase)
+            patch.networkPassphrase = nextPassphrase;
           if (Object.keys(patch).length > 0) set(patch);
         });
       } catch {
@@ -674,7 +696,8 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
     // Fail-closed network gate: never sign against a wallet network that
     // differs from the expected one, and never sign when the wallet's
     // network cannot be verified at all.
-    const expectedPassphrase = options?.networkPassphrase ?? resolveExpectedPassphrase(get().targetNetwork);
+    const expectedPassphrase =
+      options?.networkPassphrase ?? resolveExpectedPassphrase(get().targetNetwork);
     let walletPassphrase = get().networkPassphrase;
     if (!walletPassphrase) {
       await get().refreshNetwork();
@@ -706,9 +729,12 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       const signedXdr =
         typeof response === 'string'
           ? response
-          : (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.signedTxXdr ??
-            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.signedXDR ??
-            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.xdr;
+          : ((response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })
+              ?.signedTxXdr ??
+            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })
+              ?.signedXDR ??
+            (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })
+              ?.xdr);
 
       if (!signedXdr) {
         throw new FreighterError('INVALID_RESPONSE', 'Freighter did not return a signed transaction payload.');
@@ -782,9 +808,10 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
         return;
       }
 
-      const addressResult = typeof freighter.getAddress === 'function'
-        ? await withTimeout(freighter.getAddress())
-        : null;
+      const addressResult =
+        typeof freighter.getAddress === 'function'
+          ? await withTimeout(freighter.getAddress())
+          : null;
       const walletAddress = resolveWalletAddress(addressResult);
 
       if (!walletAddress) {

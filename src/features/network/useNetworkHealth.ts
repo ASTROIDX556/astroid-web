@@ -9,7 +9,7 @@ export function fetchNetworkHealth(): Promise<NetworkHealthData> {
       // Simulate real-time RPC ping variation around ~42ms - ~110ms
       const randomLatency = Math.floor(35 + Math.random() * 80);
       const baseLedger = 14820500;
-      const currentLedger = baseLedger + Math.floor(Date.now() / 5000) % 10000;
+      const currentLedger = baseLedger + (Math.floor(Date.now() / 5000) % 10000);
 
       let status: NetworkHealthStatus = 'healthy';
       if (randomLatency > 300) status = 'degraded';

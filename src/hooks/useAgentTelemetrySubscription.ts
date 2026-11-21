@@ -60,13 +60,9 @@ export function useAgentTelemetrySubscription(): UseAgentTelemetrySubscriptionRe
 
     const telemetryChannel = client
       .channel('agent-telemetry')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'agents' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: queryKeys.agents });
-        },
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'agents' }, () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.agents });
+      })
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'wallets' },
@@ -85,7 +81,11 @@ export function useAgentTelemetrySubscription(): UseAgentTelemetrySubscriptionRe
       .subscribe((subscriptionStatus: `${REALTIME_SUBSCRIBE_STATES}`) => {
         if (subscriptionStatus === 'SUBSCRIBED') {
           setStatus('connected');
-        } else if (subscriptionStatus === 'CHANNEL_ERROR' || subscriptionStatus === 'TIMED_OUT' || subscriptionStatus === 'CLOSED') {
+        } else if (
+          subscriptionStatus === 'CHANNEL_ERROR' ||
+          subscriptionStatus === 'TIMED_OUT' ||
+          subscriptionStatus === 'CLOSED'
+        ) {
           setStatus('offline');
         } else {
           setStatus('connecting');

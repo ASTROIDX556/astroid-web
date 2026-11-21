@@ -59,9 +59,13 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
     const unsubscribe = walletStore.subscribe((state, previousState) => {
       if (previousState.status === 'connected' && state.status === 'locked') {
         toast.warning('Freighter wallet locked', {
-          description: 'Unlock Freighter and reconnect to continue using Stellar features.',
+          description:
+            'Unlock Freighter and reconnect to continue using Stellar features.',
         });
-      } else if (previousState.status === 'connected' && state.status === 'disconnected') {
+      } else if (
+        previousState.status === 'connected' &&
+        state.status === 'disconnected'
+      ) {
         toast.warning('Freighter disconnected', {
           description: 'Reconnect your wallet to continue using Stellar features.',
         });
@@ -122,13 +126,10 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 flex flex-col border-b border-border bg-background-primary/95 backdrop-blur-xl">
       {/* Top Tier: Brand & Global Actions */}
-      <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
+      <div className="h-16 flex items-center gap-3 px-4 sm:px-6">
         <Link
           href="/overview"
-          className={cn(
-            'gap-2.5 mr-2 flex items-center rounded-button',
-            TOPBAR_FOCUS,
-          )}
+          className={cn('gap-2.5 mr-2 flex items-center rounded-button', TOPBAR_FOCUS)}
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button bg-accent-gradient text-accent-foreground shadow-gold">
             <Sparkles className="h-4 w-4" aria-hidden />
@@ -206,7 +207,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
 
         {/* Freighter wallet connection and active Stellar network */}
         <div
-          className="flex items-center gap-1.5 rounded-button border border-border bg-surface px-2 py-1.5 text-2xs sm:gap-2 sm:px-2.5"
+          className="gap-1.5 py-1.5 sm:px-2.5 flex items-center rounded-button border border-border bg-surface px-2 text-2xs sm:gap-2"
           aria-live="polite"
           aria-label="Stellar wallet status"
         >
@@ -230,7 +231,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
                   ? 'Connecting'
                   : 'Disconnected'}
           </span>
-          <span className="max-w-16 truncate border-l border-border pl-2 text-foreground-muted sm:max-w-20">
+          <span className="max-w-16 sm:max-w-20 truncate border-l border-border pl-2 text-foreground-muted">
             {walletNetwork ?? 'No network'}
           </span>
           {walletStatus !== 'connected' && (

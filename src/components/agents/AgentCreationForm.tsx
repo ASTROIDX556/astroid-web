@@ -1,7 +1,10 @@
-import React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { agentCreationSchema, AgentCreationFormValues } from "../../lib/validations/agent";
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  agentCreationSchema,
+  AgentCreationFormValues,
+} from '../../lib/validations/agent';
 
 interface AgentCreationFormProps {
   onSubmit: (data: AgentCreationFormValues) => void;
@@ -15,70 +18,111 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
   } = useForm<AgentCreationFormValues>({
     resolver: zodResolver(agentCreationSchema),
     defaultValues: {
-      name: "",
-      provider: "openai",
-      model: "gpt-4",
-      apiKey: "",
-      endpointUrl: "",
+      name: '',
+      provider: 'openai',
+      model: 'gpt-4',
+      apiKey: '',
+      endpointUrl: '',
       tokenLimit: 2048,
       spendingThreshold: 50,
     },
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-lg">
+    <form onSubmit={handleSubmit(onSubmit)} className="max-w-lg space-y-4">
       <div>
         <label className="block text-sm font-medium">Agent Name</label>
-        <input {...register("name")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+        <input
+          {...register('name')}
+          className="mt-1 block w-full rounded-md border p-2"
+        />
+        {errors.name && (
+          <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium">Provider</label>
-        <select {...register("provider")} className="mt-1 block w-full rounded-md border p-2">
+        <select
+          {...register('provider')}
+          className="mt-1 block w-full rounded-md border p-2"
+        >
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic</option>
           <option value="custom">Custom</option>
         </select>
-        {errors.provider && <p className="text-red-500 text-sm mt-1">{errors.provider.message}</p>}
+        {errors.provider && (
+          <p className="mt-1 text-sm text-red-500">{errors.provider.message}</p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium">Model</label>
-        <input {...register("model")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.model && <p className="text-red-500 text-sm mt-1">{errors.model.message}</p>}
+        <input
+          {...register('model')}
+          className="mt-1 block w-full rounded-md border p-2"
+        />
+        {errors.model && (
+          <p className="mt-1 text-sm text-red-500">{errors.model.message}</p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium">API Key</label>
-        <input type="password" {...register("apiKey")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.apiKey && <p className="text-red-500 text-sm mt-1">{errors.apiKey.message}</p>}
+        <input
+          type="password"
+          {...register('apiKey')}
+          className="mt-1 block w-full rounded-md border p-2"
+        />
+        {errors.apiKey && (
+          <p className="mt-1 text-sm text-red-500">{errors.apiKey.message}</p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium">Endpoint URL</label>
-        <input {...register("endpointUrl")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.endpointUrl && <p className="text-red-500 text-sm mt-1">{errors.endpointUrl.message}</p>}
+        <input
+          {...register('endpointUrl')}
+          className="mt-1 block w-full rounded-md border p-2"
+        />
+        {errors.endpointUrl && (
+          <p className="mt-1 text-sm text-red-500">{errors.endpointUrl.message}</p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium">Token Limit</label>
-        <input type="number" {...register("tokenLimit")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.tokenLimit && <p className="text-red-500 text-sm mt-1">{errors.tokenLimit.message}</p>}
+        <input
+          type="number"
+          {...register('tokenLimit')}
+          className="mt-1 block w-full rounded-md border p-2"
+        />
+        {errors.tokenLimit && (
+          <p className="mt-1 text-sm text-red-500">{errors.tokenLimit.message}</p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium">Spending Threshold ($)</label>
-        <input type="number" step="0.01" {...register("spendingThreshold")} className="mt-1 block w-full rounded-md border p-2" />
-        {errors.spendingThreshold && <p className="text-red-500 text-sm mt-1">{errors.spendingThreshold.message}</p>}
+        <input
+          type="number"
+          step="0.01"
+          {...register('spendingThreshold')}
+          className="mt-1 block w-full rounded-md border p-2"
+        />
+        {errors.spendingThreshold && (
+          <p className="mt-1 text-sm text-red-500">
+            {errors.spendingThreshold.message}
+          </p>
+        )}
       </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+        className="w-full rounded-md bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
       >
-        {isSubmitting ? "Creating..." : "Create Agent"}
+        {isSubmitting ? 'Creating...' : 'Create Agent'}
       </button>
     </form>
   );

@@ -23,7 +23,8 @@ export const MOCK_AUDIT_EVENTS: AuditEvent[] = [
     asset: 'USDC',
     xdrHash: 'AAAAAgAAAAC3a...8f9a2e',
     rawPayload: {
-      transactionHash: '5c77fc346943f56e10fc3666f4640211d721c1754886f107aac9fa696897662e',
+      transactionHash:
+        '5c77fc346943f56e10fc3666f4640211d721c1754886f107aac9fa696897662e',
       feeStroops: 100,
       sequenceNumber: '14820491',
       contractId: 'CC3K9X728N490218389FA',
@@ -58,7 +59,8 @@ export const MOCK_AUDIT_EVENTS: AuditEvent[] = [
     actorName: 'Auto-Sweep Treasury Bot',
     actorType: 'agent',
     summary: 'Rotated API Secret Key for Horizon RPC Endpoint',
-    details: 'Automated 30-day credential rotation completed successfully without downtime.',
+    details:
+      'Automated 30-day credential rotation completed successfully without downtime.',
     project: 'Security & Vault',
     rawPayload: {
       keyId: 'key-horizon-prod-02',
@@ -76,7 +78,8 @@ export const MOCK_AUDIT_EVENTS: AuditEvent[] = [
     actorName: 'Soroban DEX Arbitrageur',
     actorType: 'agent',
     summary: 'Arbitrage transaction rejected: Slippage threshold exceeded',
-    details: 'Trade path XLM->USDC failed simulation with 2.4% slippage (max allowed: 0.5%).',
+    details:
+      'Trade path XLM->USDC failed simulation with 2.4% slippage (max allowed: 0.5%).',
     project: 'DeFi Liquidity',
     amount: 1200,
     asset: 'XLM',
@@ -97,7 +100,8 @@ export const MOCK_AUDIT_EVENTS: AuditEvent[] = [
     actorName: 'Elena Rostova (Finance)',
     actorType: 'user',
     summary: 'Approved high-value multi-sig disbursement request',
-    details: 'Multi-sig threshold reached (2 of 3 signers approved 50,000 XLM transfer).',
+    details:
+      'Multi-sig threshold reached (2 of 3 signers approved 50,000 XLM transfer).',
     project: 'Treasury Operations',
     amount: 50000,
     asset: 'XLM',

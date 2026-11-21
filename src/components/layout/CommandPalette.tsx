@@ -215,7 +215,10 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
               mode === 'dark' ? (
                 <Sun className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
               ) : (
-                <Moon className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
+                <Moon
+                  className="h-4 w-4 text-foreground-secondary"
+                  aria-hidden="true"
+                />
               )
             }
             label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
@@ -233,7 +236,10 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
                 keywords={['page', 'go to', item.href]}
                 onSelect={() => navigate(item.href)}
                 icon={
-                  <Icon className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
+                  <Icon
+                    className="h-4 w-4 text-foreground-secondary"
+                    aria-hidden="true"
+                  />
                 }
                 label={item.label}
                 description={`${item.href} · navigate`}
@@ -292,7 +298,12 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
                   agent.role,
                 ]}
                 onSelect={() => navigate(`/agents/${agent.id}`)}
-                icon={<Bot className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />}
+                icon={
+                  <Bot
+                    className="h-4 w-4 text-foreground-secondary"
+                    aria-hidden="true"
+                  />
+                }
                 label={agent.name}
                 description={`${agent.role} agent · ${agent.status} · ${agent.model}`}
               />
@@ -313,7 +324,10 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
                 keywords={['policy', policy.name, policy.type, policy.description]}
                 onSelect={() => navigate(`/policies/${policy.id}`)}
                 icon={
-                  <Shield className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
+                  <Shield
+                    className="h-4 w-4 text-foreground-secondary"
+                    aria-hidden="true"
+                  />
                 }
                 label={policy.name}
                 description={`${policy.type.replace(/_/g, ' ')} · ${
@@ -433,7 +447,10 @@ function LoadingItem({ label }: { label: string }) {
       aria-live="polite"
       className={ITEM_CLASS}
     >
-      <Loader2 className="h-4 w-4 animate-spin text-foreground-muted" aria-hidden="true" />
+      <Loader2
+        className="h-4 w-4 animate-spin text-foreground-muted"
+        aria-hidden="true"
+      />
       <span className="text-2xs text-foreground-muted">{label}</span>
     </Command.Item>
   );

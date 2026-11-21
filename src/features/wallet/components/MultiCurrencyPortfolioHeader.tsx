@@ -46,8 +46,12 @@ export function MultiCurrencyPortfolioHeader({
           <p className="text-xs font-medium uppercase tracking-wider text-foreground-secondary">
             Consolidated Portfolio Value
           </p>
-          <p className="mt-1 text-2xl font-bold tabular text-foreground">
-            ${summary.totalFiatUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <p className="tabular mt-1 text-2xl font-bold text-foreground">
+            $
+            {summary.totalFiatUsd.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
           </p>
         </div>
 
@@ -84,7 +88,7 @@ export function MultiCurrencyPortfolioHeader({
         {summary.holdings.map((holding) => (
           <div
             key={`${holding.asset}-${holding.issuer ?? 'native'}`}
-            className="flex items-center justify-between rounded-button border border-border bg-surface-secondary/50 px-3.5 py-2.5"
+            className="px-3.5 py-2.5 flex items-center justify-between rounded-button border border-border bg-surface-secondary/50"
           >
             <div>
               <p className="text-xs font-semibold text-foreground">{holding.asset}</p>
@@ -95,10 +99,10 @@ export function MultiCurrencyPortfolioHeader({
               )}
             </div>
             <div className="text-right">
-              <p className="text-xs font-medium tabular text-foreground">
+              <p className="tabular text-xs font-medium text-foreground">
                 {holding.balance.toLocaleString('en-US')} {holding.asset}
               </p>
-              <p className="text-2xs tabular text-foreground-secondary">
+              <p className="tabular text-2xs text-foreground-secondary">
                 {holding.fiatValueUsd !== null
                   ? `$${holding.fiatValueUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   : 'Rate unavailable'}

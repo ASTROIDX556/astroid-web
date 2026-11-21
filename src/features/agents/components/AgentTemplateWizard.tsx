@@ -20,7 +20,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Select, Textarea } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/cn';
-import { templateWizardSchema, type TemplateWizardValues } from '@/lib/validations/agent';
+import {
+  templateWizardSchema,
+  type TemplateWizardValues,
+} from '@/lib/validations/agent';
 import { WIZARD_STEPS, STEP_FIELDS } from '../templateWizardSchema';
 import { AGENT_TEMPLATES, getTemplateById, type AgentTemplate } from '../templates';
 
@@ -43,7 +46,11 @@ const slideVariants = {
   }),
 };
 
-const NETWORK_OPTIONS = ['Stellar Mainnet', 'Stellar Testnet', 'Stellar Futurenet'] as const;
+const NETWORK_OPTIONS = [
+  'Stellar Mainnet',
+  'Stellar Testnet',
+  'Stellar Futurenet',
+] as const;
 
 const STEP_ICONS = [Layers, Settings, Shield, ClipboardCheck];
 
@@ -61,7 +68,8 @@ function TemplateSelectionStep({
   return (
     <div className="space-y-4" role="radiogroup" aria-label="Select an agent template">
       <p className="text-xs text-foreground-secondary">
-        Choose a preset template to auto-fill configuration values. You can customize everything in the next step.
+        Choose a preset template to auto-fill configuration values. You can customize
+        everything in the next step.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -100,7 +108,7 @@ function TemplateCard({
           : 'border-border bg-surface hover:border-border-strong hover:bg-surface-secondary',
       )}
     >
-      <div className="flex items-center gap-2.5">
+      <div className="gap-2.5 flex items-center">
         <span className="text-xl" aria-hidden>
           {template.icon}
         </span>
@@ -112,7 +120,7 @@ function TemplateCard({
         </div>
       </div>
 
-      <p className="text-2xs leading-relaxed text-foreground-secondary line-clamp-2">
+      <p className="line-clamp-2 text-2xs leading-relaxed text-foreground-secondary">
         {template.description}
       </p>
 
@@ -142,7 +150,8 @@ function PoliciesStep() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-foreground-secondary">
-        Set spending limits and network preferences. These can be adjusted later from the agent settings.
+        Set spending limits and network preferences. These can be adjusted later from
+        the agent settings.
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -161,7 +170,12 @@ function PoliciesStep() {
           error={undefined}
           required
         >
-          <Input id="tpl-singleTransactionCap" type="number" step="0.01" placeholder="2000" />
+          <Input
+            id="tpl-singleTransactionCap"
+            type="number"
+            step="0.01"
+            placeholder="2000"
+          />
         </FormField>
 
         <FormField
@@ -170,7 +184,12 @@ function PoliciesStep() {
           error={undefined}
           required
         >
-          <Input id="tpl-maxHourlyBudgetUsd" type="number" step="0.01" placeholder="50" />
+          <Input
+            id="tpl-maxHourlyBudgetUsd"
+            type="number"
+            step="0.01"
+            placeholder="50"
+          />
         </FormField>
 
         <FormField
@@ -178,12 +197,21 @@ function PoliciesStep() {
           htmlFor="tpl-requireApprovalAbove"
           error={undefined}
         >
-          <Input id="tpl-requireApprovalAbove" type="number" step="0.01" placeholder="5000" />
+          <Input
+            id="tpl-requireApprovalAbove"
+            type="number"
+            step="0.01"
+            placeholder="5000"
+          />
         </FormField>
       </div>
 
       <FormField label="Allowed networks" htmlFor="tpl-networks" required>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Select allowed networks">
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Select allowed networks"
+        >
           {NETWORK_OPTIONS.map((net) => (
             <Controller
               key={net}
@@ -202,7 +230,7 @@ function PoliciesStep() {
                       field.onChange(next);
                     }}
                     className={cn(
-                      'rounded-button border px-3 py-1.5 text-xs font-medium transition-colors',
+                      'py-1.5 rounded-button border px-3 text-xs font-medium transition-colors',
                       checked
                         ? 'border-gold bg-gold-soft text-gold-strong'
                         : 'border-border bg-surface text-foreground-secondary hover:bg-surface-secondary',
@@ -237,7 +265,10 @@ function ConfirmationStep({ values }: { values: TemplateWizardValues }) {
         <ReviewField label="Provider" value={values.provider} />
         <ReviewField label="Model" value={values.model} />
         <ReviewField label="Budget" value={`${values.budget.toLocaleString()} XLM`} />
-        <ReviewField label="Tx cap" value={`${values.singleTransactionCap.toLocaleString()} XLM`} />
+        <ReviewField
+          label="Tx cap"
+          value={`${values.singleTransactionCap.toLocaleString()} XLM`}
+        />
         <ReviewField label="Hourly cap" value={`$${values.maxHourlyBudgetUsd}/hr`} />
         <ReviewField
           label="Approval threshold"
@@ -264,7 +295,9 @@ function ReviewField({
 }) {
   return (
     <div className={span ? 'sm:col-span-2' : ''}>
-      <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">{label}</dt>
+      <dt className="text-2xs uppercase tracking-wide text-foreground-secondary">
+        {label}
+      </dt>
       <dd className="mt-1 text-sm text-foreground">{value}</dd>
     </div>
   );
@@ -320,7 +353,9 @@ export function AgentTemplateWizard() {
           }
         });
         // Set hourly budget from template max
-        form.setValue('maxHourlyBudgetUsd', tpl.maxHourlyBudgetUsd, { shouldValidate: false });
+        form.setValue('maxHourlyBudgetUsd', tpl.maxHourlyBudgetUsd, {
+          shouldValidate: false,
+        });
       }
     },
     [form],
@@ -345,14 +380,11 @@ export function AgentTemplateWizard() {
     setStep((s) => Math.max(s - 1, 0));
   }, []);
 
-  const onSubmit = useCallback(
-    (values: TemplateWizardValues) => {
-      console.info('Agent template wizard payload:', values);
-      setDirection(1);
-      setStep(WIZARD_STEPS.length - 1);
-    },
-    [],
-  );
+  const onSubmit = useCallback((values: TemplateWizardValues) => {
+    console.info('Agent template wizard payload:', values);
+    setDirection(1);
+    setStep(WIZARD_STEPS.length - 1);
+  }, []);
 
   /** Focus the step container on transition for screen readers. */
   useEffect(() => {
@@ -379,10 +411,10 @@ export function AgentTemplateWizard() {
               const isActive = index === step;
               const isComplete = index < step;
               return (
-                <li key={s.key} className="flex items-center gap-1.5">
+                <li key={s.key} className="gap-1.5 flex items-center">
                   <span
                     className={cn(
-                      'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs font-medium transition-colors',
+                      'gap-1.5 px-2.5 flex items-center rounded-full border py-1 text-2xs font-medium transition-colors',
                       isActive
                         ? 'border-gold bg-gold-soft text-gold-strong'
                         : isComplete
@@ -506,13 +538,20 @@ export function AgentTemplateWizard() {
                           {...form.register('provider')}
                           invalid={Boolean(form.formState.errors.provider)}
                         >
-                          {(['OpenAI', 'Anthropic', 'Gemini', 'Nvidia', 'Ollama', 'Custom'] as const).map(
-                            (p) => (
-                              <option key={p} value={p}>
-                                {p}
-                              </option>
-                            ),
-                          )}
+                          {(
+                            [
+                              'OpenAI',
+                              'Anthropic',
+                              'Gemini',
+                              'Nvidia',
+                              'Ollama',
+                              'Custom',
+                            ] as const
+                          ).map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
                         </Select>
                       </FormField>
                     </div>

@@ -160,9 +160,13 @@ export function SignerManagement() {
   const [thresholds, setThresholds] = useState<SignerThresholds>(INITIAL_THRESHOLDS);
 
   const [stagedAdditions, setStagedAdditions] = useState<OrgSigner[]>([]);
-  const [stagedAdjustments, setStagedAdjustments] = useState<SignerWeightAdjustment[]>([]);
+  const [stagedAdjustments, setStagedAdjustments] = useState<SignerWeightAdjustment[]>(
+    [],
+  );
   const [stagedRemovals, setStagedRemovals] = useState<string[]>([]);
-  const [stagedThresholds, setStagedThresholds] = useState<SignerThresholds | null>(null);
+  const [stagedThresholds, setStagedThresholds] = useState<SignerThresholds | null>(
+    null,
+  );
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [adjustTarget, setAdjustTarget] = useState<SignerTableRow | null>(null);
@@ -559,7 +563,7 @@ export function SignerManagement() {
               : Math.round((item.weight / totalWeight) * 100);
 
           return (
-            <span className="flex flex-col items-end gap-1.5">
+            <span className="gap-1.5 flex flex-col items-end">
               <span className="tabular-nums text-foreground">
                 {item.staged === 'weight' && (
                   <span className="mr-1.5 text-foreground-muted line-through">
@@ -568,7 +572,10 @@ export function SignerManagement() {
                 )}
                 {item.weight}
               </span>
-              <span className="h-1 w-16 overflow-hidden rounded-full bg-surface-secondary" aria-hidden>
+              <span
+                className="w-16 h-1 overflow-hidden rounded-full bg-surface-secondary"
+                aria-hidden
+              >
                 <span
                   className="block h-full rounded-full bg-gold"
                   style={{ width: `${share}%` }}
@@ -586,7 +593,7 @@ export function SignerManagement() {
           const meta = signerStatus(item.status);
 
           return (
-            <span className="inline-flex flex-wrap items-center gap-1.5">
+            <span className="gap-1.5 inline-flex flex-wrap items-center">
               <Badge variant={meta.variant} size="sm" dot>
                 {meta.label}
               </Badge>
@@ -690,7 +697,11 @@ export function SignerManagement() {
   // -- render ----------------------------------------------------------------
 
   return (
-    <div className="space-y-6" role="region" aria-label="Multi-signature signer management">
+    <div
+      className="space-y-6"
+      role="region"
+      aria-label="Multi-signature signer management"
+    >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <ThresholdTile
           label="Total weight"
@@ -726,10 +737,15 @@ export function SignerManagement() {
               Master key thresholds
             </CardTitle>
             <CardDescription>
-              Minimum weight required before an operation counts as low, medium or high value.
+              Minimum weight required before an operation counts as low, medium or high
+              value.
             </CardDescription>
           </div>
-          {stagedThresholds && <Badge variant="gold" size="sm">Changes staged</Badge>}
+          {stagedThresholds && (
+            <Badge variant="gold" size="sm">
+              Changes staged
+            </Badge>
+          )}
         </CardHeader>
 
         <CardContent className="space-y-5">
@@ -815,9 +831,7 @@ export function SignerManagement() {
                   type="submit"
                   variant="secondary"
                   size="sm"
-                  disabled={
-                    !thresholdForm.formState.isDirty && !stagedThresholds
-                  }
+                  disabled={!thresholdForm.formState.isDirty && !stagedThresholds}
                 >
                   Stage changes
                 </Button>
@@ -869,8 +883,8 @@ export function SignerManagement() {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-gold/40 bg-gold-soft px-4 py-3">
             <p className="flex items-center gap-2 text-xs text-foreground">
               <Info className="h-4 w-4 shrink-0 text-gold" aria-hidden />
-              {changeCount} staged {changeCount === 1 ? 'change' : 'changes'} — review and
-              propose them to your co-signers.
+              {changeCount} staged {changeCount === 1 ? 'change' : 'changes'} — review
+              and propose them to your co-signers.
             </p>
             <Button
               type="button"
@@ -887,8 +901,10 @@ export function SignerManagement() {
         {lastProposal && changeCount === 0 && (
           <p className="text-2xs text-foreground-muted">
             Last proposal{' '}
-            <span className="font-mono text-foreground-secondary">{lastProposal.id}</span> ·{' '}
-            {lastProposal.changes.length} changes · submitted{' '}
+            <span className="font-mono text-foreground-secondary">
+              {lastProposal.id}
+            </span>{' '}
+            · {lastProposal.changes.length} changes · submitted{' '}
             {formatRelativeTime(lastProposal.createdAt)}
           </p>
         )}
@@ -916,7 +932,10 @@ export function SignerManagement() {
         description="The key is staged locally and only joins the account once the proposal is co-signed."
         size="sm"
       >
-        <form onSubmit={addForm.handleSubmit(handleAddSigner)} className="space-y-4 pt-2">
+        <form
+          onSubmit={addForm.handleSubmit(handleAddSigner)}
+          className="space-y-4 pt-2"
+        >
           <FormField
             label="Label"
             hint="How this key appears in the signer table"
@@ -982,7 +1001,12 @@ export function SignerManagement() {
           </FormField>
 
           <div className="flex justify-end gap-2 border-t border-border pt-3">
-            <Button type="button" variant="secondary" size="sm" onClick={closeAddDialog}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={closeAddDialog}
+            >
               Cancel
             </Button>
             <Button type="submit" variant="gold" size="sm">
@@ -995,9 +1019,7 @@ export function SignerManagement() {
       <Dialog
         open={adjustTarget !== null}
         onClose={closeAdjustDialog}
-        title={
-          adjustTarget ? `Adjust weight — ${adjustTarget.label}` : 'Adjust weight'
-        }
+        title={adjustTarget ? `Adjust weight — ${adjustTarget.label}` : 'Adjust weight'}
         description="Propose a new signature weight for this key."
         size="sm"
       >
@@ -1007,7 +1029,8 @@ export function SignerManagement() {
         >
           {adjustTarget && (
             <div className="rounded-sm bg-surface-secondary px-3 py-2 text-2xs text-foreground-secondary">
-              <span className="font-medium text-foreground">{adjustTarget.label}</span> ·{' '}
+              <span className="font-medium text-foreground">{adjustTarget.label}</span>{' '}
+              ·{' '}
               <span className="font-mono">
                 {truncateHash(adjustTarget.publicKey, 6, 6)}
               </span>{' '}
@@ -1047,7 +1070,12 @@ export function SignerManagement() {
           </FormField>
 
           <div className="flex justify-end gap-2 border-t border-border pt-3">
-            <Button type="button" variant="secondary" size="sm" onClick={closeAdjustDialog}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={closeAdjustDialog}
+            >
               Cancel
             </Button>
             <Button type="submit" variant="gold" size="sm">
@@ -1138,8 +1166,8 @@ function ProposalChangeRow({ change }: { change: SignerProposalChange }) {
   if (change.kind === 'add') {
     return (
       <span>
-        Add <span className="font-medium">{change.label}</span> · weight {change.weight} ·{' '}
-        <code className="font-mono">{truncateHash(change.publicKey, 6, 6)}</code>
+        Add <span className="font-medium">{change.label}</span> · weight {change.weight}{' '}
+        · <code className="font-mono">{truncateHash(change.publicKey, 6, 6)}</code>
       </span>
     );
   }

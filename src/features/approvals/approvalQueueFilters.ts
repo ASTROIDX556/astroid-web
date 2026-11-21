@@ -32,7 +32,10 @@ export interface ApprovalQueueFilters {
 
 export type ApprovalSignatureFilter = 'pending_threshold' | 'threshold_met';
 
-export const APPROVAL_SIGNATURE_FILTER_LABELS: Record<'all' | ApprovalSignatureFilter, string> = {
+export const APPROVAL_SIGNATURE_FILTER_LABELS: Record<
+  'all' | ApprovalSignatureFilter,
+  string
+> = {
   all: 'All signature states',
   pending_threshold: 'Pending threshold',
   threshold_met: 'Threshold met',
@@ -62,7 +65,12 @@ export const APPROVAL_STATUS_ORDER: ProposalStatus[] = [
 ];
 
 /** Lowest to highest; mirrors the ladder in `riskLevel` (`src/lib/status.ts`). */
-export const APPROVAL_RISK_TIER_ORDER: RiskLevel[] = ['low', 'medium', 'high', 'critical'];
+export const APPROVAL_RISK_TIER_ORDER: RiskLevel[] = [
+  'low',
+  'medium',
+  'high',
+  'critical',
+];
 
 // ---------------------------------------------------------------------------
 // Sort state
@@ -81,10 +89,17 @@ export const APPROVAL_QUEUE_SORT_LABELS: Record<ApprovalQueueSortId, string> = {
   risk: 'Risk level',
 };
 
-export const APPROVAL_QUEUE_SORT_IDS: ApprovalQueueSortId[] = ['amount', 'date', 'risk'];
+export const APPROVAL_QUEUE_SORT_IDS: ApprovalQueueSortId[] = [
+  'amount',
+  'date',
+  'risk',
+];
 
 /** Default: riskiest proposals first, so reviewers see urgent items up top. */
-export const DEFAULT_APPROVAL_QUEUE_SORT: ApprovalQueueSort = { id: 'risk', desc: true };
+export const DEFAULT_APPROVAL_QUEUE_SORT: ApprovalQueueSort = {
+  id: 'risk',
+  desc: true,
+};
 
 // ---------------------------------------------------------------------------
 // Predicates
@@ -106,8 +121,12 @@ export interface ApprovalSignatureProgress {
   meetsThreshold: boolean;
 }
 
-export function approvalSignatureProgress(proposal: Proposal): ApprovalSignatureProgress {
-  const approved = proposal.approvals.filter((entry) => entry.decision === 'approved').length;
+export function approvalSignatureProgress(
+  proposal: Proposal,
+): ApprovalSignatureProgress {
+  const approved = proposal.approvals.filter(
+    (entry) => entry.decision === 'approved',
+  ).length;
   const required = proposal.requiredApprovals;
   return { approved, required, meetsThreshold: approved >= required };
 }
@@ -151,7 +170,10 @@ export function matchesApprovalQueueFilters(
   }
   if (filters.status !== 'all' && proposal.status !== filters.status) return false;
   if (filters.agent !== 'all' && proposal.agentName !== filters.agent) return false;
-  if (filters.riskTier !== 'all' && approvalRiskTier(proposal.riskScore) !== filters.riskTier) {
+  if (
+    filters.riskTier !== 'all' &&
+    approvalRiskTier(proposal.riskScore) !== filters.riskTier
+  ) {
     return false;
   }
   if (filters.signature !== 'all') {
@@ -205,9 +227,14 @@ export function compareApprovalQueueRows(
   return result !== 0 ? result : a.id.localeCompare(b.id);
 }
 
-export function sortApprovalQueue(proposals: Proposal[], sort: ApprovalQueueSort): Proposal[] {
+export function sortApprovalQueue(
+  proposals: Proposal[],
+  sort: ApprovalQueueSort,
+): Proposal[] {
   const factor = sort.desc ? -1 : 1;
-  return [...proposals].sort((a, b) => factor * compareApprovalQueueRows(a, b, sort.id));
+  return [...proposals].sort(
+    (a, b) => factor * compareApprovalQueueRows(a, b, sort.id),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +245,9 @@ export function sortApprovalQueue(proposals: Proposal[], sort: ApprovalQueueSort
 export function collectApprovalStatusOptions(proposals: Proposal[]): ProposalStatus[] {
   const present = new Set(proposals.map((proposal) => proposal.status));
   const required = new Set<ProposalStatus>(['pending', 'approved', 'rejected']);
-  return APPROVAL_STATUS_ORDER.filter((status) => required.has(status) || present.has(status));
+  return APPROVAL_STATUS_ORDER.filter(
+    (status) => required.has(status) || present.has(status),
+  );
 }
 
 /** Distinct agent names in first-seen order. */
@@ -227,7 +256,9 @@ export function collectApprovalAgentOptions(proposals: Proposal[]): string[] {
 }
 
 export function collectApprovalRiskTierOptions(proposals: Proposal[]): RiskLevel[] {
-  const present = new Set(proposals.map((proposal) => approvalRiskTier(proposal.riskScore)));
+  const present = new Set(
+    proposals.map((proposal) => approvalRiskTier(proposal.riskScore)),
+  );
   return APPROVAL_RISK_TIER_ORDER.filter((tier) => present.has(tier));
 }
 
@@ -255,7 +286,9 @@ const QUERY_PARAM_DIR = 'dir';
  * vocabulary is validated; junk or absent values fall back to the defaults,
  * so a hand-edited URL can never put the queue into an invalid state.
  */
-export function parseApprovalQueueQuery(params: URLSearchParams): ApprovalQueueQueryState {
+export function parseApprovalQueueQuery(
+  params: URLSearchParams,
+): ApprovalQueueQueryState {
   const status = params.get(QUERY_PARAM_STATUS);
   const query = params.get(QUERY_PARAM_QUERY);
   const agent = params.get(QUERY_PARAM_AGENT);
@@ -268,7 +301,8 @@ export function parseApprovalQueueQuery(params: URLSearchParams): ApprovalQueueQ
     filters: {
       query: query?.trim() ?? '',
       status:
-        status !== null && (status === 'all' || APPROVAL_STATUS_ORDER.includes(status as ProposalStatus))
+        status !== null &&
+        (status === 'all' || APPROVAL_STATUS_ORDER.includes(status as ProposalStatus))
           ? (status as ApprovalQueueFilters['status'])
           : 'all',
       agent: agent !== null && agent.trim().length > 0 ? agent : 'all',
@@ -279,16 +313,24 @@ export function parseApprovalQueueQuery(params: URLSearchParams): ApprovalQueueQ
           : 'all',
       signature:
         signature !== null &&
-        APPROVAL_SIGNATURE_FILTER_IDS.includes(signature as 'all' | ApprovalSignatureFilter)
+        APPROVAL_SIGNATURE_FILTER_IDS.includes(
+          signature as 'all' | ApprovalSignatureFilter,
+        )
           ? (signature as ApprovalQueueFilters['signature'])
           : 'all',
     },
     sort: {
       id:
-        sortId !== null && APPROVAL_QUEUE_SORT_IDS.includes(sortId as ApprovalQueueSortId)
+        sortId !== null &&
+        APPROVAL_QUEUE_SORT_IDS.includes(sortId as ApprovalQueueSortId)
           ? (sortId as ApprovalQueueSortId)
           : DEFAULT_APPROVAL_QUEUE_SORT.id,
-      desc: direction === 'desc' ? true : direction === 'asc' ? false : DEFAULT_APPROVAL_QUEUE_SORT.desc,
+      desc:
+        direction === 'desc'
+          ? true
+          : direction === 'asc'
+            ? false
+            : DEFAULT_APPROVAL_QUEUE_SORT.desc,
     },
   };
 }
@@ -318,13 +360,26 @@ export function writeApprovalQueueQuery(
     state.filters.agent,
     state.filters.agent === DEFAULT_APPROVAL_QUEUE_FILTERS.agent,
   );
-  setOrDelete(QUERY_PARAM_RISK, state.filters.riskTier, state.filters.riskTier === 'all');
-  setOrDelete(QUERY_PARAM_SIGNATURE, state.filters.signature, state.filters.signature === 'all');
-  setOrDelete(QUERY_PARAM_SORT, state.sort.id, state.sort.id === DEFAULT_APPROVAL_QUEUE_SORT.id);
+  setOrDelete(
+    QUERY_PARAM_RISK,
+    state.filters.riskTier,
+    state.filters.riskTier === 'all',
+  );
+  setOrDelete(
+    QUERY_PARAM_SIGNATURE,
+    state.filters.signature,
+    state.filters.signature === 'all',
+  );
+  setOrDelete(
+    QUERY_PARAM_SORT,
+    state.sort.id,
+    state.sort.id === DEFAULT_APPROVAL_QUEUE_SORT.id,
+  );
   setOrDelete(
     QUERY_PARAM_DIR,
     state.sort.desc ? 'desc' : 'asc',
-    state.sort.id === DEFAULT_APPROVAL_QUEUE_SORT.id && state.sort.desc === DEFAULT_APPROVAL_QUEUE_SORT.desc,
+    state.sort.id === DEFAULT_APPROVAL_QUEUE_SORT.id &&
+      state.sort.desc === DEFAULT_APPROVAL_QUEUE_SORT.desc,
   );
 
   return params;

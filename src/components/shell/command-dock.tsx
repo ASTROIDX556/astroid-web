@@ -38,7 +38,7 @@ export function CommandDock() {
       aria-label="Primary"
       className="pointer-events-none fixed inset-x-0 bottom-5 z-40 hidden justify-center px-4 lg:flex"
     >
-      <div className="glass pointer-events-auto flex max-w-[calc(100vw-2rem)] items-center gap-1 overflow-x-auto rounded-full border border-border p-1.5 shadow-soft-3 no-scrollbar">
+      <div className="glass p-1.5 no-scrollbar pointer-events-auto flex max-w-[calc(100vw-2rem)] items-center gap-1 overflow-x-auto rounded-full border border-border shadow-soft-3">
         {/* Search */}
         <DockButton
           onClick={() => openCommand(true)}
@@ -54,9 +54,11 @@ export function CommandDock() {
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           label={compactNavigation ? 'Expand navigation' : 'Collapse navigation'}
           icon={
-            compactNavigation
-              ? <PanelLeftOpen className="h-[18px] w-[18px]" aria-hidden />
-              : <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden />
+            compactNavigation ? (
+              <PanelLeftOpen className="h-[18px] w-[18px]" aria-hidden />
+            ) : (
+              <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden />
+            )
           }
           focusRing={DOCK_FOCUS}
         />
@@ -111,7 +113,7 @@ export function CommandDock() {
                   </span>
                   {item.signature && !active && (
                     <span
-                      className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-gold"
+                      className="right-1.5 top-1.5 h-1.5 w-1.5 absolute rounded-full bg-gold"
                       aria-hidden
                     />
                   )}

@@ -87,16 +87,19 @@ export function mapPoliciesToSandboxRules(policies: Policy[]): PolicyRule[] {
 
       switch (p.type) {
         case 'max_spend':
-          rule.threshold = typeof cfg.maxAmount === 'number' ? cfg.maxAmount : undefined;
+          rule.threshold =
+            typeof cfg.maxAmount === 'number' ? cfg.maxAmount : undefined;
           break;
         case 'min_spend':
-          rule.threshold = typeof cfg.minAmount === 'number' ? cfg.minAmount : undefined;
+          rule.threshold =
+            typeof cfg.minAmount === 'number' ? cfg.minAmount : undefined;
           break;
         case 'allowed_assets':
           rule.allowedAssets = Array.isArray(cfg.assets) ? cfg.assets : undefined;
           break;
         case 'approval_required':
-          rule.requiredCoSigners = typeof cfg.requiredApprovals === 'number' ? cfg.requiredApprovals : 2;
+          rule.requiredCoSigners =
+            typeof cfg.requiredApprovals === 'number' ? cfg.requiredApprovals : 2;
           break;
         case 'allowed_recipients':
           rule.allowedRecipients = Array.isArray(cfg.recipients)
@@ -109,7 +112,8 @@ export function mapPoliciesToSandboxRules(policies: Policy[]): PolicyRule[] {
             : undefined;
           break;
         case 'rate_limit':
-          rule.rateLimitPerHour = typeof cfg.maxPerHour === 'number' ? cfg.maxPerHour : undefined;
+          rule.rateLimitPerHour =
+            typeof cfg.maxPerHour === 'number' ? cfg.maxPerHour : undefined;
           break;
         case 'time_window':
           rule.windowStart = typeof cfg.start === 'string' ? cfg.start : undefined;
@@ -185,7 +189,9 @@ export function parseXdrPayload(value: string): ParsedOperation[] {
   const payload = normalizeXdrPayload(value);
 
   if (!payload) {
-    return [{ type: 'No transaction', asset: 'XLM', amount: '0', source: 'manual input' }];
+    return [
+      { type: 'No transaction', asset: 'XLM', amount: '0', source: 'manual input' },
+    ];
   }
 
   // Plaintext operation lists (`payment,USD2,1500;...`) let operators exercise
@@ -199,7 +205,14 @@ export function parseXdrPayload(value: string): ParsedOperation[] {
 
   try {
     if (typeof window === 'undefined') {
-      return [{ type: 'Simulated operation', asset: 'XLM', amount: '0', source: 'server preview' }];
+      return [
+        {
+          type: 'Simulated operation',
+          asset: 'XLM',
+          amount: '0',
+          source: 'server preview',
+        },
+      ];
     }
 
     const decoded = window.atob(payload);
@@ -219,7 +232,12 @@ export function parseXdrPayload(value: string): ParsedOperation[] {
   } catch {
     const fallbackAmount = Math.max(0, Math.min(45000, payload.length * 8));
     return [
-      { type: 'Payment', asset: 'USDC', amount: `${fallbackAmount}`, source: 'manual review' },
+      {
+        type: 'Payment',
+        asset: 'USDC',
+        amount: `${fallbackAmount}`,
+        source: 'manual review',
+      },
     ];
   }
 }
@@ -334,14 +352,16 @@ export function evaluatePolicySimulation(
 export const DEFAULT_SIMULATION_BALANCE_STROOPS = 1350;
 
 export function usePolicySimulation() {
-  const defaultRule = defaultPolicyRules[0] ?? {
-    id: 'max_txn',
-    name: 'Maximum transaction limit',
-    type: 'max_amount',
-    description: 'Reject transfers above $25,000.',
-    enabled: true,
-    threshold: 25000,
-  } satisfies PolicyRule;
+  const defaultRule =
+    defaultPolicyRules[0] ??
+    ({
+      id: 'max_txn',
+      name: 'Maximum transaction limit',
+      type: 'max_amount',
+      description: 'Reject transfers above $25,000.',
+      enabled: true,
+      threshold: 25000,
+    } satisfies PolicyRule);
 
   const [activeRuleId, setActiveRuleId] = useState<string>(defaultRule.id);
   const [xdr, setXdr] = useState(

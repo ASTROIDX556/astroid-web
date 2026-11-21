@@ -16,7 +16,13 @@ interface QueryBoundaryProps<T> {
   empty?: React.ReactNode;
 }
 
-const Fade = ({ children, keyName }: { children: React.ReactNode; keyName: string }) => (
+const Fade = ({
+  children,
+  keyName,
+}: {
+  children: React.ReactNode;
+  keyName: string;
+}) => (
   <motion.div
     key={keyName}
     initial={{ opacity: 0 }}
@@ -69,6 +75,5 @@ export function QueryBoundary<T>({
         <Fade keyName="content">{children(query.data!)}</Fade>
       )}
     </AnimatePresence>
-
   );
 }

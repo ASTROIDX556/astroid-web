@@ -14,16 +14,25 @@ import type { Wallet } from '@/types/domain';
 const EMPTY_WALLETS: Wallet[] = [];
 
 function truncateAddress(address: string): string {
-  return address.length > 14 ? `${address.slice(0, 6)}...${address.slice(-4)}` : address;
+  return address.length > 14
+    ? `${address.slice(0, 6)}...${address.slice(-4)}`
+    : address;
 }
 
 function BalanceBadges({ wallet }: { wallet?: Pick<Wallet, 'balances'> }) {
   const xlm = wallet?.balances.find((balance) => balance.asset === 'XLM')?.balance;
   const usdc = wallet?.balances.find((balance) => balance.asset === 'USDC')?.balance;
   return (
-    <span className="flex shrink-0 gap-1" aria-label={`XLM ${xlm ?? 'unavailable'}; USDC ${usdc ?? 'unavailable'}`}>
-      <span className="rounded-xs bg-surface-secondary px-1.5 py-0.5 text-2xs text-foreground-secondary">XLM {xlm === undefined ? '—' : formatNumber(xlm, true)}</span>
-      <span className="rounded-xs bg-surface-secondary px-1.5 py-0.5 text-2xs text-foreground-secondary">USDC {usdc === undefined ? '—' : formatNumber(usdc, true)}</span>
+    <span
+      className="flex shrink-0 gap-1"
+      aria-label={`XLM ${xlm ?? 'unavailable'}; USDC ${usdc ?? 'unavailable'}`}
+    >
+      <span className="px-1.5 py-0.5 rounded-xs bg-surface-secondary text-2xs text-foreground-secondary">
+        XLM {xlm === undefined ? '—' : formatNumber(xlm, true)}
+      </span>
+      <span className="px-1.5 py-0.5 rounded-xs bg-surface-secondary text-2xs text-foreground-secondary">
+        USDC {usdc === undefined ? '—' : formatNumber(usdc, true)}
+      </span>
     </span>
   );
 }
@@ -48,42 +57,61 @@ export function AccountSwitcher() {
     void hydrate();
     let stopWatching: (() => void) | undefined;
     let disposed = false;
-    void startWatching().then((stop) => {
-      if (disposed) stop();
-      else stopWatching = stop;
-    }).catch(() => undefined);
+    void startWatching()
+      .then((stop) => {
+        if (disposed) stop();
+        else stopWatching = stop;
+      })
+      .catch(() => undefined);
     return () => {
       disposed = true;
       stopWatching?.();
     };
   }, [hydrate, startWatching]);
 
-  const activeWallet = wallets.find((wallet) => wallet.id === selectedWalletId)
-    ?? (activeSource === 'managed'
+  const activeWallet =
+    wallets.find((wallet) => wallet.id === selectedWalletId) ??
+    (activeSource === 'managed'
       ? wallets.find((wallet) => wallet.stellarAddress === activePublicKey)
       : undefined);
-  const activeLabel = activeWallet?.name
-    ?? (activeSource === 'freighter' && activePublicKey ? 'Freighter account' : 'Select account');
+  const activeLabel =
+    activeWallet?.name ??
+    (activeSource === 'freighter' && activePublicKey
+      ? 'Freighter account'
+      : 'Select account');
   const activeAddress = activeWallet?.stellarAddress ?? activePublicKey;
-  const connectedWallet = wallets.find((wallet) => wallet.stellarAddress === connectedPublicKey);
+  const connectedWallet = wallets.find(
+    (wallet) => wallet.stellarAddress === connectedPublicKey,
+  );
 
-  const walletItems = useMemo<DropdownItem[]>(() => wallets.map((wallet) => ({
-    label: wallet.name,
-    description: `${truncateAddress(wallet.stellarAddress)} · ${wallet.network}`,
-    icon: selectedWalletId === wallet.id ? <Check className="h-4 w-4 text-gold" aria-hidden /> : <WalletCards className="h-4 w-4" aria-hidden />,
-    trailing: <BalanceBadges wallet={wallet} />,
-    onSelect: () => {
-      selectManagedAccount(wallet);
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.wallets }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.wallet(wallet.id) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.walletBalances(wallet.id) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactions }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.proposals }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.overview }),
-      ]);
-    },
-  })), [queryClient, selectManagedAccount, selectedWalletId, wallets]);
+  const walletItems = useMemo<DropdownItem[]>(
+    () =>
+      wallets.map((wallet) => ({
+        label: wallet.name,
+        description: `${truncateAddress(wallet.stellarAddress)} · ${wallet.network}`,
+        icon:
+          selectedWalletId === wallet.id ? (
+            <Check className="h-4 w-4 text-gold" aria-hidden />
+          ) : (
+            <WalletCards className="h-4 w-4" aria-hidden />
+          ),
+        trailing: <BalanceBadges wallet={wallet} />,
+        onSelect: () => {
+          selectManagedAccount(wallet);
+          void Promise.all([
+            queryClient.invalidateQueries({ queryKey: queryKeys.wallets }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.wallet(wallet.id) }),
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.walletBalances(wallet.id),
+            }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.transactions }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.proposals }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.overview }),
+          ]);
+        },
+      })),
+    [queryClient, selectManagedAccount, selectedWalletId, wallets],
+  );
 
   const items: (DropdownItem | 'separator')[] = [...walletItems];
   if (connectedPublicKey) {
@@ -91,11 +119,18 @@ export function AccountSwitcher() {
     items.push({
       label: 'Freighter account',
       description: `${truncateAddress(connectedPublicKey)} · ${activeNetwork ?? 'testnet'}`,
-      icon: activeSource === 'freighter' ? <Check className="h-4 w-4 text-gold" aria-hidden /> : <PlugZap className="h-4 w-4" aria-hidden />,
+      icon:
+        activeSource === 'freighter' ? (
+          <Check className="h-4 w-4 text-gold" aria-hidden />
+        ) : (
+          <PlugZap className="h-4 w-4" aria-hidden />
+        ),
       trailing: (
-        <span className="flex items-center gap-1.5">
+        <span className="gap-1.5 flex items-center">
           <BalanceBadges wallet={connectedWallet} />
-          <span className="rounded-xs bg-success-soft px-1.5 py-0.5 text-2xs text-success">Connected</span>
+          <span className="px-1.5 py-0.5 rounded-xs bg-success-soft text-2xs text-success">
+            Connected
+          </span>
         </span>
       ),
       onSelect: () => {
@@ -130,9 +165,17 @@ export function AccountSwitcher() {
   }
 
   if (walletsQuery.isLoading && items.length === 0) {
-    items.unshift({ label: 'Loading accounts…', disabled: true, icon: <WalletCards className="h-4 w-4" aria-hidden /> });
+    items.unshift({
+      label: 'Loading accounts…',
+      disabled: true,
+      icon: <WalletCards className="h-4 w-4" aria-hidden />,
+    });
   } else if (items.length === 0) {
-    items.unshift({ label: 'No accounts available', disabled: true, icon: <CircleOff className="h-4 w-4" aria-hidden /> });
+    items.unshift({
+      label: 'No accounts available',
+      disabled: true,
+      icon: <CircleOff className="h-4 w-4" aria-hidden />,
+    });
   }
 
   return (
@@ -141,18 +184,23 @@ export function AccountSwitcher() {
       aria-label="Switch Stellar account"
       triggerClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       className="min-w-[min(440px,calc(100vw-2rem))]"
-      trigger={(
-        <span className="flex max-w-[220px] items-center gap-2 rounded-button border border-border bg-surface px-2.5 py-1.5 text-left hover:bg-surface-secondary sm:max-w-[280px]">
+      trigger={
+        <span className="px-2.5 py-1.5 flex max-w-[220px] items-center gap-2 rounded-button border border-border bg-surface text-left hover:bg-surface-secondary sm:max-w-[280px]">
           <WalletCards className="h-4 w-4 shrink-0 text-gold" aria-hidden />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-medium text-foreground">{activeLabel}</span>
+            <span className="block truncate text-xs font-medium text-foreground">
+              {activeLabel}
+            </span>
             <span className="block truncate font-mono text-2xs text-foreground-muted">
               {activeAddress ? truncateAddress(activeAddress) : 'Disconnected'}
             </span>
           </span>
-          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-foreground-muted" aria-hidden />
+          <ChevronDown
+            className="h-3.5 w-3.5 shrink-0 text-foreground-muted"
+            aria-hidden
+          />
         </span>
-      )}
+      }
       items={items}
     />
   );

@@ -25,9 +25,27 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         velocity24h: 3400,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
         ledger: [
-          { id: 'ldg-1a', date: new Date(Date.now() - 1000 * 60 * 12).toISOString(), description: 'Soroban gas relay top-up', counterparty: 'Stellar Network', amount: 3400 },
-          { id: 'ldg-1b', date: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(), description: 'Contract deployment batch #482', counterparty: 'Soroban Testnet', amount: 12800 },
-          { id: 'ldg-1c', date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), description: 'RPC node relayer fees', counterparty: 'Stellar Network', amount: 4650 },
+          {
+            id: 'ldg-1a',
+            date: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+            description: 'Soroban gas relay top-up',
+            counterparty: 'Stellar Network',
+            amount: 3400,
+          },
+          {
+            id: 'ldg-1b',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
+            description: 'Contract deployment batch #482',
+            counterparty: 'Soroban Testnet',
+            amount: 12800,
+          },
+          {
+            id: 'ldg-1c',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+            description: 'RPC node relayer fees',
+            counterparty: 'Stellar Network',
+            amount: 4650,
+          },
         ],
       },
       {
@@ -42,8 +60,20 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         velocity24h: 1800,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
         ledger: [
-          { id: 'ldg-2a', date: new Date(Date.now() - 1000 * 60 * 45).toISOString(), description: 'CI runner minutes — sandbox suite', counterparty: 'GitHub Actions', amount: 1800 },
-          { id: 'ldg-2b', date: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(), description: 'Nightly regression test compute', counterparty: 'Stellar Sandbox', amount: 5200 },
+          {
+            id: 'ldg-2a',
+            date: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+            description: 'CI runner minutes — sandbox suite',
+            counterparty: 'GitHub Actions',
+            amount: 1800,
+          },
+          {
+            id: 'ldg-2b',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(),
+            description: 'Nightly regression test compute',
+            counterparty: 'Stellar Sandbox',
+            amount: 5200,
+          },
         ],
       },
       {
@@ -58,8 +88,20 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         velocity24h: 950,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
         ledger: [
-          { id: 'ldg-3a', date: new Date(Date.now() - 1000 * 60 * 5).toISOString(), description: 'RPC ping monitoring — 24h window', counterparty: 'Horizon RPC', amount: 950 },
-          { id: 'ldg-3b', date: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(), description: 'Latency alerting infra', counterparty: 'Stellar Network', amount: 2100 },
+          {
+            id: 'ldg-3a',
+            date: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+            description: 'RPC ping monitoring — 24h window',
+            counterparty: 'Horizon RPC',
+            amount: 950,
+          },
+          {
+            id: 'ldg-3b',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
+            description: 'Latency alerting infra',
+            counterparty: 'Stellar Network',
+            amount: 2100,
+          },
         ],
       },
     ],
@@ -88,8 +130,20 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         velocity24h: 2100,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
         ledger: [
-          { id: 'ldg-4a', date: new Date(Date.now() - 1000 * 60 * 20).toISOString(), description: 'DEX liquidity rebalance', counterparty: 'Soroswap AMM', amount: 2100 },
-          { id: 'ldg-4b', date: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(), description: 'Arbitrage sweep — XLM/USDC pair', counterparty: 'Soroswap AMM', amount: 9400 },
+          {
+            id: 'ldg-4a',
+            date: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
+            description: 'DEX liquidity rebalance',
+            counterparty: 'Soroswap AMM',
+            amount: 2100,
+          },
+          {
+            id: 'ldg-4b',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(),
+            description: 'Arbitrage sweep — XLM/USDC pair',
+            counterparty: 'Soroswap AMM',
+            amount: 9400,
+          },
         ],
       },
       {
@@ -104,7 +158,13 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         velocity24h: 1200,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
         ledger: [
-          { id: 'ldg-5a', date: new Date(Date.now() - 1000 * 60 * 180).toISOString(), description: 'Airdrop batch — community wave 12', counterparty: 'Community Distribution', amount: 1200 },
+          {
+            id: 'ldg-5a',
+            date: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
+            description: 'Airdrop batch — community wave 12',
+            counterparty: 'Community Distribution',
+            amount: 1200,
+          },
         ],
       },
     ],
@@ -133,8 +193,20 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         velocity24h: 15000,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
         ledger: [
-          { id: 'ldg-6a', date: new Date(Date.now() - 1000 * 60 * 2).toISOString(), description: 'Wallet consolidation sweep — batch 91', counterparty: 'Treasury Vault', amount: 15000 },
-          { id: 'ldg-6b', date: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), description: 'Idle balance sweep — sub-wallets', counterparty: 'Treasury Vault', amount: 42000 },
+          {
+            id: 'ldg-6a',
+            date: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
+            description: 'Wallet consolidation sweep — batch 91',
+            counterparty: 'Treasury Vault',
+            amount: 15000,
+          },
+          {
+            id: 'ldg-6b',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+            description: 'Idle balance sweep — sub-wallets',
+            counterparty: 'Treasury Vault',
+            amount: 42000,
+          },
         ],
       },
       {
@@ -149,8 +221,20 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         velocity24h: 8000,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
         ledger: [
-          { id: 'ldg-7a', date: new Date(Date.now() - 1000 * 60 * 360).toISOString(), description: 'Contractor payroll run — August cycle', counterparty: 'Payroll Batch', amount: 8000 },
-          { id: 'ldg-7b', date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), description: 'Contractor payroll run — July cycle', counterparty: 'Payroll Batch', amount: 79500 },
+          {
+            id: 'ldg-7a',
+            date: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
+            description: 'Contractor payroll run — August cycle',
+            counterparty: 'Payroll Batch',
+            amount: 8000,
+          },
+          {
+            id: 'ldg-7b',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+            description: 'Contractor payroll run — July cycle',
+            counterparty: 'Payroll Batch',
+            amount: 79500,
+          },
         ],
       },
     ],
@@ -179,8 +263,20 @@ export const MOCK_DEPARTMENT_BUDGETS: DepartmentBudget[] = [
         velocity24h: 4200,
         lastTransactionAt: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
         ledger: [
-          { id: 'ldg-8a', date: new Date(Date.now() - 1000 * 60 * 8).toISOString(), description: 'Daily financial intelligence briefing run', counterparty: 'Nvidia NIM', amount: 4200 },
-          { id: 'ldg-8b', date: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(), description: 'Model inference credits top-up', counterparty: 'Nvidia NIM', amount: 18500 },
+          {
+            id: 'ldg-8a',
+            date: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
+            description: 'Daily financial intelligence briefing run',
+            counterparty: 'Nvidia NIM',
+            amount: 4200,
+          },
+          {
+            id: 'ldg-8b',
+            date: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(),
+            description: 'Model inference credits top-up',
+            counterparty: 'Nvidia NIM',
+            amount: 18500,
+          },
         ],
       },
       {

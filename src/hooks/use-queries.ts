@@ -261,7 +261,10 @@ export const useAssetRates = (): UseQueryResult<AssetRate[]> =>
 
 // -- notifications ----------------------------------------------------------
 export const useNotifications = (): UseQueryResult<AppNotification[]> =>
-  useQuery({ queryKey: queryKeys.notifications, queryFn: () => resources.getNotifications() });
+  useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: () => resources.getNotifications(),
+  });
 
 // -- developer --------------------------------------------------------------
 export const useApiKeys = (): UseQueryResult<ApiKey[]> =>

@@ -182,9 +182,10 @@ export function parseTransactionXdr(value: string): ParsedXdrTransaction {
       operations: [],
       signatures: [],
       networkPassphrase: DEFAULT_NETWORK_PASSPHRASE,
-      message: fallback.length === 0
-        ? 'Paste a base64-encoded transaction envelope to inspect it.'
-        : 'The value is not valid base64 or is too short to be a transaction envelope.',
+      message:
+        fallback.length === 0
+          ? 'Paste a base64-encoded transaction envelope to inspect it.'
+          : 'The value is not valid base64 or is too short to be a transaction envelope.',
       warning: looksLikeBase64
         ? 'Base64 structure looks valid, but it does not contain a recognizable Stellar transaction envelope.'
         : undefined,
@@ -203,7 +204,8 @@ export function parseTransactionXdr(value: string): ParsedXdrTransaction {
       operations: [],
       signatures: [],
       networkPassphrase: DEFAULT_NETWORK_PASSPHRASE,
-      message: 'This payload was base64-decoded, but it is not a recognizable transaction envelope.',
+      message:
+        'This payload was base64-decoded, but it is not a recognizable transaction envelope.',
       warning:
         fallback.length > 28
           ? 'The base64 payload is structurally valid but does not match the expected transaction schema.'
@@ -216,12 +218,11 @@ export function parseTransactionXdr(value: string): ParsedXdrTransaction {
   const signatures = extractSignatures(transaction);
 
   const sourceAccount =
-    asString(transaction.sourceAccount) ??
-    asString(transaction.source) ??
-    'Unknown';
+    asString(transaction.sourceAccount) ?? asString(transaction.source) ?? 'Unknown';
 
   const fee = asStringOrNumber(transaction.fee) ?? DEFAULT_FEE;
-  const sequenceNumber = asStringOrNumber(transaction.sequenceNumber) ?? DEFAULT_SEQUENCE;
+  const sequenceNumber =
+    asStringOrNumber(transaction.sequenceNumber) ?? DEFAULT_SEQUENCE;
   const networkPassphrase =
     asString(transaction.networkPassphrase) ?? DEFAULT_NETWORK_PASSPHRASE;
 

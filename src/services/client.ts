@@ -74,7 +74,9 @@ export const apiClient = {
     const url = `${env.apiUrl}${env.apiVersion}${path}${buildQuery(query)}`;
 
     const token = getStoredToken();
-    const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+    const authHeader: Record<string, string> = token
+      ? { Authorization: `Bearer ${token}` }
+      : {};
 
     let res: Response;
     try {

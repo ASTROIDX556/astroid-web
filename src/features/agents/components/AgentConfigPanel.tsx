@@ -35,7 +35,10 @@ const PROVIDER_LABELS: Record<AgentProviderType, string> = {
 const agentConfigPanelSchema = z.object({
   provider: z.enum(agentProviderTypes),
   model: z.string().min(1, 'Model is required.'),
-  temperature: z.coerce.number().min(0, 'Temperature cannot be below 0.').max(2, 'Temperature cannot exceed 2.'),
+  temperature: z.coerce
+    .number()
+    .min(0, 'Temperature cannot be below 0.')
+    .max(2, 'Temperature cannot exceed 2.'),
   maxTokens: z.coerce.number().min(1, 'Max tokens must be at least 1.'),
   systemPrompt: z.string().min(1, 'System prompt is required.'),
   systemPromptTemplate: z.string().optional().or(z.literal('')),
@@ -101,7 +104,8 @@ export function AgentConfigPanel({
       await onSubmit?.(values);
       toast.success('Agent configuration saved.');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save configuration.';
+      const message =
+        err instanceof Error ? err.message : 'Failed to save configuration.';
       toast.error(message);
     }
   };
@@ -125,7 +129,7 @@ export function AgentConfigPanel({
         >
           {/* Provider & Model Section */}
           <fieldset className="space-y-4">
-            <legend className="text-xs font-semibold text-foreground uppercase tracking-wide">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-foreground">
               Model Selection
             </legend>
 
@@ -179,7 +183,7 @@ export function AgentConfigPanel({
 
           {/* Behavior Settings Section */}
           <fieldset className="space-y-4">
-            <legend className="text-xs font-semibold text-foreground uppercase tracking-wide">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-foreground">
               Behavior Settings
             </legend>
 
@@ -200,7 +204,7 @@ export function AgentConfigPanel({
                     {...form.register('temperature', {
                       valueAsNumber: true,
                     })}
-                    className="h-2 w-full cursor-pointer rounded-full bg-border appearance-none accent-gold"
+                    className="h-2 w-full cursor-pointer appearance-none rounded-full bg-border accent-gold"
                     aria-valuemin={0}
                     aria-valuemax={2}
                     aria-valuenow={form.watch('temperature')}
@@ -241,7 +245,7 @@ export function AgentConfigPanel({
 
           {/* System Prompt Section */}
           <fieldset className="space-y-4">
-            <legend className="text-xs font-semibold text-foreground uppercase tracking-wide">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-foreground">
               System Prompt
             </legend>
 

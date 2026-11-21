@@ -74,7 +74,9 @@ export function BudgetMeterDrilldownSection({
           <p className="text-2xs font-semibold uppercase tracking-[0.2em] text-foreground-muted">
             Department budget consumption
           </p>
-          <h3 className="mt-1 font-display text-xl font-semibold">Live envelope usage</h3>
+          <h3 className="mt-1 font-display text-xl font-semibold">
+            Live envelope usage
+          </h3>
         </div>
         <Badge variant="outline" size="sm">
           Drill-down ready
@@ -98,7 +100,10 @@ export function BudgetMeterDrilldownSection({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 items-center gap-2">
                     <ChevronDown className="h-4 w-4 shrink-0 text-gold" aria-hidden />
-                    <p className="truncate text-sm font-semibold text-foreground" title={selected.departmentName}>
+                    <p
+                      className="truncate text-sm font-semibold text-foreground"
+                      title={selected.departmentName}
+                    >
                       {selected.departmentName}
                     </p>
                     <Badge variant="outline" size="sm">
@@ -108,7 +113,7 @@ export function BudgetMeterDrilldownSection({
                   <button
                     type="button"
                     onClick={() => setSelectedId(null)}
-                    className="inline-flex items-center gap-1.5 self-start rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:self-auto"
+                    className="gap-1.5 px-2.5 py-1.5 inline-flex items-center self-start rounded-md border border-border text-xs font-medium text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:self-auto"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
                     Close breakdown
@@ -136,19 +141,31 @@ export function BudgetMeterDrilldownSection({
                     ) : (
                       <ul className="space-y-3">
                         {agentRows.map((row) => {
-                          const pct = row.allocated > 0 ? (row.spent / row.allocated) * 100 : 0;
+                          const pct =
+                            row.allocated > 0 ? (row.spent / row.allocated) * 100 : 0;
                           return (
                             <li key={row.agentId} className="space-y-1.5">
                               <div className="flex items-baseline justify-between gap-2">
-                                <span className="truncate text-xs font-medium text-foreground" title={row.agentName}>
+                                <span
+                                  className="truncate text-xs font-medium text-foreground"
+                                  title={row.agentName}
+                                >
                                   {row.agentName}
                                 </span>
-                                <span className="shrink-0 tabular text-2xs text-foreground-secondary">
-                                  {formatCurrency(row.spent, row.asset, { compact: true })} /{' '}
-                                  {formatCurrency(row.allocated, row.asset, { compact: true })}
+                                <span className="tabular shrink-0 text-2xs text-foreground-secondary">
+                                  {formatCurrency(row.spent, row.asset, {
+                                    compact: true,
+                                  })}{' '}
+                                  /{' '}
+                                  {formatCurrency(row.allocated, row.asset, {
+                                    compact: true,
+                                  })}
                                 </span>
                               </div>
-                              <ProgressBar value={pct} label={`${row.agentName} utilization`} />
+                              <ProgressBar
+                                value={pct}
+                                label={`${row.agentName} utilization`}
+                              />
                             </li>
                           );
                         })}
