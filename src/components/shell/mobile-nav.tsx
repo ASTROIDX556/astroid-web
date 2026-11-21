@@ -108,7 +108,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
       >
         <div className={cn('flex h-16 items-center justify-between', compactNavigation ? 'px-3' : 'px-5')}>
           <span className="gap-2.5 flex items-center">
-            <span className="grid h-8 w-8 place-items-center rounded-button bg-accent-gradient text-white shadow-gold">
+            <span className="grid h-8 w-8 place-items-center rounded-button bg-accent-gradient text-background-secondary shadow-gold">
               <Sparkles className="h-4 w-4" aria-hidden />
             </span>
             <span className={cn('font-display text-lg font-semibold tracking-tight', compactNavigation && 'sr-only')}>

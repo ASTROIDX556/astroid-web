@@ -237,7 +237,7 @@ export function BudgetMatrix() {
           return (
             <div className="space-y-1 w-32 ml-auto">
               <div className="flex justify-between text-2xs font-semibold tabular">
-                <span className={percent > 85 ? 'text-red-500 font-bold' : 'text-foreground'}>
+                <span className={percent > 85 ? 'text-danger font-bold' : 'text-foreground'}>
                   {percent}%
                 </span>
                 <span className="text-foreground-muted">
