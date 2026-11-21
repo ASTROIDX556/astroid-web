@@ -158,6 +158,51 @@ export const monthlyBudgetSchema = z
   .max(1_000_000, 'Monthly budget cannot exceed 1,000,000 USDC');
 
 // ---------------------------------------------------------------------------
+// Per-asset agent spending permissions
+// ---------------------------------------------------------------------------
+
+export const AGENT_ASSET_CODES = ['USDC', 'XLM', 'EURC', 'ASTRO'] as const;
+export type AgentAssetCode = (typeof AGENT_ASSET_CODES)[number];
+
+export const DEFAULT_AGENT_ASSET_PERMISSIONS = {
+  USDC: { allowed: true, maxSpend: 100 },
+  XLM: { allowed: false, maxSpend: null },
+  EURC: { allowed: false, maxSpend: null },
+  ASTRO: { allowed: false, maxSpend: null },
+} as const;
+
+const assetSpendLimitSchema = z
+  .number({ invalid_type_error: 'Spending limit must be a number.' })
+  .finite('Spending limit must be a finite number.')
+  .positive('Spending limit must be greater than 0.')
+  .max(1_000_000, 'Spending limit cannot exceed 1,000,000.')
+  .nullable();
+
+const perAssetPermissionSchema = z.object({
+  allowed: z.boolean(),
+  maxSpend: assetSpendLimitSchema,
+});
+
+export const agentAssetPermissionsSchema = z
+  .object({
+    USDC: perAssetPermissionSchema,
+    XLM: perAssetPermissionSchema,
+    EURC: perAssetPermissionSchema,
+    ASTRO: perAssetPermissionSchema,
+  })
+  .superRefine((permissions, ctx) => {
+    for (const asset of AGENT_ASSET_CODES) {
+      if (permissions[asset].allowed && permissions[asset].maxSpend === null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [asset, 'maxSpend'],
+          message: `Set a spending limit for enabled ${asset} assets.`,
+        });
+      }
+    }
+  });
+
+// ---------------------------------------------------------------------------
 // Cross-field rules shared by the schemas below
 // ---------------------------------------------------------------------------
 
@@ -225,6 +270,9 @@ const agentConfigFields = z.object({
   mode: agentModeSchema,
   temperature: temperatureSchema,
   monthlyBudget: monthlyBudgetSchema,
+  assetPermissions: agentAssetPermissionsSchema.default(
+    DEFAULT_AGENT_ASSET_PERMISSIONS,
+  ),
   singleTransactionCap: z
     .number({ invalid_type_error: 'Transaction limit must be a number' })
     .positive('Transaction limit must be greater than 0')

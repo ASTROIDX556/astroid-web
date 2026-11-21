@@ -19,7 +19,7 @@ import { PageTransition } from '@/components/ui/motion';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
-import { DepartmentBudgetChart } from '@/features/budgets/DepartmentBudgetChart';
+import { DepartmentComparisonChart } from '@/features/budgets/DepartmentComparisonChart';
 import { DepartmentBudgetBreakdown } from '@/features/budgets/DepartmentBudgetBreakdown';
 import { BudgetBreakdownChart } from '@/features/budgets/BudgetBreakdownChart';
 import { BudgetAllocationDashboard } from '@/features/budgets/components/BudgetAllocationDashboard';
@@ -126,6 +126,7 @@ export default function BudgetsPage() {
                 <BudgetAllocationChart data={chartData} />
               </ErrorBoundary>
 
+              <DepartmentComparisonChart departments={MOCK_DEPARTMENT_BUDGETS} />
               <ErrorBoundary section="Department budget chart">
                 <DepartmentBudgetChart data={MOCK_DEPARTMENT_BUDGETS} />
               </ErrorBoundary>

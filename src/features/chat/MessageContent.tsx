@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Check, Copy } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/cn';
+import { splitMessageSegments } from './messageFormatting';
 
 /**
  * Lightweight markdown-ish renderer for assistant chat bubbles. Supports fenced
@@ -12,36 +14,7 @@ import { cn } from '@/lib/cn';
  * operator/LLM content can never inject markup.
  */
 
-type Segment =
-  | { kind: 'text'; value: string }
-  | { kind: 'code'; language: string; value: string };
-
-const CODE_FENCE = /```([\w+#.-]*)\n?([\s\S]*?)```/g;
 const INLINE_TOKEN = /(\*\*[^*]+\*\*|`[^`]+`)/g;
-
-function splitSegments(content: string): Segment[] {
-  const segments: Segment[] = [];
-  let cursor = 0;
-
-  for (const match of content.matchAll(CODE_FENCE)) {
-    const index = match.index ?? 0;
-    if (index > cursor) {
-      segments.push({ kind: 'text', value: content.slice(cursor, index) });
-    }
-    segments.push({
-      kind: 'code',
-      language: (match[1] ?? '').trim(),
-      value: (match[2] ?? '').replace(/\n$/, ''),
-    });
-    cursor = index + match[0].length;
-  }
-
-  if (cursor < content.length) {
-    segments.push({ kind: 'text', value: content.slice(cursor) });
-  }
-
-  return segments;
-}
 
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
@@ -170,26 +143,31 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   );
 
   const handleCopy = async () => {
-    const text = code;
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(code);
       } else {
         const textarea = document.createElement('textarea');
-        textarea.value = text;
+        textarea.value = code;
         textarea.setAttribute('readonly', '');
         textarea.style.position = 'fixed';
         textarea.style.opacity = '0';
         document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
+        let copied = false;
+        try {
+          textarea.select();
+          copied = document.execCommand('copy');
+        } finally {
+          document.body.removeChild(textarea);
+        }
+        if (!copied) throw new Error('Clipboard copy was not permitted');
       }
       setCopied(true);
       if (resetTimer.current) clearTimeout(resetTimer.current);
       resetTimer.current = setTimeout(() => setCopied(false), 2000);
+      toast.success('Code snippet copied to clipboard');
     } catch {
-      // Clipboard can be blocked by permissions — the snippet stays selectable.
+      toast.error('Could not copy the code snippet. Select and copy it manually.');
     }
   };
 
@@ -226,7 +204,7 @@ export interface MessageContentProps {
 }
 
 export function MessageContent({ content, className }: MessageContentProps) {
-  const segments = splitSegments(content);
+  const segments = splitMessageSegments(content);
 
   return (
     <div className={cn('min-w-0 space-y-2 break-words', className)}>
