@@ -1,4 +1,6 @@
 export * from './XdrSignatureStatus';
+export * from './XdrInspectorModal';
+export * from './xdrParser';
 export * from './useXdrSigner';
 export { default as XdrSignatureStatus } from './XdrSignatureStatus';
 export * from './transactionFiltering';

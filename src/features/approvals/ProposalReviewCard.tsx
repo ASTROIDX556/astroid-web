@@ -7,6 +7,7 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  Code2,
   ShieldAlert,
   X,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ import { cn } from '@/lib/cn';
 import { formatCurrency, formatDateTime, formatRelativeTime } from '@/lib/format';
 import { proposalStatus } from '@/lib/status';
 import type { Proposal } from '@/types/domain';
+import { XdrInspectorModal } from '@/features/transactions/XdrInspectorModal';
 
 import {
   approvalQueryKeys,
@@ -100,6 +102,9 @@ export function ProposalReviewCard({
   const [confirmAction, setConfirmAction] = useState<ReviewDecision | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+
+  const rawXdr = xdr ?? proposal.xdr;
 
   const snapshotQuery = useQuery({
     queryKey: approvalQueryKeys.proposal(proposal.id),
@@ -361,6 +366,17 @@ export function ProposalReviewCard({
           >
             Reject
           </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<Code2 className="h-4 w-4" aria-hidden />}
+            disabled={!rawXdr}
+            title={rawXdr ? undefined : 'This proposal has no attached XDR envelope.'}
+            aria-label="Inspect proposal XDR"
+            onClick={() => setInspectorOpen(true)}
+          >
+            Inspect XDR
+          </Button>
         </div>
         {disabledReason && (
           <p className="text-2xs text-foreground-muted">{disabledReason}</p>
@@ -472,6 +488,13 @@ export function ProposalReviewCard({
           )}
         </div>
       </Dialog>
+
+      <XdrInspectorModal
+        open={inspectorOpen}
+        onClose={() => setInspectorOpen(false)}
+        xdr={rawXdr}
+        title={proposal.title}
+      />
     </Card>
   );
 }
