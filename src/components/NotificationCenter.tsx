@@ -242,7 +242,7 @@ export function NotificationCenter() {
             key={unread}
             initial={{ scale: 0.5 }}
             animate={{ scale: 1 }}
-            className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-xs bg-gold px-1 text-[10px] font-bold text-background-secondary"
+            className="absolute right-1.5 top-1.5 grid h-4 min-w-4 place-items-center rounded-xs bg-gold px-1 text-2xs font-bold text-background-secondary"
           >
             {unread > 9 ? '9+' : unread}
           </motion.span>

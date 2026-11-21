@@ -29,51 +29,57 @@ export const AgentCreationForm: React.FC<AgentCreationFormProps> = ({ onSubmit }
     onSubmit(data);
   };
 
+  const inputClass =
+    'mt-1 block w-full rounded-sm border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-border-strong';
+
   return (
     <form onSubmit={handleSubmit(handleSubmitEnhanced)} className="space-y-4" noValidate>
       <div>
-        <label className="block text-sm font-medium">Agent Name</label>
-        <input {...register("name")} className="mt-1 block w-full border rounded p-2" />
-        {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+        <label className="block text-xs font-medium text-foreground">Agent Name</label>
+        <input {...register("name")} className={inputClass} />
+        {errors.name && <p className="text-2xs text-danger mt-1" role="alert">{errors.name.message}</p>}
       </div>
 
       <div>
-        <label className="block text-sm font-medium">Provider</label>
-        <input {...register("provider")} className="mt-1 block w-full border rounded p-2" />
-        {errors.provider && <p className="text-red-500 text-sm mt-1">{errors.provider.message}</p>}
+        <label className="block text-xs font-medium text-foreground">Provider</label>
+        <input {...register("provider")} className={inputClass} />
+        {errors.provider && <p className="text-2xs text-danger mt-1" role="alert">{errors.provider.message}</p>}
       </div>
 
       <div>
-        <label className="block text-sm font-medium">Model</label>
-        <input {...register("model")} className="mt-1 block w-full border rounded p-2" />
-        {errors.model && <p className="text-red-500 text-sm mt-1">{errors.model.message}</p>}
+        <label className="block text-xs font-medium text-foreground">Model</label>
+        <input {...register("model")} className={inputClass} />
+        {errors.model && <p className="text-2xs text-danger mt-1" role="alert">{errors.model.message}</p>}
       </div>
 
       <div>
-        <label className="block text-sm font-medium">API Key (Optional)</label>
-        <input type="password" {...register("apiKey")} className="mt-1 block w-full border rounded p-2" />
-        {errors.apiKey && <p className="text-red-500 text-sm mt-1">{errors.apiKey.message}</p>}
+        <label className="block text-xs font-medium text-foreground">API Key (Optional)</label>
+        <input type="password" {...register("apiKey")} className={inputClass} />
+        {errors.apiKey && <p className="text-2xs text-danger mt-1" role="alert">{errors.apiKey.message}</p>}
       </div>
 
       <div>
-        <label className="block text-sm font-medium">Endpoint URL (Optional)</label>
-        <input {...register("endpointUrl")} className="mt-1 block w-full border rounded p-2" />
-        {errors.endpointUrl && <p className="text-red-500 text-sm mt-1">{errors.endpointUrl.message}</p>}
+        <label className="block text-xs font-medium text-foreground">Endpoint URL (Optional)</label>
+        <input {...register("endpointUrl")} className={inputClass} />
+        {errors.endpointUrl && <p className="text-2xs text-danger mt-1" role="alert">{errors.endpointUrl.message}</p>}
       </div>
 
       <div>
-        <label className="block text-sm font-medium">Token Limit</label>
-        <input type="number" {...register("tokenLimit", { valueAsNumber: true })} className="mt-1 block w-full border rounded p-2" />
-        {errors.tokenLimit && <p className="text-red-500 text-sm mt-1">{errors.tokenLimit.message}</p>}
+        <label className="block text-xs font-medium text-foreground">Token Limit</label>
+        <input type="number" {...register("tokenLimit", { valueAsNumber: true })} className={inputClass} />
+        {errors.tokenLimit && <p className="text-2xs text-danger mt-1" role="alert">{errors.tokenLimit.message}</p>}
       </div>
 
       <div>
-        <label className="block text-sm font-medium">Spending Threshold</label>
-        <input type="number" {...register("spendingThreshold", { valueAsNumber: true })} className="mt-1 block w-full border rounded p-2" />
-        {errors.spendingThreshold && <p className="text-red-500 text-sm mt-1">{errors.spendingThreshold.message}</p>}
+        <label className="block text-xs font-medium text-foreground">Spending Threshold</label>
+        <input type="number" {...register("spendingThreshold", { valueAsNumber: true })} className={inputClass} />
+        {errors.spendingThreshold && <p className="text-2xs text-danger mt-1" role="alert">{errors.spendingThreshold.message}</p>}
       </div>
 
-      <button type="submit" className="w-full bg-primary text-primary-foreground py-2 px-4 rounded hover:bg-primary/95">
+      <button
+        type="submit"
+        className="inline-flex w-full items-center justify-center rounded-button bg-gold px-4 py-2 text-sm font-medium text-accent-foreground shadow-soft-1 transition-all duration-base ease-astroid hover:shadow-gold hover:-translate-y-px disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
         Create Agent
       </button>
     </form>
