@@ -166,7 +166,7 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
         <ul className="space-y-4" aria-label="Approval queue">
           {sortedProposals.map((proposal) => (
             <li key={proposal.id}>
-              <ProposalReviewCard proposal={proposal} />
+              <ProposalReviewCard proposal={proposal} xdr={proposal.xdr} />
             </li>
           ))}
         </ul>

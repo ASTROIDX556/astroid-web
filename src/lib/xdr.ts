@@ -54,6 +54,8 @@ export interface ParsedXdrTransaction {
   signatures: XdrSignature[];
   /** Network passphrase, e.g. `Public Global Stellar Network ; September 2015`. */
   networkPassphrase: string;
+  /** Decoded memo text/id/hash, when the envelope carries one. */
+  memo?: string;
   /** Human-readable status message for the UI. */
   message: string;
   /** Optional supplementary warning rendered alongside the message. */
@@ -156,6 +158,27 @@ function extractSignatures(transaction: RawEnvelope): XdrSignature[] {
   });
 }
 
+/** Read a memo from either the transaction or the wrapping envelope. */
+function extractMemo(envelope: RawEnvelope, transaction: RawEnvelope): string | undefined {
+  const raw = transaction.memo ?? envelope.memo;
+  if (raw === undefined || raw === null) return undefined;
+
+  if (isRecord(raw)) {
+    const value =
+      asString(raw.value) ??
+      asString(raw.text) ??
+      asString(raw.content) ??
+      asString(raw.id) ??
+      asStringOrNumber(raw.id) ??
+      asStringOrNumber(raw.hash);
+    if (value !== undefined && value !== '') return value;
+    return undefined;
+  }
+
+  const text = asString(raw) ?? asStringOrNumber(raw);
+  return text && text.length > 0 ? text : undefined;
+}
+
 /**
  * Parse a base64-encoded Stellar `TransactionEnvelope` XDR into a structured
  * summary suitable for display in an inspector UI.
@@ -237,6 +260,7 @@ export function parseTransactionXdr(value: string): ParsedXdrTransaction {
     operations,
     signatures,
     networkPassphrase,
+    memo: extractMemo(envelope, transaction),
     message: 'XDR envelope decoded successfully.',
   };
 }
