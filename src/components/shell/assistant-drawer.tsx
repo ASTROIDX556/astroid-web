@@ -9,6 +9,8 @@ import { cn } from '@/lib/cn';
 import { env, isMockMode } from '@/lib/env';
 import type { ChatMessage } from '@/types/domain';
 import { FinancialBriefingPanel } from '@/features/ai/FinancialBriefingPanel';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const defaultSuggestions = [
   {
@@ -255,13 +257,19 @@ export function AssistantDrawer() {
               </div>
             )}
 
-            <FinancialBriefingPanel
-              messages={messages}
-              draft={draft}
-              suggestions={suggestions}
-              onDraftChange={setDraft}
-              onSend={send}
-            />
+            <ErrorBoundary
+              section="AI assistant chat"
+              compact
+              onReset={() => void briefingQuery.refetch()}
+            >
+              <FinancialBriefingPanel
+                messages={messages}
+                draft={draft}
+                suggestions={suggestions}
+                onDraftChange={setDraft}
+                onSend={send}
+              />
+            </ErrorBoundary>
           </div>
         </div>
       </div>
