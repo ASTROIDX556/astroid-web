@@ -93,3 +93,25 @@ export interface AssetHolding {
   /** Share of the portfolio's total USD value, 0–100. */
   share: number;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Asset balance breakdown widget                                              */
+/* -------------------------------------------------------------------------- */
+
+/** Loading/availability state of the price feed backing the breakdown. */
+export type PriceFeedStatus = 'loading' | 'ready' | 'stale' | 'offline';
+
+/** Props-shaped payload consumed by the asset balance breakdown widget. */
+export interface AssetBreakdownState {
+  /** Accountless (not yet connected) wallets render an empty state. */
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  priceFeed: PriceFeedStatus;
+  /** Holdings sorted by descending USD value. */
+  holdings: readonly AssetHolding[];
+  /** Sum of all holdings' USD value. */
+  totalUsdValue: number;
+  /** ISO 8601 timestamp of the last successful price refresh, or `null`. */
+  lastUpdatedAt: string | null;
+  /** Human-readable error message when {@link status} is `error`. */
+  errorMessage: string | null;
+}
