@@ -31,4 +31,11 @@ export const assetRates: AssetRate[] = [
     updatedAt: now,
     source: 'mock-stellar-dex',
   },
+  {
+    asset: 'BTCLN',
+    priceUsd: 0,
+    change24h: 0,
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    source: 'mock-stale-feed',
+  },
 ];

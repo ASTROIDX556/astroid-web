@@ -129,3 +129,29 @@ export function parseTrustlineBalances(
 export function totalHoldingsValue(holdings: readonly AssetHolding[]): number {
   return holdings.reduce((sum, holding) => sum + holding.usdValue, 0);
 }
+
+/**
+ * Format a USD amount for display. Non-finite inputs render as an em dash so
+ * an offline or failed price feed never shows `NaN` or `$Infinity`.
+ */
+export function formatUsd(value: number | null | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: value !== 0 && Math.abs(value) < 0.01 ? 6 : 2,
+  }).format(value);
+}
+
+/**
+ * Format a token amount with up to seven fractional digits (Stellar's
+ * precision), trimming trailing zeros. Zero balances render as `0`.
+ */
+export function formatAmount(value: number | null | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 7,
+  }).format(value);
+}
