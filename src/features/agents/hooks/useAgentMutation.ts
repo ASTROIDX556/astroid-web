@@ -21,7 +21,7 @@ export function useAgentMutation(agentId?: string) {
     mutationFn: async (variables: AgentUpdateVariables) => {
       // Simulate network request or call API
       await new Promise<void>((resolve) => {
-        setTimeout(resolve, 600);
+        setTimeout(() => { resolve(); }, 600);
       });
       return variables.data;
     },
