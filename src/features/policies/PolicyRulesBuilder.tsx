@@ -32,6 +32,8 @@ export function PolicyRulesBuilder() {
     },
   ]);
   const [error, setError] = useState<string | null>(null);
+  /** Which draft field the current `error` belongs to ('value', 'field', …). */
+  const [errorField, setErrorField] = useState<string | null>(null);
   const [simulationAmount, setSimulationAmount] = useState(500);
 
   const summary = useMemo(
@@ -43,18 +45,26 @@ export function PolicyRulesBuilder() {
     [rules],
   );
 
+  /** Applies a draft edit and clears any stale validation message. */
+  const patchDraft = (patch: Partial<PolicyRule>) => {
+    setDraft((current) => ({ ...current, ...patch }));
+    setError(null);
+    setErrorField(null);
+  };
+
   const handleAddRule = () => {
     const result = validateRule(draft);
     if (!result.success) {
-      setError(
-        result.error.issues[0]?.message ?? 'Please fill out the rule before adding it.',
-      );
+      const issue = result.error.issues[0];
+      setError(issue?.message ?? 'Please fill out the rule before adding it.');
+      setErrorField(issue?.path[0] ? String(issue.path[0]) : null);
       return;
     }
 
     setRules((current) => [...current, result.data]);
     setDraft(defaultRule);
     setError(null);
+    setErrorField(null);
   };
 
   const removeRule = (index: number) => {
@@ -101,10 +111,7 @@ export function PolicyRulesBuilder() {
             <select
               value={draft.field}
               onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  field: event.target.value as PolicyRule['field'],
-                }))
+                patchDraft({ field: event.target.value as PolicyRule['field'] })
               }
               className="w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-gold focus:outline-none"
             >
@@ -121,10 +128,7 @@ export function PolicyRulesBuilder() {
             <select
               value={draft.operator}
               onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  operator: event.target.value as PolicyRule['operator'],
-                }))
+                patchDraft({ operator: event.target.value as PolicyRule['operator'] })
               }
               className="w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-gold focus:outline-none"
             >
@@ -140,12 +144,17 @@ export function PolicyRulesBuilder() {
             <span>Value</span>
             <input
               value={draft.value}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, value: event.target.value }))
-              }
-              className="w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-gold focus:outline-none"
+              onChange={(event) => patchDraft({ value: event.target.value })}
+              className="w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-gold focus:outline-none aria-invalid:border-danger"
               placeholder="e.g. 5000 or G...A1"
+              aria-invalid={errorField === 'value'}
+              aria-describedby={errorField === 'value' ? 'policy-rule-value-error' : undefined}
             />
+            {errorField === 'value' && error && (
+              <span id="policy-rule-value-error" className="block text-2xs text-danger">
+                {error}
+              </span>
+            )}
           </label>
 
           <label className="space-y-1 text-xs text-foreground-secondary">
@@ -153,10 +162,7 @@ export function PolicyRulesBuilder() {
             <select
               value={draft.action}
               onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  action: event.target.value as PolicyRule['action'],
-                }))
+                patchDraft({ action: event.target.value as PolicyRule['action'] })
               }
               className="w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-gold focus:outline-none"
             >
@@ -179,7 +185,9 @@ export function PolicyRulesBuilder() {
           >
             Add rule
           </Button>
-          {error && <p className="text-xs text-danger">{error}</p>}
+          {error && errorField !== 'value' && (
+            <p className="text-xs text-danger">{error}</p>
+          )}
         </div>
 
         <div className="space-y-3">

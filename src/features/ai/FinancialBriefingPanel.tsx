@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { ArrowUpRight, Send, Sparkles } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
+import { MessageContent } from '@/features/chat/MessageContent';
+import { PromptChips } from './components/PromptChips';
 import { cn } from '@/lib/cn';
 import type { ChatMessage } from '@/types/domain';
 
@@ -74,7 +76,11 @@ export function FinancialBriefingPanel({
                     : 'border border-border bg-surface-secondary/60 text-foreground',
                 )}
               >
-                {message.content}
+                {message.role === 'assistant' ? (
+                  <MessageContent content={message.content} />
+                ) : (
+                  message.content
+                )}
               </div>
             </div>
           ))}
@@ -119,6 +125,13 @@ export function FinancialBriefingPanel({
         }}
         aria-label="Send a financial briefing question"
       >
+        <PromptChips
+          className="mb-3"
+          onSelect={(prompt) => {
+            onDraftChange(prompt);
+            textareaRef.current?.focus();
+          }}
+        />
         <div className="flex items-end gap-2 rounded-button border border-border bg-surface px-3 py-2 transition-colors focus-within:border-gold focus-within:ring-1 focus-within:ring-gold">
           <label className="sr-only" htmlFor="financial-briefing-prompt">
             Ask about treasury health, agent spending, or Stellar activity

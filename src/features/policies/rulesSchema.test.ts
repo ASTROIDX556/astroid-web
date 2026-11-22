@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../test-utils/expect';
 
 import {
   evaluateRule,
@@ -6,6 +7,8 @@ import {
   parseThresholdValue,
   parseWhitelistEntries,
   policyRuleSchema,
+  sanitizeAssetCode,
+  sanitizeNumericThreshold,
   simulatePolicyRules,
   validateRules,
   type PolicyRuleDraft,
@@ -52,7 +55,7 @@ describe('policyRuleSchema', () => {
     const invalid = policyRuleSchema.safeParse({
       field: 'Asset Identifier',
       operator: 'equals',
-      value: 'NOT A CODE',
+      value: 'WAY-TOO-LONG-ASSET-CODE-99',
       action: 'block',
     });
     expect(invalid.success).toBe(false);
@@ -96,6 +99,35 @@ describe('helpers', () => {
     expect(parseThresholdValue('-20')).toBe(-20);
     expect(parseThresholdValue('NaN')).toBeNull();
     expect(parseThresholdValue('')).toBeNull();
+  });
+
+  it('sanitizes numeric thresholds before parsing', () => {
+    expect(parseThresholdValue('1,000')).toBe(1000);
+    expect(parseThresholdValue('$2,500.50')).toBe(2500.5);
+    expect(parseThresholdValue(' 1 000 ')).toBe(1000);
+    expect(parseThresholdValue('10abc')).toBeNull();
+    expect(sanitizeNumericThreshold('1,234.56')).toBe('1234.56');
+  });
+
+  it('sanitizes asset codes to canonical Stellar form', () => {
+    expect(sanitizeAssetCode(' usdc ')).toBe('USDC');
+    expect(sanitizeAssetCode('us:dc')).toBe('USDC');
+    expect(sanitizeAssetCode('XLM:GBRPYHIL2CI5...')).toBe('XLMGBRPYHIL2CI5');
+    expect(isValidAssetCode(' us dc ')).toBe(true);
+    expect(isValidAssetCode('WAY-TOO-LONG-CODE-123')).toBe(false);
+  });
+
+  it('persists sanitized rule values after validation', () => {
+    const amount = policyRuleSchema.parse(amountRule({ value: '1,000' }));
+    expect(amount.value).toBe('1000');
+
+    const asset = policyRuleSchema.parse({
+      field: 'Asset Identifier',
+      operator: 'equals',
+      value: ' usdc ',
+      action: 'block',
+    });
+    expect(asset.value).toBe('USDC');
   });
 
   it('splits and trims whitelist entries', () => {

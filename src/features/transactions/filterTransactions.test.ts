@@ -396,6 +396,59 @@ test('amount searches cover zero, exact values, and negatives', () => {
   );
 });
 
+test('trims surrounding whitespace from the search query', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: '   ops   ' })),
+    ['txn-epsilon'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: '\tops\n' })),
+    ['txn-epsilon'],
+  );
+});
+
+test('matches agent ids and agent names case-insensitively', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'AGENT-ORION' })),
+    ['txn-beta', 'txn-epsilon'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'atlas' })),
+    ['txn-alpha', 'txn-gamma', 'txn-delta'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'OrIoN' })),
+    ['txn-beta', 'txn-epsilon'],
+  );
+});
+
+test('treats regex-like punctuation in the query as literal text', () => {
+  // `.` is not a wildcard — the query is a plain substring match.
+  assert.deepEqual(
+    filterTransactions(edgeCatalog, { ...noFilters, query: 'txn.alpha' }),
+    [],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'hash-alpha' })),
+    ['txn-alpha'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: '(50%)' })),
+    ['txn-gamma'],
+  );
+});
+
+test('matches counterparty addresses and purposes', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'destinationbeta' })),
+    ['txn-beta'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'vendor settlement' })),
+    ['txn-gamma'],
+  );
+});
+
 test('filtering does not mutate the input collection or its records', () => {
   const snapshot = structuredClone(edgeCatalog);
   filterTransactions(edgeCatalog, {
@@ -407,4 +460,113 @@ test('filtering does not mutate the input collection or its records', () => {
   });
 
   assert.deepEqual(edgeCatalog, snapshot);
+});
+
+test('startDate/endDate bounds are inclusive at both range edges', () => {
+  // `txn-gamma` sits at 23:59:59.999Z — the last millisecond of its day.
+  const filtered = filterTransactions(edgeCatalog, {
+    ...noFilters,
+    startDate: '2026-07-10',
+    endDate: '2026-07-10',
+  });
+
+  assert.deepEqual(ids(filtered), ['txn-alpha', 'txn-gamma']);
+});
+
+test('startDate/endDate work without the dateFrom/dateTo spellings', () => {
+  const filtered = filterTransactions(edgeCatalog, {
+    ...noFilters,
+    dateFrom: '',
+    dateTo: '',
+    startDate: '2026-06-30',
+    endDate: '2026-07-11',
+  });
+
+  assert.deepEqual(ids(filtered), ['txn-alpha', 'txn-beta', 'txn-gamma', 'txn-delta']);
+});
+
+test('startDate/endDate take precedence over dateFrom/dateTo', () => {
+  const filtered = filterTransactions(edgeCatalog, {
+    ...noFilters,
+    dateFrom: '2026-01-01',
+    dateTo: '2026-12-31',
+    startDate: '2026-08-01',
+    endDate: '2026-08-01',
+  });
+
+  assert.deepEqual(ids(filtered), ['txn-epsilon']);
+});
+
+test('assetType filters by asset code including trustline-style codes', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: 'XLM' })),
+    ['txn-beta', 'txn-epsilon'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: 'AQUA' })),
+    ['txn-delta'],
+  );
+  assert.deepEqual(
+    filterTransactions(edgeCatalog, { ...noFilters, assetType: 'BTC' }),
+    [],
+  );
+});
+
+test('assetType takes precedence over asset and defers when unset or all', () => {
+  // assetType wins over the legacy `asset` field when it names a code.
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        asset: 'USDC',
+        assetType: 'XLM',
+      }),
+    ),
+    ['txn-beta', 'txn-epsilon'],
+  );
+  // 'all' and empty strings fall back to the `asset` criterion.
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        asset: 'USDC',
+        assetType: 'all',
+      }),
+    ),
+    ['txn-alpha', 'txn-gamma'],
+  );
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        asset: 'XLM',
+        assetType: '',
+      }),
+    ),
+    ['txn-beta', 'txn-epsilon'],
+  );
+});
+
+test('malformed startDate/endDate values are ignored', () => {
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: 'not-a-date',
+        endDate: '2026-13-45',
+      }),
+    ),
+    ids(edgeCatalog),
+  );
+});
+
+test('assetType combines with query and status filters', () => {
+  const filtered = filterTransactions(edgeCatalog, {
+    ...noFilters,
+    assetType: 'USDC',
+    status: 'approved',
+    query: 'invoice',
+  });
+
+  assert.deepEqual(ids(filtered), ['txn-gamma']);
 });

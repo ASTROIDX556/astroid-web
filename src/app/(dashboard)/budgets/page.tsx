@@ -17,6 +17,7 @@ import { useBudgets } from '@/hooks/use-queries';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { BudgetAlertBanner } from '@/features/budgets/BudgetAlertBanner';
 import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
 import { DepartmentBudgetChart } from '@/features/budgets/DepartmentBudgetChart';
@@ -101,6 +102,10 @@ export default function BudgetsPage() {
 
           return (
             <div className="space-y-6">
+              <ErrorBoundary section="Budget alert banner">
+                <BudgetAlertBanner departments={MOCK_DEPARTMENT_BUDGETS} />
+              </ErrorBoundary>
+
               <div className="grid gap-4 sm:grid-cols-3">
                 <StatCard
                   label="Total limit"

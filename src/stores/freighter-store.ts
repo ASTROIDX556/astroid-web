@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import type { StateCreator } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { isMockMode } from '@/lib/env';
 import { safeLocalStorage } from './safe-storage';
 
 export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'locked';
@@ -276,6 +277,12 @@ interface FreighterApiErrorField {
 /** Structural subset of `@stellar/freighter-api` the store relies on. */
 export interface FreighterApi {
   isConnected?: () => Promise<boolean | ({ isConnected?: boolean } & FreighterApiErrorField)>;
+  /**
+   * Whether this site already holds wallet permission. Unlike `setAllowed`
+   * it never opens an approval popup, which is what makes silent
+   * auto-reconnect possible.
+   */
+  isAllowed?: () => Promise<boolean | ({ isAllowed?: boolean } & FreighterApiErrorField)>;
   setAllowed?: () => Promise<boolean | ({ isAllowed?: boolean } & FreighterApiErrorField)>;
   getAddress?: () => Promise<string | ({ address?: string; publicKey?: string } & FreighterApiErrorField)>;
   getNetwork?: () => Promise<string | (FreighterNetworkResult & FreighterApiErrorField)>;
@@ -383,6 +390,20 @@ const installedAfterFailure = (failure: FreighterError, previous: boolean): bool
 
 /** True once the persisted snapshot has been merged into the live store. */
 let persistedStateRestored = false;
+
+/**
+ * Test seam for the mock-mode session preservation below: `null` falls back
+ * to the real `isMockMode` env check, `true`/`false` forces the behaviour so
+ * tests do not depend on the ambient `NEXT_PUBLIC_API_URL`.
+ */
+let mockModeOverride: boolean | null = null;
+
+/** Forces mock-mode on/off for tests; pass `null` to restore env detection. */
+export function __setFreighterMockModeForTests(value: boolean | null): void {
+  mockModeOverride = value;
+}
+
+const freighterMockMode = (): boolean => mockModeOverride ?? isMockMode;
 
 /** localStorage key for the persisted Freighter connection snapshot. */
 export const FREIGHTER_PERSIST_KEY = 'astroid-freighter-wallet';
@@ -760,6 +781,39 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       persistedStateRestored = true;
       await useFreighterStore.persist.rehydrate();
     }
+    // A live session reaching this point in mock mode came from the persisted
+    // snapshot (or an in-session mock connect): Freighter cannot re-approve it
+    // without an intrusive popup, so hydrate preserves it when the extension
+    // cannot confirm the session instead of wiping it on every reload.
+    const mockSession =
+      freighterMockMode() &&
+      get().status === 'connected' &&
+      isValidStellarAddress(get().publicKey);
+
+    /**
+     * Silent auto-reconnect for a previously authorized wallet: `isAllowed`
+     * reports existing permission without prompting, and `getAddress` only
+     * resolves silently while that permission holds. Returns null whenever
+     * the wallet is not authorized or cannot answer — never throws.
+     */
+    const silentReconnect = async (freighter: FreighterApi): Promise<string | null> => {
+      if (typeof freighter.isAllowed !== 'function' || typeof freighter.getAddress !== 'function') {
+        return null;
+      }
+      try {
+        const allowedResult = assertNoApiError(await withTimeout(freighter.isAllowed()));
+        const allowed =
+          typeof allowedResult === 'boolean'
+            ? allowedResult
+            : Boolean((allowedResult as { isAllowed?: boolean } | undefined)?.isAllowed);
+        if (!allowed) return null;
+        const addressResult = assertNoApiError(await withTimeout(freighter.getAddress()));
+        return resolveWalletAddress(addressResult);
+      } catch {
+        return null;
+      }
+    };
+
     try {
       const freighter = await getFreighter();
       const connectedResult = typeof freighter.isConnected === 'function'
@@ -769,39 +823,53 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
         ? connectedResult
         : Boolean((connectedResult as { isConnected?: boolean } | null)?.isConnected);
 
+      let walletAddress: string | null = null;
       if (!connected) {
-        set({
-          status: 'disconnected',
-          publicKey: null,
-          network: null,
-          networkPassphrase: null,
-          isInstalled: false,
-          error: null,
-          errorCode: null,
-        });
-        return;
-      }
+        // The extension answered but does not currently report this site as
+        // connected. Before declaring a disconnect, try the silent reconnect
+        // path — a wallet that authorized this origin earlier can still hand
+        // over its address without any popup.
+        walletAddress = await silentReconnect(freighter);
+        if (!walletAddress) {
+          if (mockSession) {
+            // The extension is reachable but cannot confirm the mock/demo
+            // session; keep the persisted connection for the demo experience.
+            set({ isInstalled: true, error: null, errorCode: null });
+            return;
+          }
+          set({
+            status: 'disconnected',
+            publicKey: null,
+            network: null,
+            networkPassphrase: null,
+            isInstalled: false,
+            error: null,
+            errorCode: null,
+          });
+          return;
+        }
+      } else {
+        const addressResult = typeof freighter.getAddress === 'function'
+          ? await withTimeout(freighter.getAddress())
+          : null;
+        walletAddress = resolveWalletAddress(addressResult);
 
-      const addressResult = typeof freighter.getAddress === 'function'
-        ? await withTimeout(freighter.getAddress())
-        : null;
-      const walletAddress = resolveWalletAddress(addressResult);
-
-      if (!walletAddress) {
-        // The extension answered but exposed no address: the wallet is locked
-        // or access was not granted. Surface a dedicated `locked` state so the
-        // top bar can alert and offer a reconnect instead of silently showing
-        // a generic disconnect.
-        set({
-          status: 'locked',
-          publicKey: null,
-          network: null,
-          networkPassphrase: null,
-          isInstalled: true,
-          error: 'Freighter is locked or wallet access is unavailable.',
-          errorCode: 'LOCKED',
-        });
-        return;
+        if (!walletAddress) {
+          // The extension answered but exposed no address: the wallet is locked
+          // or access was not granted. Surface a dedicated `locked` state so the
+          // top bar can alert and offer a reconnect instead of silently showing
+          // a generic disconnect.
+          set({
+            status: 'locked',
+            publicKey: null,
+            network: null,
+            networkPassphrase: null,
+            isInstalled: true,
+            error: 'Freighter is locked or wallet access is unavailable.',
+            errorCode: 'LOCKED',
+          });
+          return;
+        }
       }
 
       // A network lookup failure must not invalidate an otherwise healthy
@@ -826,6 +894,16 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
     } catch (error) {
       const failure = classifyFreighterError(error);
       const isLocked = failure.code === 'LOCKED';
+      if (mockSession && !isLocked) {
+        // Extension unreachable while a mock/demo session is live: keep the
+        // persisted connection so reloads and polls do not reset it, but still
+        // record why verification failed.
+        set({
+          isInstalled: installedAfterFailure(failure, get().isInstalled),
+          ...errorPatch(failure),
+        });
+        return;
+      }
       set({
         status: isLocked ? 'locked' : 'disconnected',
         publicKey: null,
