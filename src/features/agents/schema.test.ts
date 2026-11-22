@@ -43,6 +43,26 @@ test('agent config rejects a model outside the selected provider catalog', () =>
   }
 });
 
+test('agent config schema rejects unsupported provider values', () => {
+  for (const provider of ['openai', 'OPENAI', ' Skynet ', 'gpt-4o', null, 42]) {
+    const result = agentConfigSchema.safeParse({
+      name: 'Treasury agent',
+      description: '',
+      provider,
+      model: 'gpt-4o',
+      endpointUrl: '',
+      mode: 'assisted',
+      temperature: 0.2,
+      monthlyBudget: 500,
+    });
+
+    assert.equal(result.success, false, String(provider));
+    if (!result.success) {
+      assert.ok(result.error.issues.some((issue) => issue.path[0] === 'provider'));
+    }
+  }
+});
+
 test('provider configuration rejects an empty custom endpoint', () => {
   const result = agentProviderConfigSchema.safeParse({
     name: 'Local agent',
