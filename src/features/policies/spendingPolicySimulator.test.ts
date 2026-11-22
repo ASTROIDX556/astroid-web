@@ -7,7 +7,7 @@ import {
   sandboxTransactionSchema,
   type EvaluationStep,
   type SandboxFormValues,
-} from './spendingPolicySimulation';
+} from './spendingPolicySimulator';
 import {
   defaultPolicyRules,
   evaluatePolicySimulation,

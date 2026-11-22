@@ -27,7 +27,7 @@ import {
   type SandboxFormValues,
   type EvaluationStep,
   type SandboxEvaluationResult,
-} from './spendingPolicySimulation';
+} from './spendingPolicySimulator';
 
 export {
   sandboxTransactionSchema,
