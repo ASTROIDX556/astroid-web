@@ -4,7 +4,7 @@ import { Toaster } from 'sonner';
 import { fontVariables } from '@/lib/fonts';
 import { AppProviders } from '@/providers';
 import { CursorProvider } from '@/components/effects/user-cursor';
-import { CommandPalette } from '@/components/layout/CommandPalette';
+import { CommandPaletteProvider } from '@/components/CommandPaletteProvider';
 import { THEME_COOKIE, readThemeCookie, resolveThemeValue } from '@/lib/theme-cookie';
 import '@/styles/tokens.css';
 import '@/styles/globals.css';
@@ -85,8 +85,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <AppProviders>
-          <CursorProvider>{children}</CursorProvider>
-          <CommandPalette />
+          <CursorProvider>
+            <CommandPaletteProvider>{children}</CommandPaletteProvider>
+          </CursorProvider>
           <Toaster
             position="bottom-right"
             theme="system"
