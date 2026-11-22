@@ -97,7 +97,7 @@ export function PolicySimulationPanel({ policies = [], config, className = '' }:
                 onChange={(event) => update(field.id, event.target.value)}
                 aria-invalid={Boolean(errors[field.id])}
                 aria-describedby={errors[field.id] ? `preview-${field.id}-error` : `preview-${field.id}-help`}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-gold"
                 placeholder={field.id === 'recipient' ? 'G...' : undefined}
               />
               <p id={`preview-${field.id}-help`} className="mt-1 text-xs text-foreground-muted">{field.help}</p>
@@ -107,7 +107,7 @@ export function PolicySimulationPanel({ policies = [], config, className = '' }:
           <div>
             <label htmlFor="preview-asset" className="mb-1 block text-xs font-semibold">Asset</label>
             <select id="preview-asset" value={form.asset} onChange={(event) => update('asset', event.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold focus:ring-2 focus:ring-ring">
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-gold">
               <option value="USDC">USDC</option>
               <option value="XLM">XLM</option>
               <option value="EURC">EURC</option>
