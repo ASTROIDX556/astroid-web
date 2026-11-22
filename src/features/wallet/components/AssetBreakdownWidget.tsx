@@ -71,6 +71,12 @@ export interface AssetBreakdownWidgetProps {
    * nothing to the value shares.
    */
   pricesUsd?: Readonly<Record<string, number>>;
+  /**
+   * Optional holding id (`CODE:ISSUER`, or `XLM` for the native asset) from
+   * {@link AssetSelector}. When set, the ribbon and table show only that
+   * holding; `null`/`undefined` shows the full portfolio.
+   */
+  assetId?: string | null;
   /** Heading rendered above the breakdown. */
   title?: string;
   className?: string;
@@ -100,6 +106,7 @@ function useMounted(): boolean {
 export function AssetBreakdownWidget({
   balances,
   pricesUsd,
+  assetId,
   title = 'Asset breakdown',
   className,
 }: AssetBreakdownWidgetProps) {
@@ -120,21 +127,27 @@ export function AssetBreakdownWidget({
     return parseTrustlineBalances(sourceBalances, prices);
   }, [balances, pricesUsd]);
 
-  const totalUsd = useMemo(() => totalHoldingsValue(holdings), [holdings]);
+  /** Holdings narrowed to the selected asset, when a filter is active. */
+  const visibleHoldings = useMemo(
+    () => (assetId ? holdings.filter((holding) => holding.id === assetId) : holdings),
+    [holdings, assetId],
+  );
+
+  const totalUsd = useMemo(() => totalHoldingsValue(visibleHoldings), [visibleHoldings]);
 
   /** One stacked row keyed by holding id — each holding becomes a segment. */
   const allocationRow = useMemo<Record<string, number>>(() => {
     const row: Record<string, number> = {};
-    for (const holding of holdings) row[holding.id] = holding.share;
+    for (const holding of visibleHoldings) row[holding.id] = holding.share;
     return row;
-  }, [holdings]);
+  }, [visibleHoldings]);
 
   const byId = useMemo(
-    () => new Map(holdings.map((holding) => [holding.id, holding])),
-    [holdings],
+    () => new Map(visibleHoldings.map((holding) => [holding.id, holding])),
+    [visibleHoldings],
   );
 
-  if (holdings.length === 0) {
+  if (visibleHoldings.length === 0) {
     return (
       <Card className={cn('p-6 text-center', className)}>
         <p className="text-sm text-foreground-secondary">No asset balances to show.</p>
@@ -162,7 +175,7 @@ export function AssetBreakdownWidget({
             />
           </p>
           <p className="mt-1.5 text-2xs text-foreground-secondary">
-            {holdings.length} {holdings.length === 1 ? 'asset' : 'assets'} across XLM
+            {visibleHoldings.length} {visibleHoldings.length === 1 ? 'asset' : 'assets'} across XLM
             and issued trustlines
           </p>
         </div>
@@ -205,7 +218,7 @@ export function AssetBreakdownWidget({
                       );
                     }}
                   />
-                  {holdings.map((holding, index) => (
+                  {visibleHoldings.map((holding, index) => (
                     <Bar
                       key={holding.id}
                       dataKey={holding.id}
@@ -230,7 +243,7 @@ export function AssetBreakdownWidget({
 
         {/* Legend — the chart's accessible equivalent. */}
         <ul className="gap-y-1.5 mt-3 flex flex-wrap gap-x-4">
-          {holdings.map((holding, index) => (
+          {visibleHoldings.map((holding, index) => (
             <li
               key={holding.id}
               className="gap-1.5 flex items-center text-2xs text-foreground-secondary"
@@ -300,7 +313,7 @@ export function AssetBreakdownWidget({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {holdings.map((holding, index) => (
+            {visibleHoldings.map((holding, index) => (
               <AssetBreakdownRow
                 key={holding.id}
                 holding={holding}
