@@ -570,3 +570,24 @@ test('assetType combines with query and status filters', () => {
 
   assert.deepEqual(ids(filtered), ['txn-gamma']);
 });
+
+test('asset filters match asset codes case-insensitively', () => {
+  // Operators paste codes in whatever case they have; `xlm`, `Xlm`, and the
+  // 'ALL' sentinel must behave exactly like their canonical spellings.
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, asset: 'xlm' })),
+    ['txn-beta', 'txn-epsilon'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: 'aQuA' })),
+    ['txn-delta'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, asset: 'ALL' })),
+    ids(edgeCatalog),
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: 'UsDc' })),
+    ['txn-alpha', 'txn-gamma'],
+  );
+});

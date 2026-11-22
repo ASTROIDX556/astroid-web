@@ -27,10 +27,11 @@ export function filterTransactions(
   const query = filters.query.trim().toLowerCase();
   const rangeStart = filters.startDate || filters.dateFrom;
   const rangeEnd = filters.endDate || filters.dateTo;
-  const assetFilter =
+  const assetFilter = (
     filters.assetType && filters.assetType !== 'all'
       ? filters.assetType
-      : filters.asset;
+      : filters.asset
+  ).toUpperCase();
   // Date-only filters (`YYYY-MM-DD` from the date inputs) are interpreted as
   // UTC day boundaries so results do not depend on the operator's timezone.
   const dateFrom = rangeStart
@@ -42,7 +43,7 @@ export function filterTransactions(
 
   return transactions.filter((transaction) => {
     if (filters.status !== 'all' && transaction.status !== filters.status) return false;
-    if (assetFilter !== 'all' && transaction.asset !== assetFilter) return false;
+    if (assetFilter !== 'ALL' && transaction.asset !== assetFilter) return false;
     if (filters.agentId !== 'all' && transaction.agentId !== filters.agentId)
       return false;
 
