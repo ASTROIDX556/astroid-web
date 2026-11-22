@@ -1,6 +1,5 @@
-import React from "react";
-import { createRoot } from "react-dom/client";
-import { BatchActionToolbar } from "../components/BatchActionToolbar";
+import React from 'react';
+import { BatchActionToolbar } from '../components/BatchActionToolbar';
 
 describe("BatchActionToolbar", () => {
   it("renders selected count and triggers action callbacks", () => {
