@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -40,6 +40,7 @@ import {
   type ProposalApprovalSnapshot,
   type ReviewDecision,
 } from './approvalState';
+import { ApprovalStatusLiveRegion } from './components/ApprovalStatusLiveRegion';
 
 export interface ProposalReviewCardProps {
   proposal: Proposal;
@@ -102,8 +103,8 @@ export function ProposalReviewCard({
   const [confirmAction, setConfirmAction] = useState<ReviewDecision | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [simulationOpen, setSimulationOpen] = useState(false);
-  const [pendingDecision, setPendingDecision] = useState<ReviewDecision | null>(null);
+  // Destructive confirmations place focus on Cancel, never on the confirm action.
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
   const snapshotQuery = useQuery({
     queryKey: approvalQueryKeys.proposal(proposal.id),
@@ -232,8 +233,24 @@ export function ProposalReviewCard({
         ? `You already ${myDecision} this proposal.`
         : undefined;
 
+  // These regions live on the card, not inside the dialog: they are mounted
+  // before the decision arrives and keep announcing after the dialog closes.
+  const decisionAnnouncement = hasDecided
+    ? `Your ${myDecision} decision is recorded for ${proposal.title}. ${progress.approved} of ${progress.required} approvals collected.`
+    : '';
+  const dialogAnnouncement = isSigning
+    ? 'Waiting for wallet signature.'
+    : mutation.isPending
+      ? 'Submitting your decision.'
+      : `Reviewing ${confirmAction ?? 'proposal'} decision for ${proposal.title}.`;
+
   return (
     <Card className={cn('overflow-hidden', className)}>
+      <ApprovalStatusLiveRegion message={decisionAnnouncement} />
+      <ApprovalStatusLiveRegion
+        message={actionError ? `Decision failed: ${actionError}` : ''}
+        assertive
+      />
       <CardContent className="pt-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 space-y-2">
@@ -355,6 +372,7 @@ export function ProposalReviewCard({
       <CardFooter className="flex-wrap justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Button
+            type="button"
             variant="gold"
             size="sm"
             leftIcon={<Check className="h-4 w-4" aria-hidden />}
@@ -370,6 +388,7 @@ export function ProposalReviewCard({
             Approve
           </Button>
           <Button
+            type="button"
             variant="outline"
             size="sm"
             leftIcon={<X className="h-4 w-4" aria-hidden />}
@@ -423,9 +442,11 @@ export function ProposalReviewCard({
         title={dialogCopy?.title}
         description={dialogCopy?.description}
         size="md"
+        initialFocusRef={cancelButtonRef}
         footer={
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
+              ref={cancelButtonRef}
               type="button"
               variant="outline"
               onClick={closeConfirmation}
@@ -445,13 +466,7 @@ export function ProposalReviewCard({
         }
       >
         <div className="space-y-4">
-          <p role="status" aria-live="polite" className="sr-only">
-            {isSigning
-              ? 'Waiting for wallet signature.'
-              : mutation.isPending
-                ? 'Submitting your decision.'
-                : `Reviewing ${confirmAction ?? 'proposal'} decision for ${proposal.title}.`}
-          </p>
+          <ApprovalStatusLiveRegion message={dialogAnnouncement} />
 
           <dl className="grid gap-x-4 gap-y-3 rounded-card border border-border bg-surface-secondary/40 p-4 text-xs sm:grid-cols-2">
             <div className="min-w-0">
@@ -516,7 +531,7 @@ export function ProposalReviewCard({
           )}
 
           {actionError && (
-            <p role="alert" className="text-xs font-medium text-danger">
+            <p className="text-xs font-medium text-danger">
               {actionError}
             </p>
           )}

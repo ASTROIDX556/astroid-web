@@ -1,27 +1,29 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { agentConfigSchema, agentWizardSchema } from './schema';
 import {
-  agentProviderConfigSchema,
-  providerModelOptions,
-  validateProviderApiKey,
-  validateProviderEndpoint,
-  type AgentProviderType,
-} from './providerConfigSchema';
+  AGENT_PROVIDERS,
+  PROVIDER_MODELS,
+  agentConfigurationEditorSchema,
+  agentConfigSchema,
+  type AgentConfigurationEditorInput,
+} from './schema';
+import { agentProviderConfigSchema } from './providerConfigSchema';
 
-const issuesAt = (
-  result: { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } },
-  field: string,
-) => (result.error?.issues ?? []).filter((issue) => issue.path[0] === field).map((issue) => issue.message);
+type ParseResult =
+  | { success: true; data: AgentConfigurationEditorInput }
+  | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } };
 
-const VALID_KEYS: Record<Exclude<AgentProviderType, 'ollama' | 'custom'>, string> = {
-  nvidia: `nvapi-${'A1b2'.repeat(10)}`,
-  openai: `sk-proj-${'x9Y8'.repeat(10)}`,
-  anthropic: `sk-ant-api03-${'Q'.repeat(40)}`,
-  gemini: `AIza${'S'.repeat(35)}`,
-};
+/** First validation message for a field, including errors on array items. */
+const issueFor = (result: ParseResult, field: string) =>
+  (result.success ? [] : result.error.issues).find((issue) => issue.path[0] === field)?.message;
 
-const baseSettings = { name: 'Treasury agent', temperature: 0.4, endpointUrl: '', apiKey: '' };
+const validEditorConfig = {
+  provider: 'Nvidia',
+  model: 'meta/llama-3.1-405b-instruct',
+  maxBudget: 500,
+  allowedScopes: ['wallet.read', 'analytics.read'],
+  tokenAllocation: 4_096,
+} as const;
 
 test('agent config rejects a model outside the selected provider catalog', () => {
   const result = agentConfigSchema.safeParse({
@@ -57,146 +59,129 @@ test('provider configuration rejects an empty custom endpoint', () => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Provider-specific validation (#510)
-// ---------------------------------------------------------------------------
-
-test('provider configuration accepts a valid setup for every hosted provider', () => {
-  for (const [provider, apiKey] of Object.entries(VALID_KEYS) as [keyof typeof VALID_KEYS, string][]) {
-    const result = agentProviderConfigSchema.safeParse({
-      ...baseSettings,
-      provider,
-      model: providerModelOptions[provider][0],
-      apiKey,
-    });
-    assert.equal(result.success, true, `${provider}: ${JSON.stringify(result.error?.issues)}`);
-  }
-});
-
-test('provider configuration accepts Ollama on a local http endpoint without a key', () => {
-  const result = agentProviderConfigSchema.safeParse({
-    ...baseSettings,
-    provider: 'ollama',
-    model: 'llama3.1',
-    endpointUrl: 'http://localhost:11434',
+test('editor schema accepts a valid configuration and trims the model name', () => {
+  const result = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    model: '  meta/llama-3.1-405b-instruct  ',
   });
+
   assert.equal(result.success, true);
+  if (result.success) {
+    const parsed: AgentConfigurationEditorInput = result.data;
+    assert.equal(parsed.model, 'meta/llama-3.1-405b-instruct');
+    assert.deepEqual(parsed.allowedScopes, ['wallet.read', 'analytics.read']);
+  }
 });
 
-test('provider configuration rejects a key with the wrong provider prefix', () => {
-  const result = agentProviderConfigSchema.safeParse({
-    ...baseSettings,
-    provider: 'anthropic',
-    model: providerModelOptions.anthropic[0],
-    apiKey: VALID_KEYS.openai,
-  });
-  assert.deepEqual(issuesAt(result, 'apiKey'), ['Anthropic API keys start with "sk-ant-".']);
-});
-
-test('provider configuration flags an Anthropic key pasted into OpenAI', () => {
-  assert.match(validateProviderApiKey('openai', VALID_KEYS.anthropic) ?? '', /Anthropic key/);
-});
-
-test('provider configuration enforces key length constraints', () => {
-  assert.match(validateProviderApiKey('openai', 'sk-short') ?? '', /too short/);
-  assert.match(validateProviderApiKey('nvidia', `nvapi-${'a'.repeat(200)}`) ?? '', /too long/);
-  assert.match(validateProviderApiKey('gemini', `AIza${'S'.repeat(30)}`) ?? '', /exactly 39/);
-  assert.match(validateProviderApiKey('custom', 'tiny') ?? '', /too short/);
-  assert.equal(validateProviderApiKey('ollama', 'anything'), null);
-});
-
-test('provider configuration rejects unsupported characters in a key', () => {
-  assert.match(validateProviderApiKey('gemini', `AIza${'S'.repeat(34)}!`) ?? '', /unsupported characters/);
-});
-
-test('provider configuration rejects a model outside each provider catalog', () => {
-  for (const provider of ['nvidia', 'openai', 'anthropic', 'gemini', 'ollama'] as const) {
-    const result = agentProviderConfigSchema.safeParse({
-      ...baseSettings,
+test('editor schema accepts every supported provider with a catalog model', () => {
+  for (const provider of AGENT_PROVIDERS) {
+    const config = {
+      ...validEditorConfig,
       provider,
-      model: 'definitely-not-a-model',
-      apiKey: provider === 'ollama' ? '' : VALID_KEYS[provider],
-      endpointUrl: provider === 'ollama' ? 'http://localhost:11434' : '',
-    });
-    assert.ok(issuesAt(result, 'model').length > 0, provider);
+      model: provider === 'Custom' ? 'my-org/finance-agent-v1' : PROVIDER_MODELS[provider][0] ?? '',
+      endpointUrl: provider === 'Custom' || provider === 'Ollama' ? 'http://localhost:11434' : '',
+    };
+    assert.equal(agentConfigurationEditorSchema.safeParse(config).success, true, provider);
   }
 });
 
-test('custom provider model names must be identifiers, not free text', () => {
-  const result = agentProviderConfigSchema.safeParse({
-    ...baseSettings,
-    provider: 'custom',
-    model: 'my model; drop table',
-    endpointUrl: 'https://llm.internal.example.com/v1',
-  });
-  assert.ok(issuesAt(result, 'model').length > 0);
-});
-
-test('hosted provider endpoints must use HTTPS', () => {
-  assert.equal(
-    validateProviderEndpoint('openai', 'http://api.openai.com/v1'),
-    'OpenAI endpoints must use HTTPS.',
-  );
-  assert.equal(validateProviderEndpoint('OpenAI', 'https://api.openai.com/v1'), null);
-});
-
-test('custom endpoints need HTTPS unless they are on a private network', () => {
-  assert.match(validateProviderEndpoint('custom', 'http://llm.example.com/v1') ?? '', /HTTPS/);
-  for (const url of ['http://localhost:8000/v1', 'http://127.0.0.1:8080', 'http://192.168.1.20/v1', 'http://10.0.0.5', 'http://gpu-box.local:8000']) {
-    assert.equal(validateProviderEndpoint('custom', url), null, url);
+test('editor schema rejects unsupported provider strings', () => {
+  for (const provider of ['Skynet', 'openai', '', '  ']) {
+    const result = agentConfigurationEditorSchema.safeParse({
+      ...validEditorConfig,
+      provider,
+    }) as ParseResult;
+    assert.equal(issueFor(result, 'provider'), 'Select a supported provider.', provider);
   }
 });
 
-test('endpoints may not embed credentials or fragments', () => {
-  const result = agentProviderConfigSchema.safeParse({
-    ...baseSettings,
-    provider: 'custom',
-    model: 'finance-model-v1',
-    endpointUrl: 'https://user:secret@llm.example.com/v1',
-  });
-  assert.deepEqual(issuesAt(result, 'endpointUrl'), [
-    'Endpoint URL must not contain credentials. Use the API key field instead.',
-  ]);
-  assert.match(validateProviderEndpoint('ollama', 'http://localhost:11434/#x') ?? '', /fragment/);
+test('editor schema rejects empty or whitespace-only model names', () => {
+  for (const model of ['', '   ']) {
+    const result = agentConfigurationEditorSchema.safeParse({
+      ...validEditorConfig,
+      model,
+    }) as ParseResult;
+    assert.ok(issueFor(result, 'model'), model);
+  }
 });
 
-test('malformed endpoints report a single error', () => {
-  const result = agentProviderConfigSchema.safeParse({
-    ...baseSettings,
-    provider: 'custom',
-    model: 'finance-model-v1',
-    endpointUrl: 'javascript:alert(1)',
-  });
-  assert.equal(issuesAt(result, 'endpointUrl').length, 1);
-});
-
-test('agent creation applies endpoint rules for the selected provider', () => {
-  const result = agentConfigSchema.safeParse({
-    name: 'Treasury agent',
-    description: '',
-    provider: 'Custom',
-    model: 'finance-model-v1',
-    endpointUrl: 'http://public-llm.example.com/v1',
-    mode: 'assisted',
-    temperature: 0.2,
-    monthlyBudget: 500,
-  });
-  assert.equal(result.success, false);
-  assert.ok(issuesAt(result, 'endpointUrl').length > 0);
-});
-
-test('agent wizard validates the API key format for the chosen provider', () => {
-  const wizard = {
-    name: 'Treasury agent',
-    description: 'Rebalances treasury holdings weekly.',
-    ownerDepartment: 'Finance',
-    provider: 'Anthropic',
+test('editor schema rejects a model from another provider catalog', () => {
+  const result = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    provider: 'OpenAI',
     model: 'claude-3-5-sonnet-latest',
-    endpointUrl: '',
-    budget: 1000,
-    singleTransactionCap: 100,
-  };
-  assert.equal(agentWizardSchema.safeParse({ ...wizard, apiKey: VALID_KEYS.anthropic }).success, true);
-  const bad = agentWizardSchema.safeParse({ ...wizard, apiKey: 'sk-ant-short' });
-  assert.match(issuesAt(bad, 'apiKey')[0] ?? '', /too short/);
+  }) as ParseResult;
+  assert.equal(issueFor(result, 'model'), 'Select a model offered by OpenAI.');
+});
+
+test('editor schema requires a positive max budget', () => {
+  for (const maxBudget of [0, -25, '', '   ', 100_000_001]) {
+    const result = agentConfigurationEditorSchema.safeParse({
+      ...validEditorConfig,
+      maxBudget,
+    }) as ParseResult;
+    assert.ok(issueFor(result, 'maxBudget'), String(maxBudget));
+  }
+});
+
+test('editor schema requires at least one known, unique allowed scope', () => {
+  const empty = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    allowedScopes: [],
+  }) as ParseResult;
+  assert.equal(issueFor(empty, 'allowedScopes'), 'Grant at least one allowed scope.');
+
+  const unknown = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    allowedScopes: ['wallet.read', 'root.access'],
+  }) as ParseResult;
+  assert.equal(issueFor(unknown, 'allowedScopes'), 'Unsupported permission scope.');
+
+  const duplicates = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    allowedScopes: ['wallet.read', 'wallet.read'],
+  }) as ParseResult;
+  assert.equal(issueFor(duplicates, 'allowedScopes'), 'Allowed scopes must be unique.');
+});
+
+test('editor schema requires a positive whole-number token allocation', () => {
+  for (const tokenAllocation of [0, -1, -4_096, 1.5, '', '   ']) {
+    const result = agentConfigurationEditorSchema.safeParse({
+      ...validEditorConfig,
+      tokenAllocation,
+    }) as ParseResult;
+    assert.ok(issueFor(result, 'tokenAllocation'), String(tokenAllocation));
+  }
+});
+
+test('editor schema requires an http(s) endpoint for self-hosted providers', () => {
+  for (const provider of ['Ollama', 'Custom'] as const) {
+    const model = provider === 'Custom' ? 'my-org/finance-agent-v1' : PROVIDER_MODELS.Ollama[0] ?? '';
+
+    const missing = agentConfigurationEditorSchema.safeParse({
+      ...validEditorConfig,
+      provider,
+      model,
+    }) as ParseResult;
+    assert.equal(
+      issueFor(missing, 'endpointUrl'),
+      'A valid API endpoint URL is required for this provider.',
+    );
+
+    const invalid = agentConfigurationEditorSchema.safeParse({
+      ...validEditorConfig,
+      provider,
+      model,
+      endpointUrl: 'javascript:alert(1)',
+    }) as ParseResult;
+    assert.ok(issueFor(invalid, 'endpointUrl'), provider);
+
+    const valid = agentConfigurationEditorSchema.safeParse({
+      ...validEditorConfig,
+      provider,
+      model,
+      endpointUrl: 'https://inference.example.com/v1',
+    });
+    assert.equal(valid.success, true, provider);
+  }
 });

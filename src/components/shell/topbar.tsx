@@ -15,8 +15,7 @@ import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
 import { WalletNetworkSwitcher } from '@/features/network/WalletNetworkSwitcher';
 import { CircuitBreakerControl } from '@/features/security';
 import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
-import { useFreighterStore } from '@/stores/freighter-store';
-import { getFreighterRecovery } from '@/features/wallet/freighterErrorRecovery';
+import { FREIGHTER_ERROR_TITLES, useFreighterStore } from '@/stores/freighter-store';
 import { cn } from '@/lib/cn';
 
 /** Shared, brand-tinted focus ring for every top-bar control (WCAG AA). */
@@ -82,6 +81,15 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
               }
             : undefined,
         });
+        const code = state.errorCode ?? 'UNKNOWN';
+        const title = FREIGHTER_ERROR_TITLES[code];
+        // A dismissed prompt is a user choice, not a failure: warn instead of
+        // raising an error toast. Everything else stays an error.
+        if (code === 'USER_DECLINED') {
+          toast.warning(title, { id: 'freighter-error', description: state.error });
+        } else {
+          toast.error(title, { id: 'freighter-error', description: state.error });
+        }
       }
 
       if (

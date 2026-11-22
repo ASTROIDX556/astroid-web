@@ -2,6 +2,8 @@
 
 import { create } from 'zustand';
 import type { StateCreator } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { safeLocalStorage } from './safe-storage';
 
 export type FreighterConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'locked';
 
@@ -74,87 +76,118 @@ export function networkLabelForId(target: StellarNetworkId | null): string {
 }
 
 /**
- * Machine-readable reason for the last failed Freighter interaction. The UI
- * keys its recovery copy and actions off this code instead of parsing the
- * human-readable `error` string.
- *
- * - `not_installed`    — the extension is missing or cannot be reached.
- * - `user_rejected`    — the operator declined the access/signing prompt.
- * - `timeout`          — the extension did not answer in time.
- * - `locked`           — the extension answered but the wallet is locked.
- * - `network_mismatch` — the wallet is on a different network than expected.
- * - `invalid_response` — the extension answered with an unusable payload.
- * - `unknown`          — anything else.
+ * Categories of Freighter failures. UI surfaces (toasts, banners, buttons)
+ * key their copy and recovery affordance off this code instead of
+ * pattern-matching raw extension messages.
  */
 export type FreighterErrorCode =
-  | 'not_installed'
-  | 'user_rejected'
-  | 'timeout'
-  | 'locked'
-  | 'network_mismatch'
-  | 'invalid_response'
-  | 'unknown';
+  /** Extension missing, disabled, or unreachable from this page. */
+  | 'NOT_INSTALLED'
+  /** User rejected/closed the connection or signing prompt. */
+  | 'USER_DECLINED'
+  /** Wallet is locked or access to the account was not granted. */
+  | 'LOCKED'
+  /** The extension did not answer before the request deadline. */
+  | 'TIMEOUT'
+  /** Wallet network differs from the network the action targets. */
+  | 'NETWORK_MISMATCH'
+  /** The extension answered with a malformed or empty payload. */
+  | 'INVALID_RESPONSE'
+  | 'UNKNOWN';
 
-/** Error carrying a {@link FreighterErrorCode}, thrown by the store's internals. */
+/** Typed error thrown by store actions so callers can branch on `code`. */
 export class FreighterError extends Error {
   readonly code: FreighterErrorCode;
 
-  constructor(code: FreighterErrorCode, message: string) {
+  constructor(code: FreighterErrorCode, message: string, options?: { cause?: unknown }) {
     super(message);
     this.name = 'FreighterError';
     this.code = code;
+    if (options && 'cause' in options) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
   }
 }
 
-export const FREIGHTER_TIMEOUT_MS = 15000;
-
-/** Upper bound on automatic-free manual retries before the UI suggests a reload. */
-export const FREIGHTER_MAX_RETRIES = 3;
+/** Short toast/banner headline for each error category. */
+export const FREIGHTER_ERROR_TITLES: Record<FreighterErrorCode, string> = {
+  NOT_INSTALLED: 'Freighter not detected',
+  USER_DECLINED: 'Request declined in Freighter',
+  LOCKED: 'Freighter wallet locked',
+  TIMEOUT: 'Freighter did not respond',
+  NETWORK_MISMATCH: 'Wrong Stellar network',
+  INVALID_RESPONSE: 'Unexpected Freighter response',
+  UNKNOWN: 'Freighter connection unavailable',
+};
 
 const DEFAULT_ERROR_MESSAGES: Record<FreighterErrorCode, string> = {
-  not_installed: 'Freighter extension is not installed or unavailable.',
-  user_rejected: 'Freighter access was rejected. Please approve the connection request.',
-  timeout: 'Freighter wallet request timed out. Check that the extension is installed and unlocked.',
-  locked: 'Freighter is locked or wallet access is unavailable.',
-  network_mismatch: 'Freighter is connected to a different Stellar network.',
-  invalid_response: 'Freighter returned an unexpected response.',
-  unknown: 'Unable to connect to the Freighter wallet.',
+  NOT_INSTALLED: 'Freighter extension is not installed or unavailable. Install it, then reconnect.',
+  USER_DECLINED: 'The request was declined in Freighter. Approve the prompt to continue.',
+  LOCKED: 'Freighter is locked or wallet access is unavailable. Unlock it and reconnect.',
+  TIMEOUT: 'Freighter wallet request timed out. Check that the extension is installed and unlocked.',
+  NETWORK_MISMATCH: 'Freighter is on a different Stellar network than this action targets.',
+  INVALID_RESPONSE: 'Freighter returned an unexpected response.',
+  UNKNOWN: 'Unable to reach the Freighter wallet.',
+};
+
+/** Freighter's own API error code for a user-rejected request. */
+const FREIGHTER_USER_DECLINED_API_CODE = -4;
+
+const extractRawMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object') {
+    const candidate = (error as { message?: unknown }).message;
+    if (typeof candidate === 'string') return candidate;
+  }
+  return '';
 };
 
 /**
- * Maps any thrown value (or a Freighter `{ error }` payload) to an error code.
- * Pure so the classification rules can be unit-tested on their own.
+ * Maps any value thrown by (or returned as `error` from) `@stellar/freighter-api`
+ * to a typed {@link FreighterError}. Freighter v2+ reports failures as
+ * `{ code, message }` objects rather than throwing, and older builds throw plain
+ * strings, so classification checks the numeric API code first and then falls
+ * back to message heuristics. Already-typed errors pass through unchanged.
  */
-export function classifyFreighterError(error: unknown): FreighterErrorCode {
-  if (error instanceof FreighterError) return error.code;
+export function classifyFreighterError(error: unknown): FreighterError {
+  if (error instanceof FreighterError) return error;
 
-  const raw =
-    error instanceof Error
-      ? error.message
-      : typeof error === 'string'
-        ? error
-        : error && typeof error === 'object' && 'message' in error
-          ? String((error as { message?: unknown }).message ?? '')
-          : '';
-  const message = raw.toLowerCase();
+  const raw = extractRawMessage(error).trim();
+  const text = raw.toLowerCase();
+  const apiCode =
+    error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
 
-  if (!message) return 'unknown';
-  if (/timed out|timeout/.test(message)) return 'timeout';
-  if (/not installed|not detected|unavailable|no extension|extension not found|cannot find module/.test(message)) {
-    return 'not_installed';
+  let code: FreighterErrorCode = 'UNKNOWN';
+  if (apiCode === FREIGHTER_USER_DECLINED_API_CODE || /reject|declin|denied|cancel|dismiss|closed/.test(text)) {
+    code = 'USER_DECLINED';
+  } else if (/timed? ?out/.test(text)) {
+    code = 'TIMEOUT';
+  } else if (/not installed|not detected|no freighter|unavailable|not found|failed to fetch dynamically imported module|cannot find module/.test(text)) {
+    code = 'NOT_INSTALLED';
+  } else if (/locked|unlock|not allowed|access (?:is )?(?:not granted|unavailable)/.test(text)) {
+    code = 'LOCKED';
+  } else if (/network mismatch/.test(text)) {
+    code = 'NETWORK_MISMATCH';
+  } else if (/did not return|invalid|malformed|unexpected/.test(text)) {
+    code = 'INVALID_RESPONSE';
   }
-  if (/reject|declin|denied|cancel|not allowed|user refused/.test(message)) return 'user_rejected';
-  if (/locked|unlock/.test(message)) return 'locked';
-  if (/network mismatch|wrong network/.test(message)) return 'network_mismatch';
-  return 'unknown';
+
+  return new FreighterError(code, raw || DEFAULT_ERROR_MESSAGES[code], { cause: error });
 }
 
-/** Human-readable message for a thrown value, falling back to the code's default copy. */
-function messageFor(error: unknown, code: FreighterErrorCode): string {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string' && error) return error;
-  return DEFAULT_ERROR_MESSAGES[code];
-}
+/**
+ * Freighter v2+ resolves (instead of rejecting) with `{ error }` when a prompt
+ * is rejected or the extension cannot answer. Promote that to a thrown,
+ * classified error so every call site handles it through the same path.
+ */
+const assertNoApiError = <T>(result: T): T => {
+  if (result && typeof result === 'object' && 'error' in result) {
+    const apiError = (result as { error?: unknown }).error;
+    if (apiError) throw classifyFreighterError(apiError);
+  }
+  return result;
+};
 
 export interface FreighterWalletState {
   status: FreighterConnectionStatus;
@@ -167,11 +200,13 @@ export interface FreighterWalletState {
   targetNetwork: StellarNetworkId;
   /** True while a network switch request is in flight. */
   isSwitching: boolean;
+  /** True while a signature prompt is open in the extension. */
+  isSigning: boolean;
   error: string | null;
-  /** Classified reason for `error`; null whenever `error` is null. */
+  /** Category of `error`, null whenever `error` is null. */
   errorCode: FreighterErrorCode | null;
-  /** Consecutive failed connection attempts since the last success. */
-  retryCount: number;
+  /** Clears the last error without touching connection state. */
+  clearError: () => void;
   checkExtension: () => Promise<boolean>;
   connect: () => Promise<string | null>;
   disconnect: () => void;
@@ -206,7 +241,7 @@ export type WalletActions = Pick<
   FreighterWalletState,
   'checkExtension' | 'connect' | 'disconnect' | 'refreshNetwork' | 'switchNetwork' |
     'startWalletWatch' | 'stopWalletWatch' | 'adoptConnection' | 'requestSignature' | 'hydrate' |
-    'retryConnection' | 'clearError'
+    'clearError'
 >;
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
@@ -216,7 +251,7 @@ const withTimeout = async <T>(promise: Promise<T>, ms = FREIGHTER_TIMEOUT_MS): P
 
   return await new Promise<T>((resolve, reject) => {
     timeoutId = setTimeout(() => {
-      reject(new FreighterError('timeout', DEFAULT_ERROR_MESSAGES.timeout));
+      reject(new FreighterError('TIMEOUT', DEFAULT_ERROR_MESSAGES.TIMEOUT));
     }, ms);
 
     promise.then(
@@ -237,19 +272,28 @@ interface FreighterNetworkResult {
   networkPassphrase?: string;
 }
 
-type FreighterApi = {
-  isConnected?: () => Promise<boolean | { isConnected?: boolean }>;
-  setAllowed?: () => Promise<boolean | { isAllowed?: boolean }>;
-  getAddress?: () => Promise<string | { address?: string; publicKey?: string }>;
-  getNetwork?: () => Promise<string | FreighterNetworkResult>;
-  signTransaction?: (xdr: string, options?: Record<string, unknown>) => Promise<string | { signedTxXdr?: string; signedXDR?: string; xdr?: string }>;
+/** Freighter API error envelope (v2+ resolves with this instead of throwing). */
+interface FreighterApiErrorField {
+  error?: unknown;
+}
+
+/** Structural subset of `@stellar/freighter-api` the store relies on. */
+export interface FreighterApi {
+  isConnected?: () => Promise<boolean | ({ isConnected?: boolean } & FreighterApiErrorField)>;
+  setAllowed?: () => Promise<boolean | ({ isAllowed?: boolean } & FreighterApiErrorField)>;
+  getAddress?: () => Promise<string | ({ address?: string; publicKey?: string } & FreighterApiErrorField)>;
+  getNetwork?: () => Promise<string | (FreighterNetworkResult & FreighterApiErrorField)>;
+  signTransaction?: (
+    xdr: string,
+    options?: Record<string, unknown>,
+  ) => Promise<string | ({ signedTxXdr?: string; signedXDR?: string; xdr?: string } & FreighterApiErrorField)>;
   WatchWalletChanges?: new (timeout?: number) => {
     watch: (
-    cb: (params: { address: string; network: string; networkPassphrase: string; error?: unknown }) => void,
+      cb: (params: { address: string; network: string; networkPassphrase: string; error?: unknown }) => void,
     ) => { error?: unknown };
-      stop: () => void;
-    };
-};
+    stop: () => void;
+  };
+}
 
 const defaultFreighterLoader = async (): Promise<FreighterApi> =>
   (await import('@stellar/freighter-api')) as unknown as FreighterApi;
@@ -257,31 +301,29 @@ const defaultFreighterLoader = async (): Promise<FreighterApi> =>
 let freighterLoader: () => Promise<FreighterApi> = defaultFreighterLoader;
 
 /**
- * Test seam: swaps the module that stands in for `@stellar/freighter-api`.
- * Pass `null` to restore the real extension bridge.
+ * Test seam: swaps the module loader so unit tests can simulate a missing
+ * extension, rejected prompts, or malformed payloads without a browser.
+ * Pass `null` to restore the real `@stellar/freighter-api` import.
  */
-export function __setFreighterLoader(loader: (() => Promise<Partial<FreighterApi>>) | null): void {
-  freighterLoader = loader ? (loader as () => Promise<FreighterApi>) : defaultFreighterLoader;
+export function __setFreighterLoaderForTests(loader: (() => Promise<FreighterApi>) | null): void {
+  freighterLoader = loader ?? defaultFreighterLoader;
 }
 
 const getFreighter = async (): Promise<FreighterApi> => {
   try {
     return await freighterLoader();
-  } catch {
-    throw new FreighterError('not_installed', DEFAULT_ERROR_MESSAGES.not_installed);
+  } catch (error) {
+    // A failed module import means the integration itself is unavailable;
+    // never leak raw bundler/module-resolution text into the UI.
+    throw new FreighterError('NOT_INSTALLED', DEFAULT_ERROR_MESSAGES.NOT_INSTALLED, { cause: error });
   }
 };
 
-/** Freighter v2+ resolves `{ error }` payloads instead of rejecting; surface them as throws. */
-const throwIfFreighterError = (value: unknown): void => {
-  if (value && typeof value === 'object' && 'error' in value) {
-    const raw = (value as { error?: unknown }).error;
-    if (raw) {
-      const code = classifyFreighterError(raw);
-      throw new FreighterError(code, messageFor(typeof raw === 'string' ? raw : (raw as { message?: string }).message, code));
-    }
-  }
-};
+/** Store patch describing a failure: message + category kept in lockstep. */
+const errorPatch = (error: FreighterError): Pick<FreighterWalletState, 'error' | 'errorCode'> => ({
+  error: error.message,
+  errorCode: error.code,
+});
 
 const isValidStellarAddress = (value: string | null | undefined): value is string =>
   typeof value === 'string' && STELLAR_ADDRESS_RE.test(value);
@@ -317,7 +359,73 @@ const resolvePassphrase = (value: unknown): string | null => {
  */
 let walletWatcher: { stop: () => void } | null = null;
 
-const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
+/**
+ * In-flight connect request. A second click while the Freighter approval
+ * popup is still open reuses the pending request instead of stacking a second
+ * prompt (and a second, racing state transition).
+ */
+let connectInFlight: Promise<string | null> | null = null;
+
+/**
+ * Whether the extension answered at all for this failure category. Only a
+ * missing extension flips `isInstalled` off; ambiguous failures (timeouts,
+ * unknown errors) keep the last known value instead of guessing.
+ */
+const installedAfterFailure = (failure: FreighterError, previous: boolean): boolean => {
+  switch (failure.code) {
+    case 'NOT_INSTALLED':
+      return false;
+    case 'USER_DECLINED':
+    case 'LOCKED':
+    case 'INVALID_RESPONSE':
+    case 'NETWORK_MISMATCH':
+      return true;
+    default:
+      return previous;
+  }
+};
+
+/** True once the persisted snapshot has been merged into the live store. */
+let persistedStateRestored = false;
+
+/** localStorage key for the persisted Freighter connection snapshot. */
+export const FREIGHTER_PERSIST_KEY = 'astroid-freighter-wallet';
+
+/**
+ * The only slice of wallet state that survives a reload. The live network
+ * passphrase is deliberately excluded: the signing gate must always re-read it
+ * from the extension and fail closed, never trust a stored value.
+ */
+export interface PersistedFreighterState {
+  status: 'connected' | 'disconnected';
+  publicKey: string | null;
+}
+
+/** Persist the connection only while it is healthy and its key is valid. */
+export const partializeFreighterState = (
+  state: Pick<FreighterWalletState, 'status' | 'publicKey'>,
+): PersistedFreighterState =>
+  state.status === 'connected' && isValidStellarAddress(state.publicKey)
+    ? { status: 'connected', publicKey: state.publicKey }
+    : { status: 'disconnected', publicKey: null };
+
+/**
+ * Validates whatever came out of storage (it may be stale, hand-edited or from
+ * another version) before it is merged into the live store. Anything malformed
+ * leaves the default disconnected state untouched.
+ */
+export const mergePersistedFreighterState = (
+  persisted: unknown,
+  current: FreighterWalletState,
+): FreighterWalletState => {
+  if (!persisted || typeof persisted !== 'object') return current;
+  const { status, publicKey } = persisted as Partial<PersistedFreighterState>;
+  if (status !== 'connected' || !isValidStellarAddress(publicKey)) return current;
+  // Optimistic until `hydrate()` confirms the extension still agrees.
+  return { ...current, status: 'connected', publicKey };
+};
+
+const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', unknown]]> = (set, get) => ({
   status: 'disconnected',
   isInstalled: false,
   publicKey: null,
@@ -325,104 +433,129 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
   networkPassphrase: null,
   targetNetwork: 'testnet',
   isSwitching: false,
+  isSigning: false,
   error: null,
   errorCode: null,
-  retryCount: 0,
+
+  clearError: () => {
+    set({ error: null, errorCode: null });
+  },
 
   checkExtension: async () => {
     try {
       const freighter = await getFreighter();
-      const connectedResult = typeof freighter.isConnected === 'function' ? await withTimeout(freighter.isConnected()) : { isConnected: true };
-      throwIfFreighterError(connectedResult);
-      const connected = typeof connectedResult === 'boolean' ? connectedResult : Boolean((connectedResult as { isConnected?: boolean } | undefined)?.isConnected);
+      const connectedResult =
+        typeof freighter.isConnected === 'function'
+          ? assertNoApiError(await withTimeout(freighter.isConnected()))
+          : { isConnected: true };
+      const connected =
+        typeof connectedResult === 'boolean'
+          ? connectedResult
+          : Boolean((connectedResult as { isConnected?: boolean } | undefined)?.isConnected);
       set({ isInstalled: true, status: connected ? 'connected' : 'disconnected' });
       return Boolean(connected);
     } catch (error) {
-      const code = classifyFreighterError(error);
+      const failure = classifyFreighterError(error);
       set({
-        isInstalled: code !== 'not_installed' ? get().isInstalled : false,
-        status: 'disconnected',
-        error: messageFor(error, code),
-        errorCode: code,
+        isInstalled: installedAfterFailure(failure, false),
+        status: failure.code === 'LOCKED' ? 'locked' : 'disconnected',
+        ...errorPatch(failure),
       });
       return false;
     }
   },
 
-  connect: async () => {
-    // Re-entrancy guard: a second click while a prompt is open must not spawn
-    // a parallel request that later races the first one's result.
-    if (get().status === 'connecting') return null;
+  connect: () => {
+    if (connectInFlight) return connectInFlight;
+
+    const previous = get();
     set({ status: 'connecting', error: null, errorCode: null });
 
-    try {
-      const freighter = await getFreighter();
-
-      if (typeof freighter.isConnected === 'function') {
-        const detected = await withTimeout(freighter.isConnected());
-        throwIfFreighterError(detected);
-        const present = typeof detected === 'boolean' ? detected : Boolean((detected as { isConnected?: boolean })?.isConnected);
-        if (!present) {
-          throw new FreighterError('not_installed', 'Freighter extension is not installed.');
+    const run = async (): Promise<string | null> => {
+      try {
+        const freighter = await getFreighter();
+        const installed =
+          typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
+        if (!installed && typeof freighter.isConnected !== 'function') {
+          throw new FreighterError('NOT_INSTALLED', 'Freighter extension is not installed.');
         }
-      } else {
-        const installed = typeof window !== 'undefined' && !!(window as typeof window & { freighter?: unknown }).freighter;
-        if (!installed) {
-          throw new FreighterError('not_installed', 'Freighter extension is not installed.');
+
+        if (typeof freighter.setAllowed === 'function') {
+          const allowed = assertNoApiError(await withTimeout(freighter.setAllowed()));
+          const isAllowed =
+            typeof allowed === 'boolean' ? allowed : Boolean((allowed as { isAllowed?: boolean })?.isAllowed);
+          if (!isAllowed) {
+            throw new FreighterError(
+              'USER_DECLINED',
+              'Freighter access was rejected. Please approve the connection request.',
+            );
+          }
         }
-      }
 
-      if (typeof freighter.setAllowed === 'function') {
-        const allowed = await withTimeout(freighter.setAllowed());
-        throwIfFreighterError(allowed);
-        const isAllowed = typeof allowed === 'boolean' ? allowed : Boolean((allowed as { isAllowed?: boolean })?.isAllowed);
-        if (!isAllowed) {
-          throw new FreighterError('user_rejected', DEFAULT_ERROR_MESSAGES.user_rejected);
+        const addressResult =
+          typeof freighter.getAddress === 'function'
+            ? assertNoApiError(await withTimeout(freighter.getAddress()))
+            : null;
+        const publicKey = resolveWalletAddress(addressResult);
+        if (!publicKey) {
+          throw new FreighterError('INVALID_RESPONSE', 'Freighter did not return a valid Stellar public key.');
         }
+
+        // A network lookup failure must not abort an approved connection: the
+        // passphrase stays null and the signing gate fails closed on it.
+        const networkResult =
+          typeof freighter.getNetwork === 'function'
+            ? await withTimeout(freighter.getNetwork())
+                .then(assertNoApiError)
+                .catch(() => null)
+            : null;
+        const network = resolveNetwork(networkResult) ?? 'testnet';
+        const networkPassphrase = resolvePassphrase(networkResult);
+
+        set({
+          status: 'connected',
+          isInstalled: true,
+          publicKey,
+          network,
+          networkPassphrase,
+          error: null,
+          errorCode: null,
+        });
+
+        return publicKey;
+      } catch (error) {
+        const failure = classifyFreighterError(error);
+
+        // Dismissing a re-connect prompt must not tear down a session that was
+        // already healthy: restore it and only surface the decline.
+        if (failure.code === 'USER_DECLINED' && previous.status === 'connected' && previous.publicKey) {
+          set({
+            status: 'connected',
+            publicKey: previous.publicKey,
+            network: previous.network,
+            networkPassphrase: previous.networkPassphrase,
+            isInstalled: true,
+            ...errorPatch(failure),
+          });
+          return null;
+        }
+
+        set({
+          status: failure.code === 'LOCKED' ? 'locked' : 'disconnected',
+          isInstalled: installedAfterFailure(failure, previous.isInstalled),
+          publicKey: null,
+          network: null,
+          networkPassphrase: null,
+          ...errorPatch(failure),
+        });
+        return null;
       }
+    };
 
-      const addressResult = typeof freighter.getAddress === 'function' ? await withTimeout(freighter.getAddress()) : null;
-      throwIfFreighterError(addressResult);
-      const publicKey = resolveWalletAddress(addressResult);
-      if (!publicKey) {
-        throw new FreighterError('invalid_response', 'Freighter did not return a valid Stellar public key.');
-      }
-
-      const networkResult = typeof freighter.getNetwork === 'function'
-        ? await withTimeout(freighter.getNetwork()).catch(() => null)
-        : null;
-      const network = resolveNetwork(networkResult) ?? 'testnet';
-      // Unknown passphrase stays null on purpose: signing gates fail closed.
-      const networkPassphrase = resolvePassphrase(networkResult);
-
-      set({
-        status: 'connected',
-        isInstalled: true,
-        publicKey,
-        network,
-        networkPassphrase,
-        error: null,
-        errorCode: null,
-        retryCount: 0,
-      });
-
-      return publicKey;
-    } catch (error) {
-      const code = classifyFreighterError(error);
-      set({
-        // A locked wallet answers through the extension, so it is installed.
-        status: code === 'locked' ? 'locked' : 'disconnected',
-        // Only a missing extension flips `isInstalled`; a rejection or timeout
-        // proves nothing about whether the extension exists.
-        isInstalled: code === 'not_installed' ? false : code === 'locked' || code === 'user_rejected' ? true : get().isInstalled,
-        publicKey: null,
-        network: null,
-        networkPassphrase: null,
-        error: messageFor(error, code),
-        errorCode: code,
-      });
-      return null;
-    }
+    connectInFlight = run().finally(() => {
+      connectInFlight = null;
+    });
+    return connectInFlight;
   },
 
   retryConnection: async () => {
@@ -440,9 +573,9 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
       publicKey: null,
       network: null,
       networkPassphrase: null,
+      isSigning: false,
       error: null,
       errorCode: null,
-      retryCount: 0,
     });
   },
 
@@ -450,7 +583,7 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     try {
       const freighter = await getFreighter();
       if (typeof freighter.getNetwork !== 'function') return;
-      const result = await withTimeout(freighter.getNetwork());
+      const result = assertNoApiError(await withTimeout(freighter.getNetwork()));
       const network = resolveNetwork(result);
       const networkPassphrase = resolvePassphrase(result);
       set({
@@ -467,17 +600,21 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     const legacyMainnet = target === 'mainnet';
     if (legacyMainnet) {
       if (get().status !== 'connected' || !get().publicKey) {
-        set({ error: 'Connect a Freighter wallet before switching networks.', errorCode: 'unknown' });
+        set({ error: 'Connect a Freighter wallet before switching networks.', errorCode: 'UNKNOWN' });
         return false;
       }
     }
 
     const networkTarget: StellarNetworkId = legacyMainnet ? 'public' : target;
     set({ targetNetwork: networkTarget, isSwitching: true, error: null, errorCode: null });
-    await get().refreshNetwork();
+    try {
+      await get().refreshNetwork();
+    } finally {
+      // Always release the switching spinner, even if the refresh throws.
+      set({ isSwitching: false });
+    }
     const expected = resolveExpectedPassphrase(networkTarget);
     const matched = get().networkPassphrase === expected;
-    set({ isSwitching: false });
     return legacyMainnet ? matched : { matched };
   },
 
@@ -532,14 +669,14 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
       return;
     }
     if (get().status === 'connected' && get().publicKey === publicKey) return;
-    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null, retryCount: 0 });
+    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null });
   },
 
   updatePublicKey: (publicKey) => {
     if (!isValidStellarAddress(publicKey)) {
       throw new Error('Invalid Stellar public key.');
     }
-    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null, retryCount: 0 });
+    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null });
   },
 
   requestSignature: async (xdr: string, options?: { networkPassphrase?: string }) => {
@@ -559,19 +696,25 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
     if (isNetworkMismatch(walletPassphrase, expectedPassphrase)) {
       const walletLabel = networkLabelForId(networkIdForPassphrase(walletPassphrase));
       const expectedLabel = networkLabelForId(networkIdForPassphrase(expectedPassphrase));
-      const message = `Network mismatch: Freighter is on ${walletLabel}, but this action targets ${expectedLabel}. Switch the wallet to ${expectedLabel} before signing.`;
-      set({ error: message, errorCode: 'network_mismatch' });
-      throw new FreighterError('network_mismatch', message);
+      const mismatch = new FreighterError(
+        'NETWORK_MISMATCH',
+        `Network mismatch: Freighter is on ${walletLabel}, but this action targets ${expectedLabel}. Switch the wallet to ${expectedLabel} before signing.`,
+      );
+      set(errorPatch(mismatch));
+      throw mismatch;
     }
 
+    set({ isSigning: true, error: null, errorCode: null });
     try {
       const freighter = await getFreighter();
       if (typeof freighter.signTransaction !== 'function') {
         throw new FreighterError('not_installed', 'Freighter does not expose transaction signing support.');
       }
 
-      const response = await withTimeout(
-        freighter.signTransaction(xdr, expectedPassphrase ? { networkPassphrase: expectedPassphrase } : undefined),
+      const response = assertNoApiError(
+        await withTimeout(
+          freighter.signTransaction(xdr, expectedPassphrase ? { networkPassphrase: expectedPassphrase } : undefined),
+        ),
       );
       throwIfFreighterError(response);
       const signedXdr =
@@ -582,37 +725,74 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
             (response as { signedTxXdr?: string; signedXDR?: string; xdr?: string })?.xdr;
 
       if (!signedXdr) {
-        throw new FreighterError('invalid_response', 'Freighter did not return a signed transaction payload.');
+        throw new FreighterError('INVALID_RESPONSE', 'Freighter did not return a signed transaction payload.');
       }
 
       return signedXdr;
     } catch (error) {
-      const code = classifyFreighterError(error);
-      const message = error instanceof Error && error.message ? error.message : 'Signature request failed.';
-      // Declining a single signature leaves the session intact; only failures
-      // that mean the wallet is gone or unusable drop the connection.
-      const keepsSession = code === 'user_rejected' || code === 'network_mismatch';
-      set({
-        error: message,
-        errorCode: code,
-        ...(keepsSession ? {} : { status: code === 'locked' ? 'locked' : 'disconnected' }),
-      });
-      throw error;
+      const failure = classifyFreighterError(error);
+      // Declining, timing out, or a malformed payload are per-request failures:
+      // the wallet session itself is still valid, so keep it connected. Only a
+      // vanished extension or a locked wallet invalidates the session.
+      if (failure.code === 'NOT_INSTALLED') {
+        set({
+          status: 'disconnected',
+          isInstalled: false,
+          publicKey: null,
+          network: null,
+          networkPassphrase: null,
+          ...errorPatch(failure),
+        });
+      } else if (failure.code === 'LOCKED') {
+        set({ status: 'locked', publicKey: null, networkPassphrase: null, ...errorPatch(failure) });
+      } else {
+        set(errorPatch(failure));
+      }
+      throw failure;
+    } finally {
+      set({ isSigning: false });
     }
   },
 
   hydrate: async () => {
+    // Never re-sync while a user-facing prompt is open: the background poll
+    // would otherwise flip the `connecting` spinner to `locked`/`disconnected`
+    // while the user is still looking at the Freighter popup.
+    if (connectInFlight || get().isSigning) {
+      // State produced by the open prompt is fresher than any stored
+      // snapshot, so never merge the snapshot over it on a later poll.
+      persistedStateRestored = true;
+      return;
+    }
+
+    // Restore the persisted snapshot first (client only; see skipHydration
+    // below) so a reload keeps the last connection while the extension is
+    // re-verified.
+    // Only once: `hydrate()` also runs on a poll, and later runs must not
+    // re-merge a stored snapshot over fresher in-memory state.
+    if (!persistedStateRestored) {
+      persistedStateRestored = true;
+      await useFreighterStore.persist.rehydrate();
+    }
     try {
       const freighter = await getFreighter();
       const connectedResult = typeof freighter.isConnected === 'function'
-        ? await withTimeout(freighter.isConnected())
+        ? assertNoApiError(await withTimeout(freighter.isConnected()))
         : false;
       const connected = typeof connectedResult === 'boolean'
         ? connectedResult
         : Boolean((connectedResult as { isConnected?: boolean } | null)?.isConnected);
 
       if (!connected) {
-        set({ status: 'disconnected', publicKey: null, network: null, networkPassphrase: null, isInstalled: false, error: null, errorCode: null });
+        set({
+          status: 'disconnected',
+          publicKey: null,
+          network: null,
+          networkPassphrase: null,
+          isInstalled: false,
+          error: null,
+          errorCode: null,
+        });
         return;
       }
 
@@ -632,8 +812,8 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
           network: null,
           networkPassphrase: null,
           isInstalled: true,
-          error: DEFAULT_ERROR_MESSAGES.locked,
-          errorCode: 'locked',
+          error: 'Freighter is locked or wallet access is unavailable.',
+          errorCode: 'LOCKED',
         });
         return;
       }
@@ -643,7 +823,9 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
       // closed on an unknown passphrase.
       const networkResult =
         typeof freighter.getNetwork === 'function'
-          ? await withTimeout(freighter.getNetwork()).catch(() => null)
+          ? await withTimeout(freighter.getNetwork())
+              .then(assertNoApiError)
+              .catch(() => null)
           : null;
 
       set({
@@ -656,20 +838,30 @@ const storeCreator: StateCreator<FreighterWalletState> = (set, get) => ({
         errorCode: null,
       });
     } catch (error) {
-      const code = classifyFreighterError(error);
-      const isLocked = code === 'locked';
+      const failure = classifyFreighterError(error);
+      const isLocked = failure.code === 'LOCKED';
       set({
         status: isLocked ? 'locked' : 'disconnected',
         publicKey: null,
         network: null,
         networkPassphrase: null,
         isInstalled: isLocked,
-        error: error instanceof Error && error.message ? error.message : 'Freighter wallet status is unavailable.',
-        errorCode: code,
+        ...errorPatch(failure),
       });
     }
   },
 });
 
-export const useFreighterStore = create<FreighterWalletState>()(storeCreator);
+export const useFreighterStore = create<FreighterWalletState>()(
+  persist(storeCreator, {
+    name: FREIGHTER_PERSIST_KEY,
+    version: 1,
+    storage: createJSONStorage(() => safeLocalStorage),
+    partialize: partializeFreighterState,
+    merge: mergePersistedFreighterState,
+    // Rehydrating during store creation would make the first client render
+    // differ from the server HTML. `hydrate()` rehydrates from an effect.
+    skipHydration: true,
+  }),
+);
 export const isValidStellarPublicKey = isValidStellarAddress;
