@@ -22,6 +22,7 @@ import { SpendTrendChart, SpendingCorrelationMatrix } from '@/features/analytics
 import { MOCK_SPEND_TREND_POINTS } from '@/features/analytics/mock-data';
 import { agentSpendingCorrelations } from '@/services/mock/analytics';
 import { NvidiaAssistantWidget } from '@/features/chat/NvidiaAssistantWidget';
+import { ChartErrorBoundary } from '@/components/charts/chart-error-boundary';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const chartSkeleton = <div className="skeleton h-[260px] w-full rounded-md" />;
@@ -100,17 +101,25 @@ export default function AnalyticsPage() {
                 query={activity}
                 loading={<div className="skeleton h-[372px] w-full rounded-card" />}
               >
-                {(activityData) => <ActivityChart data={activityData} />}
+                {(activityData) => (
+                  <ChartErrorBoundary label="Activity chart">
+                    <ActivityChart data={activityData} />
+                  </ChartErrorBoundary>
+                )}
               </QueryBoundary>
 
-              <SpendTrendChart data={MOCK_SPEND_TREND_POINTS} />
+              <ChartErrorBoundary label="Spend trend chart">
+                <SpendTrendChart data={MOCK_SPEND_TREND_POINTS} />
+              </ChartErrorBoundary>
 
               <Card>
                 <CardHeader>
                   <CardTitle>Cashflow</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CashflowChart data={data.cashflow} />
+                  <ChartErrorBoundary label="Cashflow chart">
+                    <CashflowChart data={data.cashflow} />
+                  </ChartErrorBoundary>
                 </CardContent>
               </Card>
 
@@ -120,7 +129,9 @@ export default function AnalyticsPage() {
                     <CardTitle>Spend by category</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <CategoryBarChart data={data.spendingByCategory} />
+                    <ChartErrorBoundary label="Category spend chart">
+                      <CategoryBarChart data={data.spendingByCategory} />
+                    </ChartErrorBoundary>
                   </CardContent>
                 </Card>
                 <Card>
@@ -128,11 +139,13 @@ export default function AnalyticsPage() {
                     <CardTitle>Risk distribution</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <DonutChart
-                      data={donut}
-                      centerLabel="Assessed"
-                      centerValue={formatNumber(riskTotal)}
-                    />
+                    <ChartErrorBoundary label="Risk distribution chart">
+                      <DonutChart
+                        data={donut}
+                        centerLabel="Assessed"
+                        centerValue={formatNumber(riskTotal)}
+                      />
+                    </ChartErrorBoundary>
                   </CardContent>
                 </Card>
               </div>
@@ -142,7 +155,9 @@ export default function AnalyticsPage() {
                   <CardTitle>Agent spend</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <AgentSpendChart data={data.agentSpend} />
+                  <ChartErrorBoundary label="Agent spend chart">
+                    <AgentSpendChart data={data.agentSpend} />
+                  </ChartErrorBoundary>
                 </CardContent>
               </Card>
 
@@ -151,13 +166,15 @@ export default function AnalyticsPage() {
                   <CardTitle>Budget waterfall</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <WaterfallChart data={data.budgetWaterfall} />
+                  <ChartErrorBoundary label="Budget waterfall chart">
+                    <WaterfallChart data={data.budgetWaterfall} />
+                  </ChartErrorBoundary>
                 </CardContent>
               </Card>
 
-              <ErrorBoundary section="Spending correlation matrix">
+              <ChartErrorBoundary label="Spending correlation matrix">
                 <SpendingCorrelationMatrix data={agentSpendingCorrelations} />
-              </ErrorBoundary>
+              </ChartErrorBoundary>
 
               <div className="space-y-4 border-t border-border pt-4">
                 <h3 className="font-display text-lg font-semibold tracking-tight">
