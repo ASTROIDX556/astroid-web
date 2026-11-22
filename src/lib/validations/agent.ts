@@ -116,6 +116,16 @@ export const agentEndpointUrlSchema = z
 /** Name this schema had when the agent forms first got Zod validation. */
 export const optionalEndpointUrlSchema = agentEndpointUrlSchema;
 
+/**
+ * An authorized signing key on the agent's Stellar account: a G-address
+ * (public key) — `G` followed by 55 base32 characters. Only keys an operator
+ * has explicitly authorized may be submitted with an agent payload.
+ */
+export const stellarPublicKeySchema = z
+  .string()
+  .trim()
+  .regex(/^G[A-Z2-7]{55}$/, 'Enter a valid Stellar public key (G-address).');
+
 /** Optional provider secret: no spaces, bounded length. */
 export const agentApiKeySchema = z
   .string()

@@ -43,6 +43,26 @@ test('agent config rejects a model outside the selected provider catalog', () =>
   }
 });
 
+test('agent config schema rejects unsupported provider values', () => {
+  for (const provider of ['openai', 'OPENAI', ' Skynet ', 'gpt-4o', null, 42]) {
+    const result = agentConfigSchema.safeParse({
+      name: 'Treasury agent',
+      description: '',
+      provider,
+      model: 'gpt-4o',
+      endpointUrl: '',
+      mode: 'assisted',
+      temperature: 0.2,
+      monthlyBudget: 500,
+    });
+
+    assert.equal(result.success, false, String(provider));
+    if (!result.success) {
+      assert.ok(result.error.issues.some((issue) => issue.path[0] === 'provider'));
+    }
+  }
+});
+
 test('provider configuration rejects an empty custom endpoint', () => {
   const result = agentProviderConfigSchema.safeParse({
     name: 'Local agent',
@@ -152,6 +172,62 @@ test('editor schema requires a positive whole-number token allocation', () => {
     }) as ParseResult;
     assert.ok(issueFor(result, 'tokenAllocation'), String(tokenAllocation));
   }
+});
+
+const VALID_SIGNING_KEY = 'G' + 'A'.repeat(55);
+const SECOND_SIGNING_KEY = 'G' + 'B'.repeat(55);
+
+test('editor schema accepts authorized Stellar signing keys', () => {
+  const result = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    signingKeys: [VALID_SIGNING_KEY, `  ${SECOND_SIGNING_KEY}  `],
+  });
+
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.deepEqual(result.data.signingKeys, [VALID_SIGNING_KEY, SECOND_SIGNING_KEY]);
+  }
+});
+
+test('editor schema rejects malformed signing keys', () => {
+  for (const signingKeys of [
+    ['not-a-stellar-address'],
+    ['S' + 'A'.repeat(55)], // wrong prefix — must be a G-address
+    ['G' + 'A'.repeat(54)], // one character short
+    ['G' + 'A'.repeat(55).toLowerCase()], // base32 is uppercase only
+    [VALID_SIGNING_KEY, ''],
+    'GA' + 'A'.repeat(55), // not an array
+  ]) {
+    const result = agentConfigurationEditorSchema.safeParse({
+      ...validEditorConfig,
+      signingKeys,
+    }) as ParseResult;
+    assert.ok(issueFor(result, 'signingKeys'), JSON.stringify(signingKeys));
+  }
+});
+
+test('editor schema rejects duplicate signing keys', () => {
+  const result = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    signingKeys: [VALID_SIGNING_KEY, VALID_SIGNING_KEY],
+  }) as ParseResult;
+
+  assert.equal(issueFor(result, 'signingKeys'), 'Signing keys must be unique.');
+});
+
+test('editor schema caps the number of authorized signing keys', () => {
+  // Eleven unique, well-formed G-addresses (A–K are valid base32 characters).
+  const signingKeys = Array.from(
+    { length: 11 },
+    (_, index) => 'G' + String.fromCharCode(65 + index) + 'A'.repeat(54),
+  );
+
+  const result = agentConfigurationEditorSchema.safeParse({
+    ...validEditorConfig,
+    signingKeys,
+  }) as ParseResult;
+
+  assert.ok(issueFor(result, 'signingKeys'));
 });
 
 test('editor schema requires an http(s) endpoint for self-hosted providers', () => {

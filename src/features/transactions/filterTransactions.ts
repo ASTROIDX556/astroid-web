@@ -14,11 +14,13 @@ export function filterTransactions(
   filters: TransactionFilterValues,
 ): Transaction[] {
   const query = filters.query.trim().toLowerCase();
+  // Date-only filters (`YYYY-MM-DD` from the date inputs) are interpreted as
+  // UTC day boundaries so results do not depend on the operator's timezone.
   const dateFrom = filters.dateFrom
-    ? new Date(`${filters.dateFrom}T00:00:00`).getTime()
+    ? new Date(`${filters.dateFrom}T00:00:00.000Z`).getTime()
     : null;
   const dateTo = filters.dateTo
-    ? new Date(`${filters.dateTo}T23:59:59.999`).getTime()
+    ? new Date(`${filters.dateTo}T23:59:59.999Z`).getTime()
     : null;
 
   return transactions.filter((transaction) => {

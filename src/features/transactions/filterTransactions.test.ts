@@ -396,6 +396,59 @@ test('amount searches cover zero, exact values, and negatives', () => {
   );
 });
 
+test('trims surrounding whitespace from the search query', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: '   ops   ' })),
+    ['txn-epsilon'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: '\tops\n' })),
+    ['txn-epsilon'],
+  );
+});
+
+test('matches agent ids and agent names case-insensitively', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'AGENT-ORION' })),
+    ['txn-beta', 'txn-epsilon'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'atlas' })),
+    ['txn-alpha', 'txn-gamma', 'txn-delta'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'OrIoN' })),
+    ['txn-beta', 'txn-epsilon'],
+  );
+});
+
+test('treats regex-like punctuation in the query as literal text', () => {
+  // `.` is not a wildcard — the query is a plain substring match.
+  assert.deepEqual(
+    filterTransactions(edgeCatalog, { ...noFilters, query: 'txn.alpha' }),
+    [],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'hash-alpha' })),
+    ['txn-alpha'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: '(50%)' })),
+    ['txn-gamma'],
+  );
+});
+
+test('matches counterparty addresses and purposes', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'destinationbeta' })),
+    ['txn-beta'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'vendor settlement' })),
+    ['txn-gamma'],
+  );
+});
+
 test('filtering does not mutate the input collection or its records', () => {
   const snapshot = structuredClone(edgeCatalog);
   filterTransactions(edgeCatalog, {
