@@ -49,7 +49,6 @@ const ITEM_CLASS =
 export function CommandPalette() {
   const open = useCommandStore((s) => s.open);
   const setOpen = useCommandStore((s) => s.setOpen);
-  const toggle = useCommandStore((s) => s.toggle);
   const pathname = usePathname();
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
@@ -81,29 +80,8 @@ export function CommandPalette() {
     };
   }, [open]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!isCommandShortcut(event)) return;
-
-      // Claim the shortcut before the browser/address bar or page inputs can.
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (
-        !useCommandStore.getState().open &&
-        typeof document !== 'undefined' &&
-        document.activeElement instanceof HTMLElement &&
-        !document.activeElement.closest('[cmdk-root]')
-      ) {
-        previouslyFocusedRef.current = document.activeElement;
-      }
-
-      toggle();
-    };
-
-    document.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => document.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [toggle]);
+  // Global keydown handling now lives in CommandPaletteProvider so the
+  // listener is registered exactly once with proper cleanup.
 
   // Navigating away should always leave the palette closed.
   useEffect(() => {
