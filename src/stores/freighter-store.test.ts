@@ -8,6 +8,7 @@ import {
   mergePersistedFreighterState,
   partializeFreighterState,
   __setFreighterLoaderForTests,
+  __setFreighterMockModeForTests,
   STELLAR_NETWORKS,
   useFreighterStore,
 } from './freighter-store';
@@ -69,6 +70,7 @@ function markConnected(): void {
 
 test.afterEach(() => {
   __setFreighterLoaderForTests(null);
+  __setFreighterMockModeForTests(null);
 });
 
 // ---------------------------------------------------------------------------
@@ -351,6 +353,8 @@ test('hydrate does not clobber an in-flight connect prompt', async () => {
 });
 
 test('hydrate classifies a missing extension and records the error code', async () => {
+  // Outside mock mode a vanished extension invalidates the session.
+  __setFreighterMockModeForTests(false);
   resetStore(null);
   markConnected();
 
@@ -358,6 +362,89 @@ test('hydrate classifies a missing extension and records the error code', async 
 
   assert.equal(useFreighterStore.getState().status, 'disconnected');
   assert.equal(useFreighterStore.getState().errorCode, 'NOT_INSTALLED');
+});
+
+test('hydrate silently reconnects a previously authorized wallet without a prompt', async () => {
+  let approvalPrompts = 0;
+  resetStore(
+    healthyApi({
+      isConnected: async () => ({ isConnected: false }),
+      isAllowed: async () => true,
+      setAllowed: async () => {
+        approvalPrompts += 1;
+        return { isAllowed: true };
+      },
+    }),
+  );
+
+  await useFreighterStore.getState().hydrate();
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.isInstalled, true);
+  // The whole point of the silent path: no approval popup was triggered.
+  assert.equal(approvalPrompts, 0);
+});
+
+test('hydrate stays disconnected when the wallet is not authorized', async () => {
+  resetStore(
+    healthyApi({
+      isConnected: async () => ({ isConnected: false }),
+      isAllowed: async () => false,
+    }),
+  );
+
+  await useFreighterStore.getState().hydrate();
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.publicKey, null);
+  assert.equal(state.isInstalled, false);
+});
+
+test('hydrate preserves the persisted session in mock mode when Freighter is missing', async () => {
+  __setFreighterMockModeForTests(true);
+  resetStore(null);
+  // Simulates the snapshot `persist.rehydrate()` merges on a reload.
+  markConnected();
+
+  await useFreighterStore.getState().hydrate();
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.errorCode, 'NOT_INSTALLED');
+  assert.equal(state.isInstalled, false);
+});
+
+test('hydrate preserves a mock session when the extension reports not-connected', async () => {
+  __setFreighterMockModeForTests(true);
+  resetStore(
+    healthyApi({
+      isConnected: async () => ({ isConnected: false }),
+      isAllowed: async () => false,
+    }),
+  );
+  markConnected();
+
+  await useFreighterStore.getState().hydrate();
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.isInstalled, true);
+});
+
+test('hydrate keeps a disconnected state in mock mode when no session exists', async () => {
+  __setFreighterMockModeForTests(true);
+  resetStore(null);
+
+  await useFreighterStore.getState().hydrate();
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.publicKey, null);
 });
 
 test('switchNetwork always releases the switching flag', async () => {
