@@ -174,7 +174,7 @@ const config: Config = {
       },
       backgroundImage: {
         'accent-gradient':
-          'linear-gradient(135deg, rgb(var(--gold) / 1) 0%, rgb(var(--gold) / 0.92) 52%, rgb(var(--ring) / 1) 100%)',
+          'linear-gradient(135deg, #5B50D6 0%, #7266E3 52%, #8B7FFF 100%)',
         'gold-sheen':
           'linear-gradient(120deg, rgb(var(--gold) / 0.16) 0%, rgb(var(--gold) / 0) 60%)',
       },

@@ -145,7 +145,10 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
           </div>
         </div>
 
-        <nav className={cn('flex-1 space-y-6 overflow-y-auto py-4', compactNavigation ? 'px-2' : 'px-3')}>
+        <nav
+          aria-label="Primary"
+          className={cn('flex-1 space-y-6 overflow-y-auto py-4', compactNavigation ? 'px-2' : 'px-3')}
+        >
           {navSections.map((section) => (
             <div key={section.heading} className="space-y-1">
               {!compactNavigation && (

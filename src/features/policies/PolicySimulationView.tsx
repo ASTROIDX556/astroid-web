@@ -2,9 +2,10 @@
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, ChevronRight, ShieldCheck, X, XCircle } from 'lucide-react';
-import { useEffect, useId, useRef } from 'react';
+import { useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { PolicyRuleEvaluation, PolicySimulationResponse } from './policyTypes';
 
 export interface PolicySimulationViewProps {
@@ -40,35 +41,13 @@ function StatusBadge({ status }: { status: PolicyRuleEvaluation['status'] }) {
 export function PolicySimulationView({ open, onClose, result, loading = false, error = null }: PolicySimulationViewProps) {
   const headingId = useId();
   const descriptionId = useId();
-  const closeRef = useRef(onClose);
   const panelRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   const reducedMotion = useReducedMotion();
 
-  useEffect(() => { closeRef.current = onClose; }, [onClose]);
-  useEffect(() => {
-    if (!open) return;
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    panelRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeRef.current();
-      if (event.key !== 'Tab') return;
-      const elements = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])') ?? []);
-      const first = elements[0];
-      const last = elements[elements.length - 1];
-      if (!first || !last) { event.preventDefault(); panelRef.current?.focus(); return; }
-      if (event.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', handleKeyDown);
-      previousFocusRef.current?.focus();
-    };
-  }, [open]);
+  // Shared WCAG AA modal behaviour: Escape closes, Tab/Shift+Tab stay inside
+  // the panel (including inputs/selects, and pulling drifted focus back),
+  // body scroll is locked, and focus returns to the trigger on close.
+  useFocusTrap({ active: open, containerRef: panelRef, onEscape: onClose });
 
   const hasFailures = result?.rules.some((rule) => rule.status === 'fail') ?? false;
   const passed = result?.status === 'pass' && !hasFailures;
@@ -89,7 +68,7 @@ export function PolicySimulationView({ open, onClose, result, loading = false, e
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: reducedMotion ? 0 : 0.22 }}
-            className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-dialog border border-border bg-surface text-foreground shadow-soft-3 outline-none"
+            className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-surface text-foreground shadow-2xl outline-none"
           >
             <header className="flex items-start justify-between gap-4 border-b border-border p-6">
               <div>

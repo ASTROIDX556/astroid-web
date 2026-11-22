@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { ArrowUpRight, Send, Sparkles } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/cn';
@@ -30,7 +30,6 @@ export function FinancialBriefingPanel({
   onSend,
 }: FinancialBriefingPanelProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -38,17 +37,6 @@ export function FinancialBriefingPanel({
     textarea.style.height = 'auto';
     textarea.style.height = `${Math.min(textarea.scrollHeight, 128)}px`;
   }, [draft]);
-
-  const dispatchMessage = async (message: string) => {
-    const trimmed = message.trim();
-    if (!trimmed || isSending) return;
-    setIsSending(true);
-    try {
-      await onSend(trimmed);
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   return (
     <div className="flex min-h-full flex-col">
@@ -102,13 +90,13 @@ export function FinancialBriefingPanel({
                 <button
                   key={suggestion.label}
                   type="button"
-                  onClick={() => void dispatchMessage(suggestion.prompt)}
-                  disabled={isSending}
-                  aria-label={`Ask: ${suggestion.label}`}
+                  onClick={() => {
+                    onDraftChange(suggestion.prompt);
+                    textareaRef.current?.focus();
+                  }}
                   className={cn(
                     'group flex items-center justify-between gap-2 rounded-button border border-border bg-surface p-3 text-left text-xs text-foreground-secondary transition-colors duration-fast hover:border-gold hover:text-foreground',
                     FOCUS_RING,
-                    'disabled:pointer-events-none disabled:opacity-50',
                   )}
                 >
                   <span>{suggestion.label}</span>
@@ -127,15 +115,10 @@ export function FinancialBriefingPanel({
         className="sticky bottom-0 shrink-0 border-t border-border bg-surface-secondary/90 p-4 backdrop-blur"
         onSubmit={(event) => {
           event.preventDefault();
-          void dispatchMessage(draft);
+          void onSend(draft);
         }}
         aria-label="Send a financial briefing question"
       >
-        {isSending && (
-          <p role="status" className="mb-2 text-2xs text-foreground-muted">
-            Assistant is responding…
-          </p>
-        )}
         <div className="flex items-end gap-2 rounded-button border border-border bg-surface px-3 py-2 transition-colors focus-within:border-gold focus-within:ring-1 focus-within:ring-gold">
           <label className="sr-only" htmlFor="financial-briefing-prompt">
             Ask about treasury health, agent spending, or Stellar activity
@@ -148,17 +131,16 @@ export function FinancialBriefingPanel({
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
-                void dispatchMessage(draft);
+                void onSend(draft);
               }
             }}
-            disabled={isSending}
             rows={1}
             placeholder="Ask about spend, policies..."
             className="max-h-32 py-1.5 min-h-8 flex-1 resize-none overflow-y-auto bg-transparent text-sm text-foreground outline-none placeholder:text-foreground-muted"
           />
           <button
             type="submit"
-            disabled={!draft.trim() || isSending}
+            disabled={!draft.trim()}
             className={cn(
               'grid h-8 w-8 shrink-0 place-items-center rounded-button bg-accent-gradient font-semibold text-background-secondary transition-opacity duration-fast disabled:opacity-40',
               FOCUS_RING,
