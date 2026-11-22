@@ -457,13 +457,29 @@ test('switchNetwork always releases the switching flag', async () => {
   assert.equal(useFreighterStore.getState().isSwitching, false);
 });
 
-test('clearError resets the message and the category together', () => {
-  useFreighterStore.setState({ error: 'Declined', errorCode: 'USER_DECLINED' });
+test('clearError resets the message, the category, and the timestamp together', () => {
+  useFreighterStore.setState({
+    error: 'Declined',
+    errorCode: 'USER_DECLINED',
+    errorAt: Date.now(),
+  });
 
   useFreighterStore.getState().clearError();
 
   assert.equal(useFreighterStore.getState().error, null);
   assert.equal(useFreighterStore.getState().errorCode, null);
+  assert.equal(useFreighterStore.getState().errorAt, null);
+});
+
+test('a failed hydrate records when the error occurred', async () => {
+  resetStore(null);
+  const before = Date.now();
+
+  await useFreighterStore.getState().hydrate();
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.errorCode, 'NOT_INSTALLED');
+  assert.ok(state.errorAt !== null && state.errorAt >= before);
 });
 
 /* -------------------------------------------------------------------------- */

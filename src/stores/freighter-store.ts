@@ -206,6 +206,8 @@ export interface FreighterWalletState {
   error: string | null;
   /** Category of `error`, null whenever `error` is null. */
   errorCode: FreighterErrorCode | null;
+  /** Epoch ms when `error` was recorded; null whenever `error` is null. */
+  errorAt: number | null;
   /** Clears the last error without touching connection state. */
   clearError: () => void;
   checkExtension: () => Promise<boolean>;
@@ -323,9 +325,12 @@ const getFreighter = async (): Promise<FreighterApi> => {
 };
 
 /** Store patch describing a failure: message + category kept in lockstep. */
-const errorPatch = (error: FreighterError): Pick<FreighterWalletState, 'error' | 'errorCode'> => ({
+const errorPatch = (
+  error: FreighterError,
+): Pick<FreighterWalletState, 'error' | 'errorCode' | 'errorAt'> => ({
   error: error.message,
   errorCode: error.code,
+  errorAt: Date.now(),
 });
 
 const isValidStellarAddress = (value: string | null | undefined): value is string =>
@@ -453,9 +458,10 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
   isSigning: false,
   error: null,
   errorCode: null,
+      errorAt: null,
 
   clearError: () => {
-    set({ error: null, errorCode: null });
+    set({ error: null, errorCode: null, errorAt: null });
   },
 
   checkExtension: async () => {
@@ -486,7 +492,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
     if (connectInFlight) return connectInFlight;
 
     const previous = get();
-    set({ status: 'connecting', error: null, errorCode: null });
+    set({ status: 'connecting', error: null, errorCode: null, errorAt: null });
 
     const run = async (): Promise<string | null> => {
       try {
@@ -537,6 +543,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
           networkPassphrase,
           error: null,
           errorCode: null,
+      errorAt: null,
         });
 
         return publicKey;
@@ -584,6 +591,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       isSigning: false,
       error: null,
       errorCode: null,
+      errorAt: null,
     });
   },
 
@@ -608,13 +616,13 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
     const legacyMainnet = target === 'mainnet';
     if (legacyMainnet) {
       if (get().status !== 'connected' || !get().publicKey) {
-        set({ error: 'Connect a Freighter wallet before switching networks.', errorCode: 'UNKNOWN' });
+        set({ error: 'Connect a Freighter wallet before switching networks.', errorCode: 'UNKNOWN', errorAt: Date.now() });
         return false;
       }
     }
 
     const networkTarget: StellarNetworkId = legacyMainnet ? 'public' : target;
-    set({ targetNetwork: networkTarget, isSwitching: true, error: null, errorCode: null });
+    set({ targetNetwork: networkTarget, isSwitching: true, error: null, errorCode: null, errorAt: null });
     try {
       await get().refreshNetwork();
     } finally {
@@ -677,14 +685,14 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       return;
     }
     if (get().status === 'connected' && get().publicKey === publicKey) return;
-    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null });
+    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null, errorAt: null });
   },
 
   updatePublicKey: (publicKey) => {
     if (!isValidStellarAddress(publicKey)) {
       throw new Error('Invalid Stellar public key.');
     }
-    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null });
+    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null, errorAt: null });
   },
 
   requestSignature: async (xdr: string, options?: { networkPassphrase?: string }) => {
@@ -712,7 +720,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       throw mismatch;
     }
 
-    set({ isSigning: true, error: null, errorCode: null });
+    set({ isSigning: true, error: null, errorCode: null, errorAt: null });
     try {
       const freighter = await getFreighter();
       if (typeof freighter.signTransaction !== 'function') {
@@ -834,7 +842,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
           if (mockSession) {
             // The extension is reachable but cannot confirm the mock/demo
             // session; keep the persisted connection for the demo experience.
-            set({ isInstalled: true, error: null, errorCode: null });
+            set({ isInstalled: true, error: null, errorCode: null, errorAt: null });
             return;
           }
           set({
@@ -845,6 +853,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
             isInstalled: false,
             error: null,
             errorCode: null,
+      errorAt: null,
           });
           return;
         }
@@ -867,6 +876,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
             isInstalled: true,
             error: 'Freighter is locked or wallet access is unavailable.',
             errorCode: 'LOCKED',
+            errorAt: Date.now(),
           });
           return;
         }
@@ -890,6 +900,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
         networkPassphrase: resolvePassphrase(networkResult),
         error: null,
         errorCode: null,
+      errorAt: null,
       });
     } catch (error) {
       const failure = classifyFreighterError(error);
