@@ -32,6 +32,7 @@ import {
 } from './approvalApi';
 import {
   approvalProgress,
+  applyDecision,
   canReviewProposal,
   snapshotFromProposal,
   type ApprovalReviewer,
@@ -142,9 +143,49 @@ export function ProposalReviewCard({
         decision,
         reviewer: activeReviewer,
       }),
+    /**
+     * Optimistic update: the card flips to the reviewer's decision immediately
+     * so the quorum counter and status badge move without waiting on the
+     * round-trip. `onError` restores the previous snapshot; `onSettled`
+     * invalidates so the server/mock truth wins once the request resolves.
+     */
+    onMutate: async (decision) => {
+      await queryClient.cancelQueries({
+        queryKey: approvalQueryKeys.proposal(proposal.id),
+      });
+      const previous = queryClient.getQueryData<ProposalApprovalSnapshot>(
+        approvalQueryKeys.proposal(proposal.id),
+      );
+      if (previous && previous.status === 'pending') {
+        queryClient.setQueryData<ProposalApprovalSnapshot>(
+          approvalQueryKeys.proposal(proposal.id),
+          (current) =>
+            current
+              ? applyDecision(current, {
+                  decision,
+                  reviewer: activeReviewer,
+                })
+              : current,
+        );
+      }
+      return { previous };
+    },
+    onError: (_error, _decision, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          approvalQueryKeys.proposal(proposal.id),
+          context.previous,
+        );
+      }
+    },
     onSuccess: (next) => {
       queryClient.setQueryData(approvalQueryKeys.proposal(proposal.id), next);
       onDecisionRecorded?.(next);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: approvalQueryKeys.proposal(proposal.id),
+      });
     },
   });
 

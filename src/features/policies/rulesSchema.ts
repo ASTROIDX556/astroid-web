@@ -43,17 +43,35 @@ const NUMERIC_OPERATORS: readonly RuleOperator[] = [
 ];
 const TEXT_OPERATORS: readonly RuleOperator[] = ['equals', 'contains'];
 
+/**
+ * Characters stripped from user-typed numeric thresholds before parsing:
+ * thousands separators, whitespace, and common currency symbols. Everything
+ * else is left for `Number()` to judge, so `10abc` still fails.
+ */
+export function sanitizeNumericThreshold(value: string): string {
+  return value.replace(/[,\s$€£¥]/g, '');
+}
+
+/**
+ * Normalize a user-entered asset identifier the way Stellar asset codes are
+ * written: trimmed, uppercased, and stripped of characters an asset code can
+ * never contain (`US DC`, `usdc:issuer` → `USDC`).
+ */
+export function sanitizeAssetCode(value: string): string {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
 /** Parse a rule threshold; `null` when the value is not a finite number. */
 export function parseThresholdValue(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const parsed = Number(trimmed);
+  const cleaned = sanitizeNumericThreshold(value);
+  if (!cleaned) return null;
+  const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
 /** True when `value` is a syntactically valid Stellar asset code. */
 export function isValidAssetCode(value: string): boolean {
-  return ASSET_CODE_PATTERN.test(value.trim().toUpperCase());
+  return ASSET_CODE_PATTERN.test(sanitizeAssetCode(value));
 }
 
 /** Split a comma/newline separated whitelist value into trimmed entries. */
@@ -167,7 +185,18 @@ export const policyRuleSchema = z
         message: 'The in_whitelist operator is only valid for whitelist rules.',
       });
     }
-  });
+  })
+  .transform((rule) => ({
+    ...rule,
+    // Persist the sanitized form so downstream consumers (simulation,
+    // summaries, exports) never see raw keyboard input like `1,000` or `usdc`.
+    value:
+      rule.field === 'Transaction Amount'
+        ? sanitizeNumericThreshold(rule.value)
+        : rule.field === 'Asset Identifier'
+          ? sanitizeAssetCode(rule.value)
+          : rule.value.trim(),
+  }));
 
 /** Alias kept for existing imports. */
 export const ruleSchema = policyRuleSchema;

@@ -7,6 +7,17 @@ export interface TransactionFilterValues {
   agentId: string;
   dateFrom: string;
   dateTo: string;
+  /**
+   * Alternate range bounds for callers that model the window as
+   * start/end. When both spellings are present, `startDate`/`endDate` win.
+   */
+  startDate?: string;
+  endDate?: string;
+  /**
+   * Alternate asset criterion (e.g. 'XLM', 'USDC', or a trustline code).
+   * A concrete code takes precedence over `asset`; 'all'/empty defers to it.
+   */
+  assetType?: string;
 }
 
 export function filterTransactions(
@@ -14,16 +25,25 @@ export function filterTransactions(
   filters: TransactionFilterValues,
 ): Transaction[] {
   const query = filters.query.trim().toLowerCase();
-  const dateFrom = filters.dateFrom
-    ? new Date(`${filters.dateFrom}T00:00:00`).getTime()
+  const rangeStart = filters.startDate || filters.dateFrom;
+  const rangeEnd = filters.endDate || filters.dateTo;
+  const assetFilter = (
+    filters.assetType && filters.assetType !== 'all'
+      ? filters.assetType
+      : filters.asset
+  ).toUpperCase();
+  // Date-only filters (`YYYY-MM-DD` from the date inputs) are interpreted as
+  // UTC day boundaries so results do not depend on the operator's timezone.
+  const dateFrom = rangeStart
+    ? new Date(`${rangeStart}T00:00:00.000Z`).getTime()
     : null;
-  const dateTo = filters.dateTo
-    ? new Date(`${filters.dateTo}T23:59:59.999`).getTime()
+  const dateTo = rangeEnd
+    ? new Date(`${rangeEnd}T23:59:59.999Z`).getTime()
     : null;
 
   return transactions.filter((transaction) => {
     if (filters.status !== 'all' && transaction.status !== filters.status) return false;
-    if (filters.asset !== 'all' && transaction.asset !== filters.asset) return false;
+    if (assetFilter !== 'ALL' && transaction.asset !== assetFilter) return false;
     if (filters.agentId !== 'all' && transaction.agentId !== filters.agentId)
       return false;
 

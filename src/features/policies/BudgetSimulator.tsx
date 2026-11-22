@@ -98,7 +98,7 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
               value={assetAmount}
               onChange={(e) => setAssetAmount(e.target.value)}
               placeholder="e.g. 1000"
-              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 text-xs font-mono text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 text-xs font-mono text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
 
@@ -110,7 +110,7 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
               id="sim-asset-symbol"
               value={selectedAsset}
               onChange={(e) => setSelectedAsset(e.target.value as AssetSymbol)}
-              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 text-xs font-medium text-foreground focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {Object.values(ASSET_RATES).map((asset) => (
                 <option key={asset.symbol} value={asset.symbol}>
@@ -132,7 +132,7 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
               step="0.00001"
               value={customFeeXlm}
               onChange={(e) => setCustomFeeXlm(e.target.value)}
-              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 text-xs font-mono text-foreground placeholder:text-foreground-muted focus:border-gold focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-surface-primary px-3 py-2 text-xs font-mono text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
         </div>
@@ -177,7 +177,11 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
           </div>
         )}
 
-        <div className="space-y-4 rounded-lg border border-border bg-surface-primary p-4">
+        <div
+          className="space-y-4 rounded-lg border border-border bg-surface-primary p-4"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-gold" aria-hidden="true" />
