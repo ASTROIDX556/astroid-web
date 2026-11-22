@@ -1,12 +1,13 @@
 'use client';
 
-import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import {
   POLL_INTERVALS,
   QUERY_CACHE,
   createBackoffRefetchInterval,
 } from '@/lib/query-config';
 import { queryKeys } from '@/services/query-keys';
+import { toast } from 'sonner';
 import { resources } from '@/services/resources';
 import type { HorizonBalance } from '@/features/wallet/types';
 import type {
@@ -154,6 +155,73 @@ export const useAgent = (id: string): UseQueryResult<Agent> =>
     enabled: Boolean(id),
     ...QUERY_CACHE.agentStatus,
   });
+
+// -- agent configuration parameter mutations (optimistic) --------------------
+export interface UpdateAgentVariables {
+  id?: string;
+  agentId?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Mutation that updates an agent's configuration parameters (execution timeout,
+ * max spending limits, etc.) with an optimistic cache update. The local cache
+ * for both the single agent and the agent list is patched immediately in
+ * `onMutate`; a failed mutation rolls the cache back and surfaces a sonner
+ * error toast; `onSettled` revalidates the affected queries.
+ */
+export const useUpdateAgent = (agentId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation<Agent, Error, UpdateAgentVariables>({
+    mutationFn: (variables) => {
+      const id = (variables?.id ?? variables?.agentId ?? agentId) as string;
+      const { id: _id, agentId: _aid, ...updates } = variables ?? {};
+      return resources.updateAgent(id, updates);
+    },
+    onMutate: async (variables) => {
+      const id = (variables?.id ?? variables?.agentId ?? agentId) as string;
+      const { id: _id, agentId: _aid, ...updates } = variables ?? {};
+      await queryClient.cancelQueries({ queryKey: queryKeys.agent(id) });
+      await queryClient.cancelQueries({ queryKey: queryKeys.agents });
+      const previousAgent = queryClient.getQueryData<Agent>(queryKeys.agent(id));
+      const previousAgents = queryClient.getQueryData<Agent[]>(queryKeys.agents);
+      queryClient.setQueryData<Agent>(queryKeys.agent(id), (old) =>
+        old ? ({ ...old, ...updates } as Agent) : old,
+      );
+      queryClient.setQueryData<Agent[]>(queryKeys.agents, (old) =>
+        old ? old.map((a) => (a.id === id ? ({ ...a, ...updates } as Agent) : a)) : old,
+      );
+      return { previousAgent, previousAgents, id, updates };
+    },
+    onError: (error, variables, context) => {
+      const id =
+        (context as { id?: string } | undefined)?.id ??
+        (variables?.id ?? variables?.agentId ?? agentId) as string;
+      const ctx = context as { previousAgent?: Agent; previousAgents?: Agent[] } | undefined;
+      if (ctx?.previousAgent) {
+        queryClient.setQueryData(queryKeys.agent(id), ctx.previousAgent);
+      }
+      if (ctx?.previousAgents) {
+        queryClient.setQueryData(queryKeys.agents, ctx.previousAgents);
+      }
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update agent configuration.',
+      );
+    },
+    onSettled: (_data, _error, variables, context) => {
+      const id =
+        (context as { id?: string } | undefined)?.id ??
+        (variables?.id ?? variables?.agentId ?? agentId) as string;
+      queryClient.invalidateQueries({ queryKey: queryKeys.agent(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.agents });
+    },
+  });
+};
+
+export const useUpdateAgentConfig = useUpdateAgent;
+export const useUpdateAgentConfiguration = useUpdateAgent;
+export const useAgentUpdate = useUpdateAgent;
+export const useUpdateAgentParameters = useUpdateAgent;
 
 // -- policies ---------------------------------------------------------------
 export const usePolicies = (): UseQueryResult<Policy[]> =>

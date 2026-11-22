@@ -154,6 +154,22 @@ export const resources = {
       one<Agent>(`/agents/${id}`),
     ),
 
+  updateAgent: (id: string, updates: Record<string, unknown>): Promise<Agent> =>
+    resolveLazy(
+      () => {
+        const agent = mock.agents.find((a) => a.id === id) ?? notFound('Agent');
+        Object.assign(agent, updates);
+        return { ...agent } as Agent;
+      },
+      () =>
+        apiClient
+          .request<Agent>(`/agents/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(updates),
+          })
+          .then((r) => r.data),
+    ),
+
   // -- policies -----------------------------------------------------------
   getPolicies: (): Promise<Policy[]> =>
     resolve(mock.policies, () => list<Policy[]>('/policies')),
