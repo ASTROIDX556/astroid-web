@@ -8,6 +8,7 @@ import {
   agentModelSchema,
   agentProviderSchema,
   requiresEndpoint,
+  stellarPublicKeySchema,
 } from '../../lib/validations/agent';
 
 /**
@@ -79,6 +80,18 @@ export const agentConfigurationEditorSchema = z
       .positive('Token allocation must be greater than 0')
       .max(10_000_000, 'Token allocation cannot exceed 10,000,000'),
     endpointUrl: agentEndpointUrlSchema,
+    /**
+     * Stellar public keys (G-addresses) the agent is authorized to sign
+     * transactions with. Optional, but every entry must be a well-formed
+     * address and the list must not contain duplicates.
+     */
+    signingKeys: z
+      .array(stellarPublicKeySchema)
+      .max(10, 'An agent can have at most 10 authorized signing keys.')
+      .refine((keys) => new Set(keys).size === keys.length, {
+        message: 'Signing keys must be unique.',
+      })
+      .optional(),
   })
   .superRefine((values, ctx) => {
     requireEditorEndpoint(values, ctx);
