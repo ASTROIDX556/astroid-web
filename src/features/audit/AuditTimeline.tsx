@@ -96,6 +96,35 @@ export function AuditTimeline() {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'timestamp', desc: true }]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 25 });
 
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      if (selectedEventType !== 'all' && event.eventType !== selectedEventType) {
+        return false;
+      }
+      if (selectedLogLevel !== 'all' && event.level !== selectedLogLevel) {
+        return false;
+      }
+      if (selectedActorId !== 'all' && event.actorId !== selectedActorId) {
+        return false;
+      }
+      const cutoff = getTimeRangeCutoff(selectedTimeRange);
+      if (cutoff !== null && new Date(event.timestamp).getTime() < cutoff) {
+        return false;
+      }
+      if (searchQuery.trim() !== '') {
+        const q = searchQuery.toLowerCase();
+        const matchSummary = event.summary.toLowerCase().includes(q);
+        const matchActor = event.actorName.toLowerCase().includes(q) || event.actorId.toLowerCase().includes(q);
+        const matchId = event.id.toLowerCase().includes(q);
+        const matchDetails = event.details.toLowerCase().includes(q);
+        if (!matchSummary && !matchActor && !matchId && !matchDetails) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [events, selectedEventType, selectedLogLevel, selectedActorId, selectedTimeRange, searchQuery]);
+
   const uniqueActors = useMemo(() => {
     const actorMap = new Map<string, string>();
     events.forEach((evt) => {
@@ -106,35 +135,7 @@ export function AuditTimeline() {
     return Array.from(actorMap.entries()).map(([id, name]) => ({ id, name }));
   }, [events]);
 
-  const filteredEvents = useMemo(() => {
-    const cutoff = getTimeRangeCutoff(selectedTimeRange);
-    return events.filter((evt) => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matches =
-          evt.summary.toLowerCase().includes(q) ||
-          evt.details.toLowerCase().includes(q) ||
-          evt.actorName.toLowerCase().includes(q) ||
-          evt.actorId.toLowerCase().includes(q) ||
-          (evt.project && evt.project.toLowerCase().includes(q));
-        if (!matches) return false;
-      }
-      if (selectedEventType !== 'all' && evt.eventType !== selectedEventType) {
-        return false;
-      }
-      if (selectedLogLevel !== 'all' && evt.level !== selectedLogLevel) {
-        return false;
-      }
-      if (selectedActorId !== 'all' && evt.actorId !== selectedActorId) {
-        return false;
-      }
-      if (cutoff !== null) {
-        const evtTime = new Date(evt.timestamp).getTime();
-        if (evtTime < cutoff) return false;
-      }
-      return true;
-    });
-  }, [events, searchQuery, selectedEventType, selectedLogLevel, selectedTimeRange, selectedActorId]);
+
 
   const handleClearFilters = useCallback(() => {
     setSearchQuery('');
