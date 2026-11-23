@@ -11,6 +11,8 @@ import { Dropdown, type DropdownItem } from '@/components/ui/dropdown';
 
 interface AuditExportMenuProps {
   events: AuditEvent[];
+  className?: string;
+  label?: string;
 }
 
 export function AuditExportMenu({
