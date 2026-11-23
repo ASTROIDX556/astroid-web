@@ -103,6 +103,8 @@ export function ProposalReviewCard({
   const [confirmAction, setConfirmAction] = useState<ReviewDecision | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [simulationOpen, setSimulationOpen] = useState(false);
+  const [pendingDecision, setPendingDecision] = useState<ReviewDecision | null>(null);
   // Destructive confirmations place focus on Cancel, never on the confirm action.
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 

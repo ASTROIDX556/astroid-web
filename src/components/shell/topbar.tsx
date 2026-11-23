@@ -15,7 +15,8 @@ import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
 import { WalletNetworkSwitcher } from '@/features/network/WalletNetworkSwitcher';
 import { CircuitBreakerControl } from '@/features/security';
 import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
-import { FREIGHTER_ERROR_TITLES, useFreighterStore } from '@/stores/freighter-store';
+import { useFreighterStore } from '@/stores/freighter-store';
+import { getFreighterRecovery } from '@/features/wallet/freighterErrorRecovery';
 import { cn } from '@/lib/cn';
 
 /** Shared, brand-tinted focus ring for every top-bar control (WCAG AA). */
@@ -71,7 +72,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
         const recovery = getFreighterRecovery(state.errorCode, state.retryCount);
         const retryable =
           recovery.action === 'retry' || recovery.action === 'unlock_and_retry';
-        toast.error(recovery.title, {
+        const options = {
           id: 'freighter-error',
           description: state.error,
           action: retryable
@@ -80,15 +81,13 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
                 onClick: () => void walletStore.getState().retryConnection(),
               }
             : undefined,
-        });
-        const code = state.errorCode ?? 'UNKNOWN';
-        const title = FREIGHTER_ERROR_TITLES[code];
+        };
         // A dismissed prompt is a user choice, not a failure: warn instead of
         // raising an error toast. Everything else stays an error.
-        if (code === 'USER_DECLINED') {
-          toast.warning(title, { id: 'freighter-error', description: state.error });
+        if (state.errorCode === 'USER_DECLINED') {
+          toast.warning(recovery.title, options);
         } else {
-          toast.error(title, { id: 'freighter-error', description: state.error });
+          toast.error(recovery.title, options);
         }
       }
 

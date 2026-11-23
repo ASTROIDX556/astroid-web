@@ -21,7 +21,7 @@ export interface FreighterRecovery {
 export const FREIGHTER_INSTALL_URL = 'https://www.freighter.app/';
 
 const RECOVERY: Record<FreighterErrorCode, FreighterRecovery> = {
-  not_installed: {
+  NOT_INSTALLED: {
     title: 'Freighter extension not found',
     description:
       'Install the Freighter browser extension, then reload this page and connect again.',
@@ -29,7 +29,7 @@ const RECOVERY: Record<FreighterErrorCode, FreighterRecovery> = {
     actionLabel: 'Install Freighter',
     tone: 'danger',
   },
-  user_rejected: {
+  USER_DECLINED: {
     title: 'Connection request declined',
     description:
       'Freighter reported that the request was rejected. Try again and approve the prompt in the extension.',
@@ -37,7 +37,7 @@ const RECOVERY: Record<FreighterErrorCode, FreighterRecovery> = {
     actionLabel: 'Try again',
     tone: 'warning',
   },
-  timeout: {
+  TIMEOUT: {
     title: 'Freighter did not respond',
     description:
       'The extension took too long to answer. Make sure it is enabled and unlocked, then retry.',
@@ -45,14 +45,14 @@ const RECOVERY: Record<FreighterErrorCode, FreighterRecovery> = {
     actionLabel: 'Retry connection',
     tone: 'warning',
   },
-  locked: {
+  LOCKED: {
     title: 'Freighter is locked',
     description: 'Open the Freighter extension, unlock it with your password, then reconnect.',
     action: 'unlock_and_retry',
     actionLabel: 'I unlocked it — reconnect',
     tone: 'warning',
   },
-  network_mismatch: {
+  NETWORK_MISMATCH: {
     title: 'Wrong Stellar network',
     description:
       'Switch Freighter to the network this workspace targets, then retry the action.',
@@ -60,7 +60,7 @@ const RECOVERY: Record<FreighterErrorCode, FreighterRecovery> = {
     actionLabel: 'Retry',
     tone: 'warning',
   },
-  invalid_response: {
+  INVALID_RESPONSE: {
     title: 'Unexpected wallet response',
     description:
       'Freighter answered without a usable account. Select an account in the extension and retry.',
@@ -68,7 +68,7 @@ const RECOVERY: Record<FreighterErrorCode, FreighterRecovery> = {
     actionLabel: 'Retry connection',
     tone: 'danger',
   },
-  unknown: {
+  UNKNOWN: {
     title: 'Wallet connection failed',
     description: 'Something went wrong while talking to Freighter. Retry the connection.',
     action: 'retry',
@@ -86,7 +86,7 @@ export function getFreighterRecovery(
   code: FreighterErrorCode | null | undefined,
   retryCount = 0,
 ): FreighterRecovery {
-  const recovery = RECOVERY[code ?? 'unknown'] ?? RECOVERY.unknown;
+  const recovery = RECOVERY[code ?? 'UNKNOWN'] ?? RECOVERY.UNKNOWN;
   const retryable = recovery.action === 'retry' || recovery.action === 'unlock_and_retry';
   if (retryable && retryCount >= FREIGHTER_MAX_RETRIES) {
     return {

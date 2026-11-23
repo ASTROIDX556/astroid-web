@@ -11,13 +11,13 @@ import {
 } from '../freighterErrorRecovery';
 
 const ICONS: Record<FreighterErrorCode, typeof AlertTriangle> = {
-  not_installed: WifiOff,
-  user_rejected: AlertTriangle,
-  timeout: RefreshCw,
-  locked: Lock,
-  network_mismatch: AlertTriangle,
-  invalid_response: AlertTriangle,
-  unknown: AlertTriangle,
+  NOT_INSTALLED: WifiOff,
+  USER_DECLINED: AlertTriangle,
+  TIMEOUT: RefreshCw,
+  LOCKED: Lock,
+  NETWORK_MISMATCH: AlertTriangle,
+  INVALID_RESPONSE: AlertTriangle,
+  UNKNOWN: AlertTriangle,
 };
 
 export interface FreighterErrorBannerProps {
@@ -43,7 +43,7 @@ export function FreighterErrorBanner({ className, onRecovered }: FreighterErrorB
   const clearError = useFreighterStore((s) => s.clearError);
 
   const visible = Boolean(error);
-  const code: FreighterErrorCode = errorCode ?? 'unknown';
+  const code: FreighterErrorCode = errorCode ?? 'UNKNOWN';
   const recovery = getFreighterRecovery(code, retryCount);
   const Icon = ICONS[code];
   const retrying = status === 'connecting';
