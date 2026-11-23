@@ -16,6 +16,7 @@ export {
   classifyFreighterError,
   FreighterError,
   FREIGHTER_ERROR_TITLES,
+  selectFreighterIsConnected,
 } from './freighter-store';
 export { useWalletStore } from '@/lib/useWalletStore';
 export type {

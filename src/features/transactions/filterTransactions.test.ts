@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Transaction } from '@/types/domain';
-import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
+import {
+  filterTransactions,
+  parseTransactionDateBound,
+  type TransactionFilterValues,
+} from './filterTransactions';
 
 const records: Transaction[] = [
   {
@@ -407,4 +411,249 @@ test('filtering does not mutate the input collection or its records', () => {
   });
 
   assert.deepEqual(edgeCatalog, snapshot);
+});
+
+/* -------------------------------------------------------------------------- */
+/* Date range bounds and asset type criteria (issue #514)                     */
+/* -------------------------------------------------------------------------- */
+
+/** A record whose timestamp cannot be placed on the timeline. */
+const unparseableRecord: Transaction = {
+  ...edgeRecords[0]!,
+  id: 'txn-unparseable',
+  createdAt: 'not-a-timestamp',
+};
+
+test('startDate and endDate bound the range inclusively in UTC', () => {
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: '2026-07-10',
+        endDate: '2026-07-10',
+      }),
+    ),
+    ['txn-alpha', 'txn-gamma'],
+  );
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+      }),
+    ),
+    ['txn-alpha', 'txn-beta', 'txn-gamma'],
+  );
+});
+
+test('startDate and endDate anchor day-only values to UTC, not the local zone', () => {
+  // `txn-gamma` is the last millisecond of 2026-07-10 UTC and `txn-delta` is the
+  // first millisecond of 2026-06-30 UTC, so both must sit on their own day for
+  // every viewer regardless of the machine's time zone.
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: '2026-07-10',
+        endDate: '2026-07-10',
+      }),
+    ),
+    ['txn-alpha', 'txn-gamma'],
+  );
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: '2026-06-30',
+        endDate: '2026-06-30',
+      }),
+    ),
+    ['txn-delta'],
+  );
+  assert.equal(parseTransactionDateBound('2026-07-10', 'start'), Date.parse('2026-07-10T00:00:00.000Z'));
+  assert.equal(parseTransactionDateBound('2026-07-10', 'end'), Date.parse('2026-07-10T23:59:59.999Z'));
+});
+
+test('full ISO timestamps are accepted as date range bounds', () => {
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: '2026-07-10T12:00:00.000Z',
+        endDate: '2026-07-10T12:00:00.000Z',
+      }),
+    ),
+    ['txn-alpha'],
+  );
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: '2026-07-10T12:00:00.001Z',
+      }),
+    ),
+    ['txn-beta', 'txn-gamma', 'txn-epsilon'],
+  );
+});
+
+test('startDate and endDate take precedence over the legacy dateFrom and dateTo', () => {
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        dateFrom: '2000-01-01',
+        dateTo: '2000-01-02',
+        startDate: '2026-08-01',
+        endDate: '2026-08-01',
+      }),
+    ),
+    ['txn-epsilon'],
+  );
+  // An empty new value falls back to the legacy field instead of clearing it.
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        dateFrom: '2026-07-10',
+        dateTo: '2026-07-10',
+        startDate: '',
+        endDate: '  ',
+      }),
+    ),
+    ['txn-alpha', 'txn-gamma'],
+  );
+});
+
+test('assetType filters XLM, USDC, and custom Stellar assets', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: 'XLM' })),
+    ['txn-beta', 'txn-epsilon'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: 'USDC' })),
+    ['txn-alpha', 'txn-gamma'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: 'AQUA' })),
+    ['txn-delta'],
+  );
+  assert.deepEqual(
+    filterTransactions(edgeCatalog, { ...noFilters, assetType: 'BTC' }),
+    [],
+  );
+});
+
+test('assetType "all" or an empty value means no asset constraint', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: 'all' })),
+    ids(edgeCatalog),
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: '   ' })),
+    ids(edgeCatalog),
+  );
+  // A non-empty assetType wins over the legacy asset field.
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, asset: 'USDC', assetType: 'XLM' })),
+    ['txn-beta', 'txn-epsilon'],
+  );
+  // `all` on the new field is an explicit "no constraint" even when the legacy
+  // field still carries a stale value.
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, asset: 'USDC', assetType: 'all' })),
+    ids(edgeCatalog),
+  );
+});
+
+test('asset type matching ignores surrounding whitespace', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assetType: '  XLM  ' })),
+    ['txn-beta', 'txn-epsilon'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, asset: '  USDC  ' })),
+    ['txn-alpha', 'txn-gamma'],
+  );
+});
+
+test('malformed date range values are ignored instead of hiding transactions', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, startDate: 'not-a-date' })),
+    ids(edgeCatalog),
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, endDate: '2026-13-45' })),
+    ids(edgeCatalog),
+  );
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: 'nope',
+        endDate: 'also-nope',
+      }),
+    ),
+    ids(edgeCatalog),
+  );
+});
+
+test('a reversed startDate/endDate range matches nothing', () => {
+  assert.deepEqual(
+    filterTransactions(edgeCatalog, {
+      ...noFilters,
+      startDate: '2026-08-01',
+      endDate: '2026-07-01',
+    }),
+    [],
+  );
+});
+
+test('unparseable timestamps are excluded only when a date bound is active', () => {
+  const catalog = [...edgeCatalog, unparseableRecord];
+
+  assert.deepEqual(
+    ids(
+      filterTransactions(catalog, {
+        ...noFilters,
+        startDate: '2026-06-01',
+        endDate: '2026-09-01',
+      }),
+    ),
+    ['txn-alpha', 'txn-beta', 'txn-gamma', 'txn-delta', 'txn-epsilon'],
+  );
+  // Without a bound the record is still searchable.
+  assert.deepEqual(
+    ids(filterTransactions(catalog, { ...noFilters, query: 'txn-unparseable' })),
+    ['txn-unparseable'],
+  );
+});
+
+test('date range and asset type compose with the other filters', () => {
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+        assetType: 'USDC',
+        status: 'completed',
+        agentId: 'agent-atlas',
+        query: 'stellar',
+      }),
+    ),
+    ['txn-alpha'],
+  );
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+        assetType: 'XLM',
+      }),
+    ),
+    // `txn-epsilon` is XLM but falls in August, outside the July range.
+    ['txn-beta'],
+  );
 });

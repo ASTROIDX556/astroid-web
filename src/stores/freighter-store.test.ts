@@ -7,7 +7,9 @@ import {
   FreighterError,
   mergePersistedFreighterState,
   partializeFreighterState,
+  selectFreighterIsConnected,
   __setFreighterLoaderForTests,
+  __setFreighterTimeoutForTests,
   STELLAR_NETWORKS,
   useFreighterStore,
 } from './freighter-store';
@@ -68,6 +70,8 @@ function markConnected(): void {
 }
 
 test.afterEach(() => {
+  useFreighterStore.getState().stopWalletWatch();
+  __setFreighterTimeoutForTests(null);
   __setFreighterLoaderForTests(null);
 });
 
@@ -377,6 +381,224 @@ test('clearError resets the message and the category together', () => {
 
   assert.equal(useFreighterStore.getState().error, null);
   assert.equal(useFreighterStore.getState().errorCode, null);
+});
+
+/* -------------------------------------------------------------------------- */
+/* Error recovery hardening (issue #555)                                      */
+/* -------------------------------------------------------------------------- */
+
+/** Flushes the microtask/`setTimeout(0)` work inside `startWalletWatch`. */
+const flushWalletWatch = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+/** Minimal stand-in for Freighter's `WatchWalletChanges` polling class. */
+class FakeWalletWatcher {
+  static instances: FakeWalletWatcher[] = [];
+
+  callback: ((params: WatchPayload) => void) | null = null;
+  stopped = false;
+
+  constructor(public readonly timeout?: number) {
+    FakeWalletWatcher.instances.push(this);
+  }
+
+  watch(callback: (params: WatchPayload) => void): { error?: unknown } {
+    this.callback = callback;
+    return {};
+  }
+
+  stop(): void {
+    this.stopped = true;
+  }
+
+  emit(params: WatchPayload): void {
+    this.callback?.(params);
+  }
+}
+
+interface WatchPayload {
+  address: string;
+  network: string;
+  networkPassphrase: string;
+  error?: unknown;
+}
+
+const watcherApi = (): FreighterApi => ({
+  ...healthyApi(),
+  WatchWalletChanges: FakeWalletWatcher as unknown as NonNullable<
+    FreighterApi['WatchWalletChanges']
+  >,
+});
+
+const otherPublicKey = `G${'B'.repeat(55)}`;
+
+test('classifyFreighterError separates transport failures from other categories', () => {
+  assert.equal(classifyFreighterError(new Error('Network Error')).code, 'NETWORK_ERROR');
+  assert.equal(classifyFreighterError(new Error('Failed to fetch')).code, 'NETWORK_ERROR');
+  assert.equal(classifyFreighterError('Load failed').code, 'NETWORK_ERROR');
+  assert.equal(classifyFreighterError(new TypeError('Connection refused')).code, 'NETWORK_ERROR');
+  // A missing module is still an installation problem, not a transport one.
+  assert.equal(
+    classifyFreighterError(new Error('Failed to fetch dynamically imported module')).code,
+    'NOT_INSTALLED',
+  );
+  // The network *mismatch* gate keeps its own category.
+  assert.equal(classifyFreighterError(new Error('Network mismatch')).code, 'NETWORK_MISMATCH');
+});
+
+test('selectFreighterIsConnected only reports a healthy session', () => {
+  assert.equal(
+    selectFreighterIsConnected({ status: 'connected', publicKey: validPublicKey }),
+    true,
+  );
+  for (const status of ['disconnected', 'connecting', 'locked'] as const) {
+    assert.equal(
+      selectFreighterIsConnected({ status, publicKey: validPublicKey }),
+      false,
+      `${status} must not report a usable wallet`,
+    );
+  }
+  assert.equal(selectFreighterIsConnected({ status: 'connected', publicKey: null }), false);
+  assert.equal(selectFreighterIsConnected({ status: 'connected', publicKey: 'bogus' }), false);
+});
+
+test('connect releases the spinner and reports TIMEOUT when the extension never answers', async () => {
+  __setFreighterTimeoutForTests(10);
+  resetStore(
+    healthyApi({
+      setAllowed: () => new Promise<{ isAllowed: boolean }>(() => {}),
+    }),
+  );
+
+  const result = await useFreighterStore.getState().connect();
+  const state = useFreighterStore.getState();
+
+  assert.equal(result, null);
+  assert.equal(state.status, 'disconnected', 'a timeout must not leave the spinner in `connecting`');
+  assert.equal(state.errorCode, 'TIMEOUT');
+  assert.equal(state.publicKey, null);
+  assert.match(state.error ?? '', /timed out/i);
+});
+
+test('connect classifies a transport failure as NETWORK_ERROR and keeps the install state', async () => {
+  resetStore(healthyApi({ setAllowed: async () => Promise.reject(new Error('Network Error')) }));
+  markConnected();
+
+  await useFreighterStore.getState().connect();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.errorCode, 'NETWORK_ERROR');
+  assert.equal(state.publicKey, null);
+  assert.equal(state.isInstalled, true, 'a transport failure must not imply the extension is missing');
+});
+
+test('hydrate re-reads the address so a rejected prompt is not mistaken for a locked wallet', async () => {
+  resetStore(healthyApi({ getAddress: async () => ({ address: '', error: userRejected }) }));
+  markConnected();
+
+  await useFreighterStore.getState().hydrate();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.errorCode, 'USER_DECLINED');
+  assert.equal(state.isInstalled, true);
+});
+
+test('hydrate keeps the last known install state on an ambiguous transport failure', async () => {
+  resetStore(healthyApi({ isConnected: async () => Promise.reject(new Error('Network Error')) }));
+  markConnected();
+
+  await useFreighterStore.getState().hydrate();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.errorCode, 'NETWORK_ERROR');
+  assert.equal(state.isInstalled, true);
+});
+
+test('disconnect clears signing, switching, and error state together', () => {
+  markConnected();
+  useFreighterStore.setState({
+    isSigning: true,
+    isSwitching: true,
+    error: 'stale failure',
+    errorCode: 'TIMEOUT',
+  });
+
+  useFreighterStore.getState().disconnect();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.isSigning, false);
+  assert.equal(state.isSwitching, false);
+  assert.equal(state.error, null);
+  assert.equal(state.errorCode, null);
+});
+
+test('wallet watch adopts an account switch from the extension', async () => {
+  FakeWalletWatcher.instances = [];
+  resetStore(watcherApi());
+
+  useFreighterStore.getState().startWalletWatch();
+  await flushWalletWatch();
+  const watcher = FakeWalletWatcher.instances.at(-1);
+  assert.ok(watcher, 'watch() should have been constructed');
+
+  watcher!.emit({
+    address: otherPublicKey,
+    network: 'TESTNET',
+    networkPassphrase: testnetPassphrase,
+  });
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, otherPublicKey);
+  assert.equal(state.isInstalled, true);
+  assert.equal(state.networkPassphrase, testnetPassphrase);
+});
+
+test('a wallet watch disconnection resets the session, signing flag, and error', async () => {
+  FakeWalletWatcher.instances = [];
+  resetStore(watcherApi());
+  markConnected();
+  useFreighterStore.setState({ isSigning: true, error: 'stale failure', errorCode: 'TIMEOUT' });
+
+  useFreighterStore.getState().startWalletWatch();
+  await flushWalletWatch();
+  const watcher = FakeWalletWatcher.instances.at(-1);
+  assert.ok(watcher);
+
+  watcher!.emit({
+    address: '',
+    network: '',
+    networkPassphrase: '',
+    error: new Error('Wallet is locked'),
+  });
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.publicKey, null);
+  assert.equal(state.network, null);
+  assert.equal(state.networkPassphrase, null);
+  assert.equal(state.isSigning, false);
+  assert.equal(state.error, null);
+  assert.equal(state.errorCode, null);
+});
+
+test('an invalid address event is treated as a disconnection', async () => {
+  FakeWalletWatcher.instances = [];
+  resetStore(watcherApi());
+  markConnected();
+
+  useFreighterStore.getState().startWalletWatch();
+  await flushWalletWatch();
+  const watcher = FakeWalletWatcher.instances.at(-1);
+  assert.ok(watcher);
+
+  watcher!.emit({ address: 'not-a-key', network: 'TESTNET', networkPassphrase: testnetPassphrase });
+
+  assert.equal(useFreighterStore.getState().status, 'disconnected');
+  assert.equal(useFreighterStore.getState().publicKey, null);
 });
 
 /* -------------------------------------------------------------------------- */
