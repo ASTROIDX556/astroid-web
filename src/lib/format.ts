@@ -29,6 +29,15 @@ export function formatCurrency(
   return `${prefix}${value}${suffix}`;
 }
 
+export function formatDashboardCurrency(
+  amount: number,
+  currency: 'USD' | 'USDC',
+  options: { compact?: boolean; decimals?: number } = {},
+): string {
+  const formatted = formatCurrency(amount, 'USD', options);
+  return currency === 'USDC' ? `${formatted} USDC` : formatted;
+}
+
 /** Compact integer/decimal formatting: 1,284 / 12.9K / 4.2M. */
 export function formatNumber(value: number, compact = false): string {
   return new Intl.NumberFormat('en-US', {

@@ -13,7 +13,7 @@ import {
   providerModelOptions,
   agentProviderTypes,
   type AgentProviderType,
-} from '@/features/agents/providerConfigSchema';
+} from '@/lib/validations/agent';
 import {
   SYSTEM_PROMPT_TEMPLATES,
   getSystemPromptTemplateById,

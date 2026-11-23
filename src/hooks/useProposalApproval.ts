@@ -17,8 +17,9 @@ export interface UseProposalApprovalResult {
   requiredApprovals: number;
   isQuorumMet: boolean;
   remaining: number;
-  approve: () => Promise<void>;
-  reject: () => Promise<void>;
+  approve: () => Promise<boolean>;
+  reject: () => Promise<boolean>;
+  requestChanges: () => Promise<boolean>;
 }
 
 /**
@@ -29,21 +30,38 @@ export interface UseProposalApprovalResult {
  */
 export function useProposalApproval(proposal: Proposal): UseProposalApprovalResult {
   const entry = useProposalApprovalStore((state) => state.getEntry(proposal.id));
-  const beginDecision = useProposalApprovalStore((state) => state.beginDecision);
   const resolveDecision = useProposalApprovalStore((state) => state.resolveDecision);
   const failDecision = useProposalApprovalStore((state) => state.failDecision);
 
   const quorum = computeQuorumStatus(proposal, entry.decision);
 
   const decide = useCallback(
-    async (decision: LocalApprovalDecision) => {
-      if (entry.isProcessing) return;
-      if (proposal.status !== 'pending') {
-        toast.error('This proposal is no longer pending.');
-        return;
+    async (decision: LocalApprovalDecision): Promise<boolean> => {
+      // Read the live store instead of the render-time snapshot: two clicks in
+      // the same tick would both see the previous render's `isProcessing`.
+      const store = useProposalApprovalStore.getState();
+      const current = store.getEntry(proposal.id);
+
+      if (current.isProcessing) {
+        toast.error('A decision is already being recorded for this proposal.');
+        return false;
       }
 
-      beginDecision(proposal.id);
+      if (current.decision !== null) {
+        toast.error('You have already recorded a decision on this proposal.');
+        return false;
+      }
+
+      if (proposal.status !== 'pending') {
+        toast.error('This proposal is no longer pending.');
+        return false;
+      }
+
+      // Atomic claim: fails if another handler won the race in this tick.
+      if (!store.tryBeginDecision(proposal.id)) {
+        toast.error('A decision is already being recorded for this proposal.');
+        return false;
+      }
 
       try {
         // Placeholder for the signing/submission round-trip — network or
@@ -62,21 +80,28 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
                 : `${next.remaining} more approval${next.remaining === 1 ? '' : 's'} needed.`,
             },
           );
-        } else {
+        } else if (decision === 'rejected') {
           toast.success('Proposal rejected');
+        } else {
+          toast.success('Changes requested', {
+            description: 'The proposal was returned for revision.',
+          });
         }
+        return true;
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Failed to record decision.';
         failDecision(proposal.id, message);
         toast.error(message);
+        return false;
       }
     },
-    [entry.isProcessing, proposal, beginDecision, resolveDecision, failDecision],
+    [proposal, resolveDecision, failDecision],
   );
 
   const approve = useCallback(() => decide('approved'), [decide]);
   const reject = useCallback(() => decide('rejected'), [decide]);
+  const requestChanges = useCallback(() => decide('changes_requested'), [decide]);
 
   return {
     decision: entry.decision,
@@ -88,6 +113,7 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
     remaining: quorum.remaining,
     approve,
     reject,
+    requestChanges,
   };
 }
 

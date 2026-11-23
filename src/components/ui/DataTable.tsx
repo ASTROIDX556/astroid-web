@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -28,6 +28,7 @@ export interface DataTableProps<TData> {
   emptyState?: React.ReactNode;
   caption?: string;
   onRowClick?: (row: TData) => void;
+  onFilteredRowsChange?: (rows: TData[]) => void;
 }
 
 export function DataTable<TData>({
@@ -41,6 +42,7 @@ export function DataTable<TData>({
   emptyState,
   caption,
   onRowClick,
+  onFilteredRowsChange,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -77,6 +79,12 @@ export function DataTable<TData>({
 
   const pageCount = table.getPageCount();
   const canPaginate = pageCount > 1;
+  const currentGlobalFilter = table.getState().globalFilter;
+  const currentColumnFilters = table.getState().columnFilters;
+
+  useEffect(() => {
+    onFilteredRowsChange?.(table.getFilteredRowModel().rows.map((row) => row.original));
+  }, [currentColumnFilters, currentGlobalFilter, data, onFilteredRowsChange, table]);
 
   const summary = useMemo(() => {
     const start = data.length === 0 ? 0 : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1;

@@ -10,6 +10,9 @@ export const queryKeys = {
   wallets: ['wallets'] as const,
   wallet: (id: string) => ['wallets', id] as const,
   walletBalances: (id: string) => ['wallets', id, 'balances'] as const,
+  walletTrustlines: (id: string) => ['wallets', id, 'trustlines'] as const,
+  /** Live Stellar account snapshot (holdings + activity) keyed by public key. */
+  walletAccount: (publicKey: string) => ['wallet', publicKey] as const,
   agents: ['agents'] as const,
   agent: (id: string) => ['agents', id] as const,
   policies: ['policies'] as const,
@@ -22,7 +25,11 @@ export const queryKeys = {
   proposal: (id: string) => ['proposals', id] as const,
   memory: ['memory'] as const,
   memoryRecord: (id: string) => ['memory', id] as const,
+  auditEvents: ['audit', 'events'] as const,
   rates: ['rates'] as const,
+  /** Live Stellar (Horizon) balance for a connected Freighter account. */
+  stellarBalance: (publicKey: string, networkUrl: string) =>
+    ['stellar', 'wallet', networkUrl, publicKey, 'balance'] as const,
   notifications: ['notifications'] as const,
   apiKeys: ['developer', 'keys'] as const,
   webhooks: ['developer', 'webhooks'] as const,

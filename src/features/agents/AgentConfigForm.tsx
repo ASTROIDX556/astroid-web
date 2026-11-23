@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Bot, Gauge, Link2, Sparkles } from 'lucide-react';
+import { Activity, Bot, CalendarDays, Coins, Cpu, Gauge, Link2, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,9 +14,9 @@ import {
   AGENT_PROVIDER_IDS,
   PROVIDER_LABELS,
   PROVIDER_MODELS,
-  agentConfigSchema,
+  createAgentSchema,
   requiresEndpoint,
-  type AgentConfigFormValues,
+  type CreateAgentInput,
 } from './schema';
 
 /**
@@ -33,8 +33,8 @@ export function AgentConfigForm() {
     trigger,
     watch,
     formState: { errors, isSubmitting, isSubmitSuccessful },
-  } = useForm<AgentConfigFormValues>({
-    resolver: zodResolver(agentConfigSchema),
+  } = useForm<CreateAgentInput>({
+    resolver: zodResolver(createAgentSchema),
     mode: 'onBlur',
     defaultValues: {
       name: '',
@@ -45,6 +45,12 @@ export function AgentConfigForm() {
       mode: 'assisted',
       temperature: 0.2,
       monthlyBudget: 500,
+      singleTransactionCap: 100,
+      timeoutSeconds: 60,
+      dailyBudget: 100,
+      maxSpendPerTransaction: 25,
+      rateLimitPerMinute: 60,
+      tokenThreshold: 4_096,
     },
   });
 
@@ -77,7 +83,7 @@ export function AgentConfigForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
-  const onSubmit = (values: AgentConfigFormValues) => {
+  const onSubmit = (values: CreateAgentInput) => {
     // Mock-mode deployment: the API contract is defined in astroid-api
     // (POST /agents); wire the payload there once the backend ships.
     toast.success(`${values.name} configured`, {
@@ -114,25 +120,34 @@ export function AgentConfigForm() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <FormField label="Agent name" required error={errors.name?.message}>
+          <FormField
+            label="Agent name"
+            htmlFor="agent-config-name"
+            required
+            error={errors.name?.message}
+          >
             <Input
-              id="agent-name"
+              id="agent-config-name"
               placeholder="e.g. Treasury Rebalancer"
               invalid={Boolean(errors.name)}
-              aria-describedby={errors.name ? 'agent-name-error' : undefined}
+              aria-describedby={errors.name ? 'agent-config-name-error' : undefined}
               {...register('name')}
             />
           </FormField>
 
           <FormField
             label="Provider"
+            htmlFor="agent-config-provider"
             required
             error={errors.provider?.message}
             hint="Model options update to match the selected provider."
           >
             <Select
-              id="agent-provider"
+              id="agent-config-provider"
               invalid={Boolean(errors.provider)}
+              aria-describedby={
+                errors.provider ? 'agent-config-provider-error' : undefined
+              }
               {...register('provider')}
             >
               {AGENT_PROVIDER_IDS.map((id) => (
@@ -146,6 +161,7 @@ export function AgentConfigForm() {
 
         <FormField
           label={isCustomModel ? 'Custom model identifier' : 'Model'}
+          htmlFor="agent-config-model"
           required
           error={errors.model?.message}
           hint={
@@ -156,15 +172,17 @@ export function AgentConfigForm() {
         >
           {isCustomModel ? (
             <Input
-              id="agent-model"
+              id="agent-config-model"
               placeholder="e.g. my-org/finance-agent-v1"
               invalid={Boolean(errors.model)}
+              aria-describedby={errors.model ? 'agent-config-model-error' : undefined}
               {...register('model')}
             />
           ) : (
             <Select
-              id="agent-model"
+              id="agent-config-model"
               invalid={Boolean(errors.model)}
+              aria-describedby={errors.model ? 'agent-config-model-error' : undefined}
               {...register('model')}
             >
               {modelOptions.map((m) => (
@@ -179,6 +197,7 @@ export function AgentConfigForm() {
         {needsEndpoint && (
           <FormField
             label="API endpoint URL"
+            htmlFor="agent-config-endpoint"
             required
             error={errors.endpointUrl?.message}
             hint={
@@ -188,20 +207,33 @@ export function AgentConfigForm() {
             }
           >
             <Input
-              id="agent-endpoint"
+              id="agent-config-endpoint"
               type="url"
               inputMode="url"
               placeholder="https://inference.example.com/v1"
               leftIcon={<Link2 className="h-4 w-4" aria-hidden />}
               invalid={Boolean(errors.endpointUrl)}
+              aria-describedby={
+                errors.endpointUrl ? 'agent-config-endpoint-error' : undefined
+              }
               {...register('endpointUrl')}
             />
           </FormField>
         )}
 
         <div className="grid gap-5 sm:grid-cols-3">
-          <FormField label="Operating mode" required error={errors.mode?.message}>
-            <Select id="agent-mode" invalid={Boolean(errors.mode)} {...register('mode')}>
+          <FormField
+            label="Operating mode"
+            htmlFor="agent-config-mode"
+            required
+            error={errors.mode?.message}
+          >
+            <Select
+              id="agent-config-mode"
+              invalid={Boolean(errors.mode)}
+              aria-describedby={errors.mode ? 'agent-config-mode-error' : undefined}
+              {...register('mode')}
+            >
               <option value="assisted">Assisted</option>
               <option value="autonomous">Autonomous</option>
             </Select>
@@ -209,47 +241,166 @@ export function AgentConfigForm() {
 
           <FormField
             label="Temperature"
+            htmlFor="agent-config-temperature"
             required
             error={errors.temperature?.message}
             hint="0 – 2 · sampling creativity"
           >
             <Input
-              id="agent-temperature"
+              id="agent-config-temperature"
               type="number"
               step="0.1"
               min={0}
               max={2}
               invalid={Boolean(errors.temperature)}
+              aria-describedby={
+                errors.temperature ? 'agent-config-temperature-error' : undefined
+              }
               {...register('temperature', { valueAsNumber: true })}
             />
           </FormField>
 
           <FormField
             label="Monthly budget (USDC)"
+            htmlFor="agent-config-budget"
             required
             error={errors.monthlyBudget?.message}
           >
             <Input
-              id="agent-budget"
+              id="agent-config-budget"
               type="number"
               min={1}
               step="1"
               invalid={Boolean(errors.monthlyBudget)}
+              aria-describedby={
+                errors.monthlyBudget ? 'agent-config-budget-error' : undefined
+              }
               leftIcon={<Gauge className="h-4 w-4" aria-hidden />}
               {...register('monthlyBudget', { valueAsNumber: true })}
             />
           </FormField>
+
+          <FormField
+            label="Transaction limit (USDC)"
+            required
+            error={errors.singleTransactionCap?.message}
+          >
+            <Input
+              id="agent-transaction-limit"
+              type="number"
+              min={1}
+              step="1"
+              invalid={Boolean(errors.singleTransactionCap)}
+              {...register('singleTransactionCap', { valueAsNumber: true })}
+            />
+          </FormField>
+
+          <FormField
+            label="Request timeout (seconds)"
+            required
+            error={errors.timeoutSeconds?.message}
+          >
+            <Input
+              id="agent-timeout"
+              type="number"
+              min={1}
+              max={600}
+              step="1"
+              invalid={Boolean(errors.timeoutSeconds)}
+              {...register('timeoutSeconds', { valueAsNumber: true })}
+            />
+          </FormField>
         </div>
+
+        <fieldset className="space-y-4 rounded-card border border-border bg-surface-secondary p-4">
+          <legend className="px-1 text-2xs font-semibold uppercase tracking-wide text-foreground-secondary">
+            Spend controls
+          </legend>
+
+          <div className="grid gap-5 sm:grid-cols-3">
+            <FormField
+              label="Daily budget (USDC)"
+              required
+              error={errors.dailyBudget?.message}
+              hint="Resets at 00:00 UTC"
+            >
+              <Input
+                id="agent-daily-budget"
+                type="number"
+                min={1}
+                step="1"
+                invalid={Boolean(errors.dailyBudget)}
+                leftIcon={<CalendarDays className="h-4 w-4" aria-hidden />}
+                {...register('dailyBudget', { valueAsNumber: true })}
+              />
+            </FormField>
+
+            <FormField
+              label="Max spend per transaction (USDC)"
+              required
+              error={errors.maxSpendPerTransaction?.message}
+              hint="Hard cap on any single payment"
+            >
+              <Input
+                id="agent-max-spend"
+                type="number"
+                min={1}
+                step="1"
+                invalid={Boolean(errors.maxSpendPerTransaction)}
+                leftIcon={<Coins className="h-4 w-4" aria-hidden />}
+                {...register('maxSpendPerTransaction', { valueAsNumber: true })}
+              />
+            </FormField>
+
+            <FormField
+              label="Requests per minute"
+              required
+              error={errors.rateLimitPerMinute?.message}
+              hint="Inference rate limit"
+            >
+              <Input
+                id="agent-rate-limit"
+                type="number"
+                min={1}
+                step="1"
+                invalid={Boolean(errors.rateLimitPerMinute)}
+                leftIcon={<Activity className="h-4 w-4" aria-hidden />}
+                {...register('rateLimitPerMinute', { valueAsNumber: true })}
+              />
+            </FormField>
+          </div>
+
+          <FormField
+            label="Token threshold"
+            required
+            error={errors.tokenThreshold?.message}
+            hint="Pause the agent for review once a run exceeds this many tokens."
+          >
+            <Input
+              id="agent-token-threshold"
+              type="number"
+              min={1000}
+              step="256"
+              invalid={Boolean(errors.tokenThreshold)}
+              leftIcon={<Cpu className="h-4 w-4" aria-hidden />}
+              {...register('tokenThreshold', { valueAsNumber: true })}
+            />
+          </FormField>
+        </fieldset>
 
         <FormField
           label="Description"
+          htmlFor="agent-config-description"
           error={errors.description?.message}
           hint="Optional · shown on the agent detail page."
         >
           <Input
-            id="agent-description"
+            id="agent-config-description"
             placeholder="What does this agent do?"
             invalid={Boolean(errors.description)}
+            aria-describedby={
+              errors.description ? 'agent-config-description-error' : undefined
+            }
             {...register('description')}
           />
         </FormField>

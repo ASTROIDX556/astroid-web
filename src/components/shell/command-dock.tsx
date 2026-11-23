@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Sparkles } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Search, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { navSections } from '@/lib/nav';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
+import { usePreferencesStore } from '@/stores/preferences-store';
+import { useHydrated } from '@/hooks/use-hydrated';
 import { cn } from '@/lib/cn';
 
 /**
@@ -23,8 +25,13 @@ const DOCK_FOCUS =
 
 export function CommandDock() {
   const pathname = usePathname();
+  const commandOpen = useCommandStore((s) => s.open);
   const openCommand = useCommandStore((s) => s.setOpen);
   const openAssistant = useAssistantStore((s) => s.setOpen);
+  const hydrated = useHydrated();
+  const sidebarCollapsed = usePreferencesStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = usePreferencesStore((s) => s.setSidebarCollapsed);
+  const compactNavigation = hydrated && sidebarCollapsed;
 
   return (
     <nav
@@ -38,6 +45,19 @@ export function CommandDock() {
           label="Search"
           hint="⌘K"
           icon={<Search className="h-[18px] w-[18px]" aria-hidden />}
+          focusRing={DOCK_FOCUS}
+          expanded={commandOpen}
+          controls="command-palette"
+        />
+
+        <DockButton
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          label={compactNavigation ? 'Expand navigation' : 'Collapse navigation'}
+          icon={
+            compactNavigation
+              ? <PanelLeftOpen className="h-[18px] w-[18px]" aria-hidden />
+              : <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden />
+          }
           focusRing={DOCK_FOCUS}
         />
 
@@ -79,7 +99,7 @@ export function CommandDock() {
                       )}
                       aria-hidden
                     />
-                    {active && (
+                    {active && !compactNavigation && (
                       <motion.span
                         initial={{ opacity: 0, width: 0 }}
                         animate={{ opacity: 1, width: 'auto' }}
@@ -126,12 +146,18 @@ function DockButton({
   hint,
   icon,
   focusRing,
+  expanded,
+  controls,
 }: {
   onClick: () => void;
   label: string;
   hint?: string;
   icon: React.ReactNode;
   focusRing?: string;
+  /** When the button opens a overlay, its expanded state for assistive tech. */
+  expanded?: boolean;
+  /** The id of the element the button controls, e.g. `command-palette`. */
+  controls?: string;
 }) {
   return (
     <button
@@ -139,6 +165,9 @@ function DockButton({
       onClick={onClick}
       aria-label={label}
       title={hint ? `${label} (${hint})` : label}
+      aria-haspopup={controls ? 'dialog' : undefined}
+      aria-expanded={expanded}
+      aria-controls={controls}
       className={cn(
         'grid h-11 w-11 shrink-0 place-items-center rounded-full text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground',
         focusRing,

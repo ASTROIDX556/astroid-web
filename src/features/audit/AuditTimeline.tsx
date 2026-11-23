@@ -12,8 +12,6 @@ import {
 } from '@tanstack/react-table';
 import {
   Search,
-  FileJson,
-  FileSpreadsheet,
   Code,
   CheckCircle2,
   AlertTriangle,
@@ -28,13 +26,15 @@ import {
   ChevronRight,
   Calendar,
   Filter,
+  RefreshCw,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { useAuditEvents } from '@/hooks/use-queries';
 import { formatCurrency, formatRelativeTime, formatDateTime } from '@/lib/format';
-import { MOCK_AUDIT_EVENTS } from './mock-data';
+import { AuditExportMenu } from './AuditExportMenu';
 import type { AuditEvent, AuditEventType, AuditLogLevel, AuditTimeRange } from './types';
 
 const LEVEL_ICONS: Record<AuditLogLevel, React.ReactNode> = {
@@ -83,7 +83,10 @@ function getTimeRangeCutoff(timeRange: AuditTimeRange): number | null {
 }
 
 export function AuditTimeline() {
-  const [events] = useState<AuditEvent[]>(MOCK_AUDIT_EVENTS);
+  // Audit events resolve through the mock provider / live API via TanStack
+  // Query, so the same latency, caching, and error semantics apply here.
+  const auditEvents = useAuditEvents();
+  const events = useMemo<AuditEvent[]>(() => auditEvents.data ?? [], [auditEvents.data]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEventType, setSelectedEventType] = useState<AuditEventType | 'all'>('all');
   const [selectedLogLevel, setSelectedLogLevel] = useState<AuditLogLevel | 'all'>('all');
@@ -132,44 +135,6 @@ export function AuditTimeline() {
       return true;
     });
   }, [events, searchQuery, selectedEventType, selectedLogLevel, selectedTimeRange, selectedActorId]);
-
-  const handleExportJSON = useCallback(() => {
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(filteredEvents, null, 2)
-    )}`;
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', `astroid-audit-timeline-${Date.now()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  }, [filteredEvents]);
-
-  const handleExportCSV = useCallback(() => {
-    const headers = ['ID', 'Timestamp', 'Level', 'Event Type', 'Actor', 'Summary', 'Details', 'Project', 'Amount', 'Asset'];
-    const rows = filteredEvents.map((e) => [
-      e.id,
-      e.timestamp,
-      e.level,
-      e.eventType,
-      `"${e.actorName} (${e.actorId})"`,
-      `"${e.summary.replace(/"/g, '""')}"`,
-      `"${e.details.replace(/"/g, '""')}"`,
-      e.project || '',
-      e.amount || '',
-      e.asset || '',
-    ]);
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', url);
-    downloadAnchor.setAttribute('download', `astroid-audit-timeline-${Date.now()}.csv`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    URL.revokeObjectURL(url);
-  }, [filteredEvents]);
 
   const handleClearFilters = useCallback(() => {
     setSearchQuery('');
@@ -322,6 +287,42 @@ export function AuditTimeline() {
   const pageCount = table.getPageCount();
   const canPaginate = pageCount > 1;
 
+  if (auditEvents.isPending) {
+    return (
+      <div
+        className="space-y-6"
+        role="region"
+        aria-label="Agent Activity Audit Log Timeline"
+        aria-busy="true"
+      >
+        <div className="skeleton h-9 w-72 rounded-button" />
+        <div className="skeleton h-[420px] w-full rounded-card" />
+        <span className="sr-only">Loading audit log records…</span>
+      </div>
+    );
+  }
+
+  if (auditEvents.isError && events.length === 0) {
+    return (
+      <div className="space-y-6" role="region" aria-label="Agent Activity Audit Log Timeline">
+        <Card className="flex flex-col items-start gap-3 p-6">
+          <p className="text-sm font-medium text-foreground">Unable to load the audit log</p>
+          <p className="text-xs text-foreground-secondary">
+            The request to the audit service failed. Retry to fetch the latest records.
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void auditEvents.refetch()}
+            leftIcon={<RefreshCw className="h-3.5 w-3.5" aria-hidden />}
+          >
+            Retry
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" role="region" aria-label="Agent Activity Audit Log Timeline">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -334,24 +335,7 @@ export function AuditTimeline() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportJSON}
-            aria-label="Export audit log as JSON"
-            leftIcon={<FileJson className="h-3.5 w-3.5 text-gold" aria-hidden />}
-          >
-            Export JSON
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            aria-label="Export audit log as CSV"
-            leftIcon={<FileSpreadsheet className="h-3.5 w-3.5 text-success" aria-hidden />}
-          >
-            Export CSV
-          </Button>
+          <AuditExportMenu events={filteredEvents} />
         </div>
       </div>
 

@@ -8,15 +8,20 @@ import { KeyValue, SectionLabel } from '@/components/dashboard/stat-card';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useWallet } from '@/hooks/use-queries';
+import { useWallet, useWalletTrustlines } from '@/hooks/use-queries';
 import { walletStatus } from '@/lib/status';
 import { formatCurrency, formatDateTime, truncateHash } from '@/lib/format';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
 import { XdrInspector } from '@/features/wallet/components/XdrInspector';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { WalletBalanceCards } from '@/features/wallet/components/WalletBalanceCards';
+import { AssetBreakdownWidget } from '@/features/wallet/components/AssetBreakdownWidget';
+import { WalletTransactionHistory } from '@/features/wallet/components/WalletTransactionHistory';
+import { StellarAccountSyncPanel } from '@/features/wallet/components/StellarAccountSyncPanel';
 
 export default function WalletDetailPage({ params }: { params: { id: string } }) {
   const wallet = useWallet(params.id);
+  const trustlines = useWalletTrustlines(params.id);
 
   return (
     <PageTransition className="space-y-8">
@@ -92,6 +97,11 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
                   )}
                 </dl>
               </Card>
+
+              <div className="space-y-4">
+                <SectionLabel>Live account</SectionLabel>
+                <StellarAccountSyncPanel publicKey={data.stellarAddress} />
+              </div>
             </div>
           );
         }}
@@ -99,12 +109,31 @@ export default function WalletDetailPage({ params }: { params: { id: string } })
 
       <div className="space-y-4">
         <SectionLabel>Balances</SectionLabel>
-        <WalletBalanceCards walletId={params.id} />
+        <ErrorBoundary section="Wallet balances">
+          <WalletBalanceCards walletId={params.id} />
+        </ErrorBoundary>
+      </div>
+
+      <div className="space-y-4">
+        <SectionLabel>Transaction history</SectionLabel>
+        <WalletTransactionHistory walletId={params.id} />
+      </div>
+
+      <div className="space-y-4">
+        <SectionLabel>Multi-currency breakdown</SectionLabel>
+        <QueryBoundary
+          query={trustlines}
+          loading={<div className="skeleton h-96 w-full rounded-card" />}
+        >
+          {(data) => <AssetBreakdownWidget balances={data} />}
+        </QueryBoundary>
       </div>
 
       <div className="space-y-4">
         <SectionLabel>Transaction inspector</SectionLabel>
-        <XdrInspector />
+        <ErrorBoundary section="Wallet transaction inspector">
+          <XdrInspector />
+        </ErrorBoundary>
       </div>
     </PageTransition>
   );

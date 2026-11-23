@@ -31,7 +31,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         },
       }}
       className={cn(
-        'rounded-card border border-border bg-surface',
+        'rounded-card border border-border bg-surface-primary',
         elevationClass[elevation],
         interactive &&
           'transition-all duration-base ease-astroid hover:-translate-y-0.5 hover:shadow-soft-2',
@@ -72,7 +72,7 @@ export const CardDescription = forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn('text-xs text-foreground-secondary leading-relaxed', className)}
+    className={cn('text-xs text-foreground-muted leading-relaxed', className)}
     {...props}
   />
 ));

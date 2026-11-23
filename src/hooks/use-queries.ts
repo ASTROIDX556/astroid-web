@@ -1,8 +1,14 @@
 'use client';
 
-import { useQuery, useMutation, type UseQueryResult } from '@tanstack/react-query';
+import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  POLL_INTERVALS,
+  QUERY_CACHE,
+  createBackoffRefetchInterval,
+} from '@/lib/query-config';
 import { queryKeys } from '@/services/query-keys';
 import { resources } from '@/services/resources';
+import type { HorizonBalance } from '@/features/wallet/types';
 import type {
   ActivityPoint,
   Agent,
@@ -24,6 +30,7 @@ import type {
   Wallet,
   Webhook,
 } from '@/types/domain';
+import type { AuditEvent } from '@/types/audit';
 
 /**
  * Typed TanStack Query hooks over the resource layer.
@@ -34,20 +41,32 @@ import type {
 
 // -- session / org ----------------------------------------------------------
 export const useCurrentUser = (): UseQueryResult<User> =>
-  useQuery({ queryKey: queryKeys.session, queryFn: resources.getCurrentUser });
+  useQuery({ queryKey: queryKeys.session, queryFn: resources.getCurrentUser, ...QUERY_CACHE.static });
 
 export const useOrganizations = (): UseQueryResult<Organization[]> =>
-  useQuery({ queryKey: queryKeys.organizations, queryFn: resources.getOrganizations });
+  useQuery({
+    queryKey: queryKeys.organizations,
+    queryFn: () => resources.getOrganizations(),
+    ...QUERY_CACHE.static,
+  });
 
 export const useTeam = (): UseQueryResult<User[]> =>
-  useQuery({ queryKey: queryKeys.team, queryFn: resources.getTeam });
+  useQuery({ queryKey: queryKeys.team, queryFn: () => resources.getTeam() });
 
 // -- analytics --------------------------------------------------------------
 export const useOverview = (): UseQueryResult<AnalyticsOverview> =>
-  useQuery({ queryKey: queryKeys.overview, queryFn: resources.getOverview });
+  useQuery({
+    queryKey: queryKeys.overview,
+    queryFn: resources.getOverview,
+    ...QUERY_CACHE.metrics,
+  });
 
 export const useActivity = (): UseQueryResult<ActivityPoint[]> =>
-  useQuery({ queryKey: queryKeys.activity, queryFn: resources.getActivity });
+  useQuery({
+    queryKey: queryKeys.activity,
+    queryFn: () => resources.getActivity(),
+    ...QUERY_CACHE.metrics,
+  });
 
 // -- ai assistant -----------------------------------------------------------
 export const useBriefing = (): UseQueryResult<AiBriefing> =>
@@ -58,43 +77,98 @@ export const useAssistantSeed = (): UseQueryResult<ChatMessage[]> =>
 
 // -- wallets ----------------------------------------------------------------
 export const useWallets = (): UseQueryResult<Wallet[]> =>
-  useQuery({ queryKey: queryKeys.wallets, queryFn: resources.getWallets });
+  useQuery({
+    queryKey: queryKeys.wallets,
+    queryFn: () => resources.getWallets(),
+    ...QUERY_CACHE.entity,
+  });
 
 export const useWallet = (id: string): UseQueryResult<Wallet> =>
   useQuery({
     queryKey: queryKeys.wallet(id),
     queryFn: () => resources.getWallet(id),
     enabled: Boolean(id),
+    ...QUERY_CACHE.entity,
   });
 
-/** Asset-level balances, fetched separately so the cards own their loading/error state. */
-export const useWalletBalances = (id: string): UseQueryResult<AssetBalance[]> =>
-  useQuery({
+export interface WalletBalancesQueryOptions {
+  /** Base poll cadence in ms (backs off while fetches fail); `0` polls only on demand. Defaults to 30s. */
+  pollIntervalMs?: number;
+  /** How long a balances payload stays fresh. Defaults to 15s. */
+  staleTimeMs?: number;
+  /** Master switch for the query. Defaults to true. */
+  enabled?: boolean;
+}
+
+/**
+ * Asset-level balances, fetched separately so the cards own their loading/error
+ * state. Polls every 30s by default and keeps the previous payload while a
+ * refresh is in flight, so periodic updates never flash a skeleton.
+ */
+export const useWalletBalances = (
+  id: string,
+  options: WalletBalancesQueryOptions = {},
+): UseQueryResult<AssetBalance[]> => {
+  const {
+    pollIntervalMs = POLL_INTERVALS.balances,
+    staleTimeMs = QUERY_CACHE.live.staleTime,
+    enabled = true,
+  } = options;
+
+  return useQuery({
     queryKey: queryKeys.walletBalances(id),
     queryFn: () => resources.getWalletBalances(id),
+    enabled: Boolean(id) && enabled,
+    staleTime: staleTimeMs,
+    gcTime: QUERY_CACHE.live.gcTime,
+    // Backs off exponentially while the backend is failing, resets on success.
+    refetchInterval:
+      pollIntervalMs > 0 ? createBackoffRefetchInterval({ baseMs: pollIntervalMs }) : false,
+    // Hidden tabs never poll; focus only refetches when the data is stale.
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+};
+
+/** Horizon-shaped trustlines powering the multi-currency asset breakdown. */
+export const useWalletTrustlines = (id: string): UseQueryResult<HorizonBalance[]> =>
+  useQuery({
+    queryKey: queryKeys.walletTrustlines(id),
+    queryFn: () => resources.getWalletTrustlines(id),
     enabled: Boolean(id),
+    ...QUERY_CACHE.entity,
   });
 
 // -- agents -----------------------------------------------------------------
 export const useAgents = (): UseQueryResult<Agent[]> =>
-  useQuery({ queryKey: queryKeys.agents, queryFn: resources.getAgents });
+  useQuery({
+    queryKey: queryKeys.agents,
+    queryFn: () => resources.getAgents(),
+    ...QUERY_CACHE.agentStatus,
+  });
 
 export const useAgent = (id: string): UseQueryResult<Agent> =>
   useQuery({
     queryKey: queryKeys.agent(id),
     queryFn: () => resources.getAgent(id),
     enabled: Boolean(id),
+    ...QUERY_CACHE.agentStatus,
   });
 
 // -- policies ---------------------------------------------------------------
 export const usePolicies = (): UseQueryResult<Policy[]> =>
-  useQuery({ queryKey: queryKeys.policies, queryFn: resources.getPolicies });
+  useQuery({
+    queryKey: queryKeys.policies,
+    queryFn: () => resources.getPolicies(),
+    ...QUERY_CACHE.entity,
+  });
 
 export const usePolicy = (id: string): UseQueryResult<Policy> =>
   useQuery({
     queryKey: queryKeys.policy(id),
     queryFn: () => resources.getPolicy(id),
     enabled: Boolean(id),
+    ...QUERY_CACHE.entity,
   });
 
 /** Policy simulator — a mutation so it re-runs on demand with a fresh amount. */
@@ -105,63 +179,93 @@ export const usePolicySimulation = () =>
 
 // -- budgets ----------------------------------------------------------------
 export const useBudgets = (): UseQueryResult<Budget[]> =>
-  useQuery({ queryKey: queryKeys.budgets, queryFn: resources.getBudgets });
+  useQuery({
+    queryKey: queryKeys.budgets,
+    queryFn: () => resources.getBudgets(),
+    ...QUERY_CACHE.metrics,
+  });
 
 export const useBudget = (id: string): UseQueryResult<Budget> =>
   useQuery({
     queryKey: queryKeys.budget(id),
     queryFn: () => resources.getBudget(id),
     enabled: Boolean(id),
+    ...QUERY_CACHE.metrics,
   });
 
 // -- transactions -----------------------------------------------------------
 export const useTransactions = (): UseQueryResult<Transaction[]> =>
-  useQuery({ queryKey: queryKeys.transactions, queryFn: resources.getTransactions });
+  useQuery({
+    queryKey: queryKeys.transactions,
+    queryFn: () => resources.getTransactions(),
+    ...QUERY_CACHE.entity,
+  });
 
 export const useTransaction = (id: string): UseQueryResult<Transaction> =>
   useQuery({
     queryKey: queryKeys.transaction(id),
     queryFn: () => resources.getTransaction(id),
     enabled: Boolean(id),
+    ...QUERY_CACHE.entity,
   });
 
 // -- proposals / approvals --------------------------------------------------
 export const useProposals = (): UseQueryResult<Proposal[]> =>
-  useQuery({ queryKey: queryKeys.proposals, queryFn: resources.getProposals });
+  useQuery({
+    queryKey: queryKeys.proposals,
+    queryFn: () => resources.getProposals(),
+    ...QUERY_CACHE.entity,
+  });
 
 export const useProposal = (id: string): UseQueryResult<Proposal> =>
   useQuery({
     queryKey: queryKeys.proposal(id),
     queryFn: () => resources.getProposal(id),
     enabled: Boolean(id),
+    ...QUERY_CACHE.entity,
   });
 
 // -- financial memory -------------------------------------------------------
 export const useMemoryRecords = (): UseQueryResult<MemoryRecord[]> =>
-  useQuery({ queryKey: queryKeys.memory, queryFn: resources.getMemoryRecords });
+  useQuery({
+    queryKey: queryKeys.memory,
+    queryFn: () => resources.getMemoryRecords(),
+    ...QUERY_CACHE.entity,
+  });
 
 export const useMemoryRecord = (id: string): UseQueryResult<MemoryRecord> =>
   useQuery({
     queryKey: queryKeys.memoryRecord(id),
     queryFn: () => resources.getMemoryRecord(id),
     enabled: Boolean(id),
+    ...QUERY_CACHE.entity,
+  });
+
+// -- audit log ---------------------------------------------------------------
+export const useAuditEvents = (): UseQueryResult<AuditEvent[]> =>
+  useQuery({
+    queryKey: queryKeys.auditEvents,
+    queryFn: () => resources.getAuditEvents(),
+    ...QUERY_CACHE.entity,
   });
 
 // -- asset rates -------------------------------------------------------------
 export const useAssetRates = (): UseQueryResult<AssetRate[]> =>
   useQuery({
     queryKey: queryKeys.rates,
-    queryFn: resources.getAssetRates,
-    refetchInterval: 30_000,
+    queryFn: () => resources.getAssetRates(),
+    ...QUERY_CACHE.live,
+    refetchInterval: createBackoffRefetchInterval({ baseMs: POLL_INTERVALS.balances }),
+    refetchIntervalInBackground: false,
   });
 
 // -- notifications ----------------------------------------------------------
 export const useNotifications = (): UseQueryResult<AppNotification[]> =>
-  useQuery({ queryKey: queryKeys.notifications, queryFn: resources.getNotifications });
+  useQuery({ queryKey: queryKeys.notifications, queryFn: () => resources.getNotifications() });
 
 // -- developer --------------------------------------------------------------
 export const useApiKeys = (): UseQueryResult<ApiKey[]> =>
-  useQuery({ queryKey: queryKeys.apiKeys, queryFn: resources.getApiKeys });
+  useQuery({ queryKey: queryKeys.apiKeys, queryFn: () => resources.getApiKeys() });
 
 export const useWebhooks = (): UseQueryResult<Webhook[]> =>
-  useQuery({ queryKey: queryKeys.webhooks, queryFn: resources.getWebhooks });
+  useQuery({ queryKey: queryKeys.webhooks, queryFn: () => resources.getWebhooks() });

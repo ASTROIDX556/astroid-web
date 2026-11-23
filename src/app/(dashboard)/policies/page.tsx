@@ -13,10 +13,13 @@ import { PolicyShieldIllustration } from '@/components/illustrations';
 import { usePolicies } from '@/hooks/use-queries';
 import { formatNumber } from '@/lib/format';
 import { PageTransition } from '@/components/ui/motion';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PolicyRulesBuilder } from '@/features/policies/PolicyRulesBuilder';
 import { BudgetSimulator } from '@/features/policies/BudgetSimulator';
 import { PolicySandboxWidget } from '@/features/policies/PolicySandboxWidget';
+import { PolicySimulationPanel } from '@/features/policies/PolicySimulationPanel';
 import { SpendingPolicyBuilder } from '@/features/policies/SpendingPolicyBuilder';
+import { TransactionSimulator } from '@/features/policies/TransactionSimulator';
 
 const titleCase = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
@@ -32,7 +35,16 @@ export default function PoliciesPage() {
         description="The guardrails every agent operates within — spend ceilings, allow-lists, approval rules and locks."
       />
 
-      <BudgetSimulator />
+      <ErrorBoundary section="Budget simulator">
+        <BudgetSimulator />
+      </ErrorBoundary>
+
+      <div className="space-y-4">
+        <SectionLabel>Policy rule simulation modal</SectionLabel>
+        <ErrorBoundary section="Transaction simulator">
+          <TransactionSimulator />
+        </ErrorBoundary>
+      </div>
 
       <QueryBoundary
         query={policies}
@@ -54,13 +66,22 @@ export default function PoliciesPage() {
       >
         {(data) => (
           <div className="space-y-6">
-            <PolicySandboxWidget policies={data} />
+            <ErrorBoundary section="Policy simulation">
+              <PolicySimulationPanel policies={data} />
+            </ErrorBoundary>
+            <ErrorBoundary section="Policy sandbox">
+              <PolicySandboxWidget policies={data} />
+            </ErrorBoundary>
 
             <SectionLabel>Spending policy studio</SectionLabel>
-            <SpendingPolicyBuilder />
+            <ErrorBoundary section="Spending policy studio">
+              <SpendingPolicyBuilder />
+            </ErrorBoundary>
 
             <SectionLabel>Spending rule designer</SectionLabel>
-            <PolicyRulesBuilder />
+            <ErrorBoundary section="Spending rule designer">
+              <PolicyRulesBuilder />
+            </ErrorBoundary>
 
             <SectionLabel>{data.length} policies</SectionLabel>
             <div className="grid gap-4 lg:grid-cols-2">

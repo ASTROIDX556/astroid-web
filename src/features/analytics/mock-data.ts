@@ -1,3 +1,4 @@
+import type { SpendTrendPoint } from './analyticsTypes';
 import type { SpendingCorrelationDataset } from './types';
 
 export const MOCK_SPENDING_CORRELATION_DATA: SpendingCorrelationDataset = {
@@ -62,3 +63,44 @@ export const MOCK_SPENDING_CORRELATION_DATA: SpendingCorrelationDataset = {
     { agentIdA: 'agent-arbitrage', agentIdB: 'agent-arbitrage', coefficient: 1.0, sampleSize: 1890, commonTransactionsCount: 1890 },
   ],
 };
+
+// ---------------------------------------------------------------------------
+// Historical spend trend — 365 deterministic daily observations ending
+// 2026-07-31. The chart aggregates these into weekly / monthly buckets.
+// ---------------------------------------------------------------------------
+
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const SPEND_TREND_DAYS = 365;
+const SPEND_TREND_END = Date.UTC(2026, 6, 31);
+
+function generateSpendTrend(): SpendTrendPoint[] {
+  const random = mulberry32(0x5a17c0de);
+  const start = SPEND_TREND_END - (SPEND_TREND_DAYS - 1) * 24 * 60 * 60 * 1000;
+
+  return Array.from({ length: SPEND_TREND_DAYS }, (_, index) => {
+    const timestamp = start + index * 24 * 60 * 60 * 1000;
+    const date = new Date(timestamp);
+    const weekend = date.getUTCDay() === 0 || date.getUTCDay() === 6 ? 0.55 : 1;
+    const growth = 780 + index * 1.35;
+    const seasonal = Math.sin((index / 30) * Math.PI) * 170;
+    const noise = random() * 240;
+    const amount = Math.max(0, (growth + seasonal + noise) * weekend);
+
+    return {
+      timestamp: date.toISOString(),
+      amount: Math.round(amount * 100) / 100,
+    };
+  });
+}
+
+export const MOCK_SPEND_TREND_POINTS: SpendTrendPoint[] = generateSpendTrend();

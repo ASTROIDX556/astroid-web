@@ -3,3 +3,4 @@ export * from './domain';
 export * from './budget';
 export * from './audit';
 export * from './multisig';
+export * from './stellar';

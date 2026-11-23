@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -21,13 +22,15 @@ import {
   collectApprovalRiskTierOptions,
   collectApprovalStatusOptions,
   DEFAULT_APPROVAL_QUEUE_FILTERS,
-  DEFAULT_APPROVAL_QUEUE_SORT,
   filterApprovalQueue,
+  parseApprovalQueueQuery,
+  writeApprovalQueueQuery,
   type ApprovalQueueFilters,
+  type ApprovalQueueQueryState,
   type ApprovalQueueSortId,
 } from './approvalQueueFilters';
 import { ApprovalQueueToolbar } from './components/ApprovalQueueToolbar';
-import { ProposalCard } from './components/ProposalQueueCard';
+import { ProposalReviewCard } from './ProposalReviewCard';
 
 /**
  * Sort columns are declared as a TanStack Table instance and applied through
@@ -56,9 +59,28 @@ const COLUMNS: ColumnDef<Proposal>[] = [
   },
 ];
 
+/**
+ * Filter and sort state lives in URL search params rather than local state
+ * (#246 AC3), so a review in progress survives navigation between views,
+ * back/forward, and a shared link. The same `approvalQueueFilters` vocabulary
+ * drives both the URL round-trip and the in-memory predicates, and the
+ * router.replace sync mirrors `TransactionAuditToolbar`.
+ */
 export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
-  const [filters, setFilters] = useState<ApprovalQueueFilters>(DEFAULT_APPROVAL_QUEUE_FILTERS);
-  const [sort, setSort] = useState(DEFAULT_APPROVAL_QUEUE_SORT);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const { filters, sort } = useMemo(
+    () => parseApprovalQueueQuery(searchParams),
+    [searchParams],
+  );
+
+  const applyQuery = (next: ApprovalQueueQueryState) => {
+    const params = writeApprovalQueueQuery(next, searchParams);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
 
   const filtered = useMemo(
     () => filterApprovalQueue(proposals, filters),
@@ -84,7 +106,9 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
     onSortingChange: (update) => {
       const next = typeof update === 'function' ? update([]) : update;
       const [first] = next;
-      if (first) setSort({ id: first.id as ApprovalQueueSortId, desc: !!first.desc });
+      if (first) {
+        applyQuery({ filters, sort: { id: first.id as ApprovalQueueSortId, desc: !!first.desc } });
+      }
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -95,10 +119,13 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
   const setFilter = <TKey extends keyof ApprovalQueueFilters>(
     key: TKey,
     value: ApprovalQueueFilters[TKey],
-  ) => setFilters((current) => ({ ...current, [key]: value }));
+  ) => applyQuery({ filters: { ...filters, [key]: value }, sort });
 
   const toggleSort = (id: ApprovalQueueSortId) =>
-    setSort((current) => (current.id === id ? { id, desc: !current.desc } : { id, desc: true }));
+    applyQuery({
+      filters,
+      sort: sort.id === id ? { id, desc: !sort.desc } : { id, desc: true },
+    });
 
   return (
     <div className="space-y-6">
@@ -109,7 +136,7 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
       <ApprovalQueueToolbar
         filters={filters}
         onFilterChange={setFilter}
-        onClearFilters={() => setFilters(DEFAULT_APPROVAL_QUEUE_FILTERS)}
+        onClearFilters={() => applyQuery({ filters: DEFAULT_APPROVAL_QUEUE_FILTERS, sort })}
         activeFilterCount={activeFilterCount}
         statusOptions={statusOptions}
         agentOptions={agentOptions}
@@ -128,7 +155,7 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
           action={
             <button
               type="button"
-              onClick={() => setFilters(DEFAULT_APPROVAL_QUEUE_FILTERS)}
+              onClick={() => applyQuery({ filters: DEFAULT_APPROVAL_QUEUE_FILTERS, sort })}
               className="rounded-md border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Clear all filters
@@ -139,7 +166,7 @@ export function ApprovalQueue({ proposals }: { proposals: Proposal[] }) {
         <ul className="space-y-4" aria-label="Approval queue">
           {sortedProposals.map((proposal) => (
             <li key={proposal.id}>
-              <ProposalCard proposal={proposal} />
+              <ProposalReviewCard proposal={proposal} />
             </li>
           ))}
         </ul>

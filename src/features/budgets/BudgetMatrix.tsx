@@ -23,7 +23,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
@@ -31,19 +30,30 @@ import {
   Tooltip as RechartsTooltip,
   Cell,
 } from 'recharts';
+import { ChartFrame } from '@/components/charts/chart-frame';
+import { AXIS_TICK, CHART_COLORS, chartToken, ChartTooltipShell } from '@/components/charts/theme';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
+import {
+  EMPTY_BUDGET_LEDGER_FILTERS,
+  applyBudgetLedgerFilters,
+  isBudgetLedgerFilterActive,
+  type BudgetLedgerFilterState,
+} from './budgetLedgerFiltering';
+import { exportBudgetLedgerCsv } from './budgetLedgerCsv';
+import { BudgetLedgerFilters, type BudgetAgentOption } from './BudgetLedgerFilters';
 import type { DepartmentBudget, AgentAllocation } from './types';
-
+/** One categorical chart token per asset, so the colors follow the active theme. */
 const ASSET_COLORS: Record<string, string> = {
-  USDC: '#3b82f6', // blue
-  XLM: '#eab308',  // gold
-  ASTRO: '#a855f7', // purple
-  EURC: '#10b981', // green
+  USDC: chartToken('chart-1'),
+  XLM: chartToken('chart-4'),
+  ASTRO: chartToken('chart-7'),
+  EURC: chartToken('chart-6'),
 };
+const DEFAULT_ASSET_COLOR = chartToken('chart-4');
 
 export function BudgetMatrix() {
   const [data] = useState<DepartmentBudget[]>(MOCK_DEPARTMENT_BUDGETS);
@@ -53,12 +63,43 @@ export function BudgetMatrix() {
   ]);
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [activeChartMode, setActiveChartMode] = useState<'bar' | 'distribution'>('bar');
+  const [ledgerFilters, setLedgerFilters] = useState<BudgetLedgerFilterState>(EMPTY_BUDGET_LEDGER_FILTERS);
 
   // Filter department list
   const filteredData = useMemo(() => {
     if (departmentFilter === 'all') return data;
     return data.filter((d) => d.departmentCode === departmentFilter);
   }, [data, departmentFilter]);
+
+  // Advanced agent-level filters (date range / agent id / budget status)
+  const tableData = useMemo(
+    () => applyBudgetLedgerFilters(filteredData, ledgerFilters),
+    [filteredData, ledgerFilters],
+  );
+
+  const agentOptions = useMemo<BudgetAgentOption[]>(() => {
+    const seen = new Map<string, BudgetAgentOption>();
+    for (const dept of data) {
+      for (const agent of dept.agents) {
+        if (!seen.has(agent.agentId)) {
+          seen.set(agent.agentId, { agentId: agent.agentId, agentName: agent.agentName });
+        }
+      }
+    }
+    return [...seen.values()];
+  }, [data]);
+
+  const ledgerEntryCount = (departments: DepartmentBudget[]) =>
+    departments.reduce(
+      (sum, dept) =>
+        sum + dept.agents.reduce((acc, agent) => acc + Math.max(agent.ledger?.length ?? 0, 1), 0),
+      0,
+    );
+
+  const hasLedgerFilters = isBudgetLedgerFilterActive(ledgerFilters);
+
+  const handleLedgerFilterChange = (patch: Partial<BudgetLedgerFilterState>) =>
+    setLedgerFilters((current) => ({ ...current, ...patch }));
 
   // Chart data
   const chartData = useMemo(() => {
@@ -213,7 +254,7 @@ export function BudgetMatrix() {
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: tableData,
     columns,
     state: {
       expanded,
@@ -275,43 +316,69 @@ export function BudgetMatrix() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartFrame
+              label="Spend utilization by department"
+              height="100%"
+              empty={chartData.length === 0}
+              emptyTitle="No department spend yet"
+              emptyDescription="Utilization per department appears here once budgets are in use."
+            >
               <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#888' }} />
-                <YAxis tick={{ fontSize: 12, fill: '#888' }} unit="%" domain={[0, 100]} />
+                <XAxis dataKey="name" tick={AXIS_TICK} />
+                <YAxis tick={AXIS_TICK} unit="%" domain={[0, 100]} />
                 <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length && payload[0]) {
-                      const d = payload[0].payload;
-                      if (!d) return null;
-                      return (
-                        <div className="rounded-button border border-border bg-surface p-3 shadow-xl space-y-1 text-xs">
-                          <p className="font-bold text-foreground">{d.fullName}</p>
-                          <p className="text-foreground-secondary">
-                            Utilization: <span className="font-mono text-gold font-bold">{d.spendPercent}%</span>
-                          </p>
-                          <p className="text-foreground-muted">
-                            Spent: {formatCurrency(d.spent, d.asset)} / {formatCurrency(d.limit, d.asset)}
-                          </p>
+                  cursor={{ fill: CHART_COLORS.grid, fillOpacity: 0.3 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0]?.payload as typeof chartData[0] | undefined;
+                    if (!d) return null;
+                    return (
+                      <ChartTooltipShell label={label ? String(label) : d.fullName}>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-foreground-secondary">Utilization:</span>
+                          <span className="tabular font-bold text-gold">{d.spendPercent}%</span>
                         </div>
-                      );
-                    }
-                    return null;
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-foreground-secondary">Spent:</span>
+                          <span className="tabular font-medium text-foreground">
+                            {formatCurrency(d.spent, d.asset)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-foreground-secondary">Limit:</span>
+                          <span className="tabular font-medium text-foreground">
+                            {formatCurrency(d.limit, d.asset)}
+                          </span>
+                        </div>
+                      </ChartTooltipShell>
+                    );
                   }}
                 />
                 <Bar dataKey="spendPercent" radius={[6, 6, 0, 0]}>
                   {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={ASSET_COLORS[entry.asset] || '#eab308'}
+                      fill={ASSET_COLORS[entry.asset] || DEFAULT_ASSET_COLOR}
                     />
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ChartFrame>
           </div>
         </CardContent>
       </Card>
+
+      {/* Advanced ledger filters + CSV export, directly above the budget table */}
+      <BudgetLedgerFilters
+        filters={ledgerFilters}
+        agentOptions={agentOptions}
+        hasActiveFilters={hasLedgerFilters}
+        totalEntryCount={ledgerEntryCount(filteredData)}
+        filteredEntryCount={ledgerEntryCount(tableData)}
+        onChange={handleLedgerFilterChange}
+        onClear={() => setLedgerFilters(EMPTY_BUDGET_LEDGER_FILTERS)}
+        onExportCSV={() => exportBudgetLedgerCsv(tableData)}
+      />
 
       {/* TanStack Department Table with Expandable Agent Rows */}
       <Card className="overflow-hidden border border-border">

@@ -1,17 +1,17 @@
 import { env, isMockMode } from '@/lib/env';
-import type { ApiResponse, ListQuery } from '@/types/api';
+import { AstroidApiError } from './errors';
+import { resolveMockRequest } from './mock/handlers';
+import type { ApiMeta, ApiResponse, ListQuery } from '@/types/api';
 
-/** Thrown for any non-2xx API response with the machine-readable code. */
-export class AstroidApiError extends Error {
-  readonly code: string;
-  readonly requestId?: string;
+export { AstroidApiError } from './errors';
 
-  constructor(code: string, message: string, requestId?: string) {
-    super(message);
-    this.name = 'AstroidApiError';
-    this.code = code;
-    this.requestId = requestId;
-  }
+/** Extra query parameters the client serializes into the request URL. */
+export type ApiRequestInit = RequestInit & { query?: ListQuery };
+
+/** Unwrapped API response: the typed payload plus its pagination/context meta. */
+export interface ApiResult<T> {
+  data: T;
+  meta: ApiMeta;
 }
 
 const TOKEN_KEY = 'astroid_token';
@@ -50,41 +50,62 @@ function buildQuery(query?: ListQuery): string {
 /**
  * The typed Astroid API client.
  *
- * In mock mode (`NEXT_PUBLIC_API_URL` unset) callers should route through the
- * resource layer, which resolves against local mock data. When a base URL is
- * configured, `request` performs a real fetch against `${apiUrl}${apiVersion}`
- * and unwraps the standard `{ success, data, meta, requestId }` envelope.
+ * Every method transparently switches transport:
+ * - mock mode (`NEXT_PUBLIC_API_URL` unset) → the local handler registry in
+ *   `services/mock/handlers` resolves the request with simulated latency;
+ * - configured base URL → a real fetch against `${apiUrl}${apiVersion}` that
+ *   unwraps the standard `{ success, data, meta, requestId }` envelope.
  *
- * Authorization: every request automatically includes `Authorization: Bearer <token>`
- * when a token is stored (set by the auth page after successful login).
+ * The UI is agnostic to which path is active, and both paths throw the same
+ * `AstroidApiError` for failed requests.
+ *
+ * Authorization: live requests automatically include
+ * `Authorization: Bearer <token>` when a token is stored.
  */
 export const apiClient = {
   isMock: isMockMode,
 
-  async request<T>(
-    path: string,
-    init: RequestInit & { query?: ListQuery } = {},
-  ): Promise<{ data: T; meta: ApiResponse<T> extends { meta: infer M } ? M : never }> {
+  async request<T>(path: string, init: ApiRequestInit = {}): Promise<ApiResult<T>> {
+    if (isMockMode) {
+      return resolveMockRequest<T>(path, init);
+    }
+
     const { query, ...rest } = init;
     const url = `${env.apiUrl}${env.apiVersion}${path}${buildQuery(query)}`;
 
     const token = getStoredToken();
     const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-    const res = await fetch(url, {
-      ...rest,
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeader,
-        ...(rest.headers ?? {}),
-      },
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        ...rest,
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeader,
+          ...(rest.headers ?? {}),
+        },
+      });
+    } catch (err) {
+      throw new AstroidApiError(
+        'NETWORK_ERROR',
+        err instanceof Error ? err.message : `Unable to reach ${url}`,
+      );
+    }
 
-    const body = (await res.json()) as ApiResponse<T>;
+    let body: ApiResponse<T>;
+    try {
+      body = (await res.json()) as ApiResponse<T>;
+    } catch {
+      throw new AstroidApiError(
+        'INVALID_RESPONSE',
+        `Malformed API response from ${url} (HTTP ${res.status}).`,
+      );
+    }
+
     if (!body.success) {
       throw new AstroidApiError(body.error.code, body.error.message, body.requestId);
     }
-    return { data: body.data, meta: body.meta as never };
+    return { data: body.data, meta: body.meta };
   },
 };
-

@@ -21,6 +21,35 @@ import {
 } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { PageTransition, AnimatedNumber } from '@/components/ui/motion';
+import { ExportMenu, type ExportAction } from '@/features/budgets/BudgetExportMenu';
+import { exportDataset, type ExportColumn } from '@/features/budgets/export';
+
+const spendExportColumns: ExportColumn<Transaction>[] = [
+  { key: 'date', header: 'Date', value: (t) => t.createdAt },
+  { key: 'counterparty', header: 'Counterparty', value: (t) => t.counterparty },
+  { key: 'purpose', header: 'Purpose', value: (t) => t.purpose },
+  { key: 'agent', header: 'Agent', value: (t) => t.agentName ?? '' },
+  { key: 'direction', header: 'Direction', value: (t) => t.direction },
+  { key: 'status', header: 'Status', value: (t) => t.status },
+  { key: 'amount', header: 'Amount', value: (t) => t.amount },
+  { key: 'asset', header: 'Asset', value: (t) => t.asset },
+  { key: 'txId', header: 'Transaction ID', value: (t) => t.id },
+];
+
+function buildSpendExportActions(spend: Transaction[], budgetId: string): ExportAction[] {
+  return [
+    {
+      label: 'Spend ledger (CSV)',
+      format: 'csv',
+      run: () => exportDataset(spend, spendExportColumns, 'csv', `budget-${budgetId}-spend`),
+    },
+    {
+      label: 'Spend ledger (JSON)',
+      format: 'json',
+      run: () => exportDataset(spend, spendExportColumns, 'json', `budget-${budgetId}-spend`),
+    },
+  ];
+}
 
 const spendColumns: Column<Transaction>[] = [
   {
@@ -107,14 +136,20 @@ export default function BudgetDetailPage({ params }: { params: { id: string } })
                 title={data.name}
                 description={`${data.period} envelope · resets ${formatRelativeTime(data.resetsAt)}`}
                 actions={
-                  <Badge
-                    variant={
-                      utilization >= 90 ? 'danger' : utilization >= 75 ? 'warning' : 'success'
-                    }
-                    dot
-                  >
-                    {formatPercent(utilization)} used
-                  </Badge>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <ExportMenu
+                      ariaLabel={`Export ${data.name} budget transactions`}
+                      actions={buildSpendExportActions(spend, data.id)}
+                    />
+                    <Badge
+                      variant={
+                        utilization >= 90 ? 'danger' : utilization >= 75 ? 'warning' : 'success'
+                      }
+                      dot
+                    >
+                      {formatPercent(utilization)} used
+                    </Badge>
+                  </div>
                 }
               />
 

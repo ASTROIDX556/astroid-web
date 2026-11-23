@@ -19,11 +19,11 @@ import {
   Line,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from 'recharts';
+import { ChartFrame } from '@/components/charts/chart-frame';
 import {
   AlertTriangle,
   Coins,
@@ -725,7 +725,7 @@ function AllocationDonut({
 
   return (
     <div className="relative h-[240px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ChartFrame label="Budget allocation by recipient" height="100%">
         <PieChart>
           <Pie
             data={data}
@@ -751,7 +751,7 @@ function AllocationDonut({
             content={<AllocationDonutTooltip asset={asset} pool={pool} />}
           />
         </PieChart>
-      </ResponsiveContainer>
+      </ChartFrame>
 
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
         <span
@@ -790,7 +790,7 @@ function ConsumptionTrend({
 
   return (
     <div className="h-[240px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ChartFrame label="Budget burn over time" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="budget-allocation-burn" x1="0" y1="0" x2="0" y2="1">
@@ -868,7 +868,7 @@ function ConsumptionTrend({
             isAnimationActive={false}
           />
         </ComposedChart>
-      </ResponsiveContainer>
+      </ChartFrame>
     </div>
   );
 }
