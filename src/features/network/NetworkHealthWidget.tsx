@@ -14,6 +14,29 @@ const WIDGET_FOCUS =
 export function NetworkHealthWidget() {
   const { data, isPending, isError, refetch, isFetching } = useStellarHealth({ pollIntervalMs: 5000 });
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
+
+  // Non-modal popover: Escape closes it and returns focus to the trigger;
+  // clicking outside closes it without moving focus.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || focusTrapStack.size() > 0) return;
+      setIsOpen(false);
+      triggerRef.current?.focus();
+    };
+    const onPointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousedown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('mousedown', onPointerDown);
+    };
+  }, [isOpen]);
 
   if (isPending && !data) {
     return (
@@ -48,10 +71,12 @@ export function NetworkHealthWidget() {
   }
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
+        aria-controls={isOpen ? panelId : undefined}
         className={cn(
           'flex items-center gap-2 rounded-button border border-border bg-surface px-2.5 py-1.5 text-2xs font-medium transition-colors hover:border-gold hover:bg-surface-secondary',
           WIDGET_FOCUS,
@@ -67,6 +92,7 @@ export function NetworkHealthWidget() {
       {/* Expanded Health Popover Panel */}
       {isOpen && (
         <div
+          id={panelId}
           role="dialog"
           aria-label="Stellar network health details"
           className="absolute right-0 top-full mt-2 z-50 w-72 rounded-card border border-border bg-surface p-4 shadow-xl space-y-3"
