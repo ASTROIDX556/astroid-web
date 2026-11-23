@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileSpreadsheet, FileText } from 'lucide-react';
+import { FileSpreadsheet, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LogExportMenu } from './LogExportMenu';
 import { planAuditExport } from './export-utils';
