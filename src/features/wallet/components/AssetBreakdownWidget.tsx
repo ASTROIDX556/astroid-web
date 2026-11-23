@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Bar,
   BarChart,
-  ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
@@ -24,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { AnimatedNumber } from '@/components/ui/motion';
 import { CATEGORICAL, ChartTooltipShell } from '@/components/charts';
+import { ChartFrame } from '@/components/charts/chart-frame';
 import type { TooltipPayloadItem } from '@/components/charts';
 import { cn } from '@/lib/cn';
 import { isMockMode } from '@/lib/env';
@@ -76,13 +76,6 @@ export interface AssetBreakdownWidgetProps {
   className?: string;
 }
 
-/** Avoids a server/client mismatch on Recharts' measured SVG. */
-function useMounted(): boolean {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  return mounted;
-}
-
 /* -------------------------------------------------------------------------- */
 /* Component                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -103,8 +96,6 @@ export function AssetBreakdownWidget({
   title = 'Asset breakdown',
   className,
 }: AssetBreakdownWidgetProps) {
-  const mounted = useMounted();
-
   // In mock mode everything rendered here is the bundled fixture — whether the
   // caller passed it or the resource layer resolved it.
   const usingMockData = isMockMode;
@@ -177,8 +168,10 @@ export function AssetBreakdownWidget({
       <div className="mt-5">
         {hasValue ? (
           <div className="overflow-hidden rounded-full">
-            {mounted ? (
-              <ResponsiveContainer width="100%" height={28}>
+            <ChartFrame
+              label="Asset allocation by share of portfolio"
+              height={28}
+            >
                 <BarChart
                   data={[allocationRow]}
                   layout="vertical"
@@ -217,10 +210,7 @@ export function AssetBreakdownWidget({
                     />
                   ))}
                 </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="skeleton h-7 w-full" />
-            )}
+            </ChartFrame>
           </div>
         ) : (
           <div className="py-1.5 rounded-full border border-dashed border-border px-3 text-center text-2xs text-foreground-muted">
