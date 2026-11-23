@@ -418,6 +418,21 @@ test('recovery copy offers a distinct action per error code', () => {
 /** Flushes the microtask/`setTimeout(0)` work inside `startWalletWatch`. */
 const flushWalletWatch = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+/**
+ * `startWalletWatch` is client-only and bails out when `window` is undefined,
+ * which is exactly the case in Node. The watcher tests therefore present a
+ * minimal browser window for the duration of the (synchronous) guard.
+ */
+const startWalletWatchInBrowser = (): void => {
+  const scope = globalThis as { window?: unknown };
+  scope.window = {};
+  try {
+    useFreighterStore.getState().startWalletWatch();
+  } finally {
+    delete scope.window;
+  }
+};
+
 /** Minimal stand-in for Freighter's `WatchWalletChanges` polling class. */
 class FakeWalletWatcher {
   static instances: FakeWalletWatcher[] = [];
@@ -567,7 +582,7 @@ test('wallet watch adopts an account switch from the extension', async () => {
   FakeWalletWatcher.instances = [];
   resetStore(watcherApi());
 
-  useFreighterStore.getState().startWalletWatch();
+  startWalletWatchInBrowser();
   await flushWalletWatch();
   const watcher = FakeWalletWatcher.instances.at(-1);
   assert.ok(watcher, 'watch() should have been constructed');
@@ -591,7 +606,7 @@ test('a wallet watch disconnection resets the session, signing flag, and error',
   markConnected();
   useFreighterStore.setState({ isSigning: true, error: 'stale failure', errorCode: 'TIMEOUT' });
 
-  useFreighterStore.getState().startWalletWatch();
+  startWalletWatchInBrowser();
   await flushWalletWatch();
   const watcher = FakeWalletWatcher.instances.at(-1);
   assert.ok(watcher);
@@ -618,7 +633,7 @@ test('an invalid address event is treated as a disconnection', async () => {
   resetStore(watcherApi());
   markConnected();
 
-  useFreighterStore.getState().startWalletWatch();
+  startWalletWatchInBrowser();
   await flushWalletWatch();
   const watcher = FakeWalletWatcher.instances.at(-1);
   assert.ok(watcher);

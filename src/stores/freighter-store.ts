@@ -262,7 +262,22 @@ export type WalletActions = Pick<
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
 
-const withTimeout = async <T>(promise: Promise<T>, ms = FREIGHTER_TIMEOUT_MS): Promise<T> => {
+/**
+ * Live deadline for Freighter calls. Starts at {@link FREIGHTER_TIMEOUT_MS} and
+ * is only changed by {@link __setFreighterTimeoutForTests}.
+ */
+let freighterRequestTimeoutMs = FREIGHTER_TIMEOUT_MS;
+
+/**
+ * Test seam: shortens (or restores, with `null`) the request deadline used by
+ * `withTimeout` so timeout handling can be exercised without waiting the full
+ * fifteen seconds. Never called from application code.
+ */
+export function __setFreighterTimeoutForTests(ms: number | null): void {
+  freighterRequestTimeoutMs = typeof ms === 'number' && ms > 0 ? ms : FREIGHTER_TIMEOUT_MS;
+}
+
+const withTimeout = async <T>(promise: Promise<T>, ms = freighterRequestTimeoutMs): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return await new Promise<T>((resolve, reject) => {
