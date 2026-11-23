@@ -534,9 +534,14 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       } catch (error) {
         const failure = classifyFreighterError(error);
 
-        // Dismissing a re-connect prompt must not tear down a session that was
-        // already healthy: restore it and only surface the decline.
-        if (failure.code === 'USER_DECLINED' && previous.status === 'connected' && previous.publicKey) {
+        // Dismissing a re-connect prompt, or the extension being slow to answer
+        // it, must not tear down a session that was already healthy: restore it
+        // and only surface the failure so the user can retry.
+        if (
+          (failure.code === 'USER_DECLINED' || failure.code === 'TIMEOUT') &&
+          previous.status === 'connected' &&
+          previous.publicKey
+        ) {
           set({
             status: 'connected',
             publicKey: previous.publicKey,
@@ -843,6 +848,16 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       });
     } catch (error) {
       const failure = classifyFreighterError(error);
+
+      // `hydrate()` also runs as a background poll. One slow answer from the
+      // extension says nothing about the wallet itself, so keep a healthy
+      // session (and its installed flag) and only record the failure.
+      const current = get();
+      if (failure.code === 'TIMEOUT' && current.status === 'connected' && current.publicKey) {
+        set(errorPatch(failure));
+        return;
+      }
+
       const isLocked = failure.code === 'LOCKED';
       set({
         status: isLocked ? 'locked' : 'disconnected',

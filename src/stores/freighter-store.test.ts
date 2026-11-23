@@ -200,6 +200,55 @@ test('declining a re-connect prompt keeps an existing healthy session', async ()
   assert.equal(state.errorCode, 'USER_DECLINED');
 });
 
+test('a re-connect that times out keeps an existing healthy session', async () => {
+  resetStore(healthyApi({ setAllowed: async () => Promise.reject(new Error('Freighter request timed out')) }));
+  markConnected();
+
+  const result = await useFreighterStore.getState().connect();
+  const state = useFreighterStore.getState();
+
+  assert.equal(result, null);
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.networkPassphrase, testnetPassphrase);
+  assert.equal(state.isInstalled, true);
+  assert.equal(state.errorCode, 'TIMEOUT');
+});
+
+test('a first connect that times out still ends disconnected, not stuck connecting', async () => {
+  resetStore(healthyApi({ setAllowed: async () => Promise.reject(new Error('Freighter request timed out')) }));
+
+  await useFreighterStore.getState().connect();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.publicKey, null);
+  assert.equal(state.errorCode, 'TIMEOUT');
+});
+
+test('a hydrate poll that times out keeps a connected wallet and its installed flag', async () => {
+  resetStore(healthyApi({ isConnected: async () => Promise.reject(new Error('Freighter request timed out')) }));
+  markConnected();
+
+  await useFreighterStore.getState().hydrate();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.isInstalled, true);
+  assert.equal(state.errorCode, 'TIMEOUT');
+});
+
+test('a hydrate poll that times out with no session stays disconnected', async () => {
+  resetStore(healthyApi({ isConnected: async () => Promise.reject(new Error('Freighter request timed out')) }));
+
+  await useFreighterStore.getState().hydrate();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.errorCode, 'TIMEOUT');
+});
+
 test('connect flags a malformed address payload as INVALID_RESPONSE', async () => {
   resetStore(healthyApi({ getAddress: async () => ({ address: 'not-a-key' }) }));
 
