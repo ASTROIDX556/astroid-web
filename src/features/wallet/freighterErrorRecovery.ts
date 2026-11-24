@@ -45,6 +45,14 @@ const RECOVERY: Record<FreighterErrorCode, FreighterRecovery> = {
     actionLabel: 'Retry connection',
     tone: 'warning',
   },
+  NETWORK_ERROR: {
+    title: 'Freighter connection failed',
+    description:
+      'This page could not reach the Freighter extension. Check your connection, then retry the connection.',
+    action: 'retry',
+    actionLabel: 'Retry connection',
+    tone: 'warning',
+  },
   LOCKED: {
     title: 'Freighter is locked',
     description: 'Open the Freighter extension, unlock it with your password, then reconnect.',

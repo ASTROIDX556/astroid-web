@@ -17,6 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { TabTransition } from '@/components/ui/tab-transition';
 import { RiskBadge } from '@/components/dashboard/risk-badge';
 import { ProposalApprovalConfirmDialog } from '@/features/approvals/components/ProposalApprovalConfirmDialog';
 import { useProposalApproval } from '@/hooks/useProposalApproval';
@@ -409,6 +410,9 @@ export function ProposalReviewWorkflow({
         aria-labelledby={`proposal-tab-${activeStatus}`}
         className="space-y-4"
       >
+        {/* The animated wrapper is keyed by status so switching tabs cross-fades
+            the panel while the tablist itself stays static. */}
+        <TabTransition activeKey={activeStatus} className="space-y-4">
         {/* Filter controls */}
         <div className="flex flex-col gap-3 rounded-card border border-border bg-surface p-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-wrap items-end gap-3">
@@ -623,6 +627,7 @@ export function ProposalReviewWorkflow({
             </table>
           </div>
         </div>
+        </TabTransition>
       </div>
     </section>
   );

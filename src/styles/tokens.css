@@ -100,6 +100,13 @@
   --chart-grid: 231 223 209; /* hairline */
   --chart-axis: 201 187 166;
   --chart-on-fill: 255 255 255; /* text on a colored chart fill */
+
+  /* Motion — mirrors Tailwind's duration/ease utilities and the Framer presets
+     used by `components/ui/tab-transition.tsx`. */
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 180ms;
+  --motion-duration-slow: 250ms;
+  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 [data-theme='dark'] {

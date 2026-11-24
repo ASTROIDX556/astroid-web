@@ -12,6 +12,7 @@ import {
 
 const ICONS: Record<FreighterErrorCode, typeof AlertTriangle> = {
   NOT_INSTALLED: WifiOff,
+  NETWORK_ERROR: WifiOff,
   USER_DECLINED: AlertTriangle,
   TIMEOUT: RefreshCw,
   LOCKED: Lock,

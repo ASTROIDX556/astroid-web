@@ -89,6 +89,8 @@ export type FreighterErrorCode =
   | 'LOCKED'
   /** The extension did not answer before the request deadline. */
   | 'TIMEOUT'
+  /** The extension answered, but the connection to it failed (offline, refused). */
+  | 'NETWORK_ERROR'
   /** Wallet network differs from the network the action targets. */
   | 'NETWORK_MISMATCH'
   /** The extension answered with a malformed or empty payload. */
@@ -121,6 +123,7 @@ export const FREIGHTER_ERROR_TITLES: Record<FreighterErrorCode, string> = {
   USER_DECLINED: 'Request declined in Freighter',
   LOCKED: 'Freighter wallet locked',
   TIMEOUT: 'Freighter did not respond',
+  NETWORK_ERROR: 'Freighter connection failed',
   NETWORK_MISMATCH: 'Wrong Stellar network',
   INVALID_RESPONSE: 'Unexpected Freighter response',
   UNKNOWN: 'Freighter connection unavailable',
@@ -131,6 +134,7 @@ const DEFAULT_ERROR_MESSAGES: Record<FreighterErrorCode, string> = {
   USER_DECLINED: 'The request was declined in Freighter. Approve the prompt to continue.',
   LOCKED: 'Freighter is locked or wallet access is unavailable. Unlock it and reconnect.',
   TIMEOUT: 'Freighter wallet request timed out. Check that the extension is installed and unlocked.',
+  NETWORK_ERROR: 'Unable to reach the Freighter extension over the network. Check your connection and retry.',
   NETWORK_MISMATCH: 'Freighter is on a different Stellar network than this action targets.',
   INVALID_RESPONSE: 'Freighter returned an unexpected response.',
   UNKNOWN: 'Unable to reach the Freighter wallet.',
@@ -173,6 +177,12 @@ export function classifyFreighterError(error: unknown): FreighterError {
     code = 'NOT_INSTALLED';
   } else if (/locked|unlock|not allowed|access (?:is )?(?:not granted|unavailable)/.test(text)) {
     code = 'LOCKED';
+  } else if (
+    /network ?error|network request failed|failed to fetch|load failed|connection (?:refused|error|closed|reset)|err_internet_disconnected|offline/.test(
+      text,
+    )
+  ) {
+    code = 'NETWORK_ERROR';
   } else if (/network mismatch/.test(text)) {
     code = 'NETWORK_MISMATCH';
   } else if (/did not return|invalid|malformed|unexpected/.test(text)) {
@@ -252,7 +262,22 @@ export type WalletActions = Pick<
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
 
-const withTimeout = async <T>(promise: Promise<T>, ms = FREIGHTER_TIMEOUT_MS): Promise<T> => {
+/**
+ * Live deadline for Freighter calls. Starts at {@link FREIGHTER_TIMEOUT_MS} and
+ * is only changed by {@link __setFreighterTimeoutForTests}.
+ */
+let freighterRequestTimeoutMs = FREIGHTER_TIMEOUT_MS;
+
+/**
+ * Test seam: shortens (or restores, with `null`) the request deadline used by
+ * `withTimeout` so timeout handling can be exercised without waiting the full
+ * fifteen seconds. Never called from application code.
+ */
+export function __setFreighterTimeoutForTests(ms: number | null): void {
+  freighterRequestTimeoutMs = typeof ms === 'number' && ms > 0 ? ms : FREIGHTER_TIMEOUT_MS;
+}
+
+const withTimeout = async <T>(promise: Promise<T>, ms = freighterRequestTimeoutMs): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return await new Promise<T>((resolve, reject) => {
@@ -386,6 +411,10 @@ const installedAfterFailure = (failure: FreighterError, previous: boolean): bool
     case 'INVALID_RESPONSE':
     case 'NETWORK_MISMATCH':
       return true;
+    case 'NETWORK_ERROR':
+      // The extension exists but the transport failed; keep the last known
+      // install state instead of telling the user to install it again.
+      return previous;
     default:
       return previous;
   }
@@ -578,6 +607,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       network: null,
       networkPassphrase: null,
       isSigning: false,
+      isSwitching: false,
       error: null,
       errorCode: null,
       retryCount: 0,
@@ -639,9 +669,10 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
         watcher.watch(({ address, network, networkPassphrase, error }) => {
           if (error || !isValidStellarAddress(address)) {
             // Wallet locked, switched to an unsupported account, or lost the
-            // connection: reflect a clean disconnected state rather than
-            // keeping stale signing context around.
-            set({ status: 'disconnected', publicKey: null, networkPassphrase: null });
+            // connection: reset the whole session — status, public key,
+            // network, signing/spinner flags and the last error — rather than
+            // keeping stale signing context (or a stale error banner) around.
+            get().disconnect();
             return;
           }
 
@@ -800,8 +831,11 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
         return;
       }
 
+      // `getAddress` resolves with `{ error }` on rejected/locked prompts in
+      // Freighter v2+, so promote any API error into the classified path
+      // instead of mistaking it for a locked wallet.
       const addressResult = typeof freighter.getAddress === 'function'
-        ? await withTimeout(freighter.getAddress())
+        ? assertNoApiError(await withTimeout(freighter.getAddress()))
         : null;
       const walletAddress = resolveWalletAddress(addressResult);
 
@@ -849,7 +883,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
         publicKey: null,
         network: null,
         networkPassphrase: null,
-        isInstalled: isLocked,
+        isInstalled: installedAfterFailure(failure, get().isInstalled),
         ...errorPatch(failure),
       });
     }
@@ -869,3 +903,11 @@ export const useFreighterStore = create<FreighterWalletState>()(
   }),
 );
 export const isValidStellarPublicKey = isValidStellarAddress;
+
+/**
+ * Derived "is this wallet usable right now?" flag. Exposed as a selector rather
+ * than duplicated state so it can never drift from `status`/`publicKey`.
+ */
+export const selectFreighterIsConnected = (
+  state: Pick<FreighterWalletState, 'status' | 'publicKey'>,
+): boolean => state.status === 'connected' && isValidStellarAddress(state.publicKey);
