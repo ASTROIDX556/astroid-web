@@ -231,7 +231,8 @@ describe('agent form schemas & validation helpers', () => {
   });
 
   test('wizard, provider, panel, configuration schemas & getFirstValidationMessage', () => {
-    const wiz = { name: 'Copilot', description: 'Monitors Stellar treasury balances.', ownerDepartment: 'Treasury', provider: 'OpenAI' as const, model: 'gpt-4o-mini', apiKey: 'sk-live', endpointUrl: 'https://api.openai.com/v1', contextWindowTokens: 128_000, budget: 5000, singleTransactionCap: 1500 };
+    const validOpenAiKey = `sk-${'a'.repeat(40)}`;
+    const wiz = { name: 'Copilot', description: 'Monitors Stellar treasury balances.', ownerDepartment: 'Treasury', provider: 'OpenAI' as const, model: 'gpt-4o-mini', apiKey: validOpenAiKey, endpointUrl: 'https://api.openai.com/v1', contextWindowTokens: 128_000, budget: 5000, singleTransactionCap: 1500 };
     assert.equal(agentWizardSchema.safeParse(wiz).success, true);
     assert.ok(hasErr(agentWizardSchema.safeParse({ ...wiz, budget: 1000, singleTransactionCap: 1500 }), 'singleTransactionCap'));
     assert.ok(hasErr(agentWizardSchema.safeParse({ ...wiz, apiKey: 'bad key' }), 'apiKey'));
@@ -245,7 +246,7 @@ describe('agent form schemas & validation helpers', () => {
 
     const prov = { name: 'Prod OpenAI', provider: 'openai' as const, model: 'gpt-4o', temperature: 0.5, endpointUrl: '', apiKey: '' };
     assert.ok(hasErr(providerSettingsSchema.safeParse(prov), 'apiKey'));
-    assert.equal(providerSettingsSchema.safeParse({ ...prov, apiKey: 'sk-live' }).success, true);
+    assert.equal(providerSettingsSchema.safeParse({ ...prov, apiKey: validOpenAiKey }).success, true);
     assert.ok(hasErr(providerSettingsSchema.safeParse({ ...prov, provider: 'ollama', model: 'llama3.1' }), 'endpointUrl'));
 
     const panel = { provider: 'anthropic' as const, model: 'claude-sonnet-5', temperature: 0.7, maxTokens: 2048, systemPrompt: 'Stay within bounds.' };
