@@ -4,6 +4,7 @@ Thanks for your interest in improving the frontend for Astroid — the Financial
 Operating System for autonomous AI agents on Stellar. We develop in the open
 and welcome issues, discussion, and pull requests.
 
+
 ## Getting started
 
 ```bash
