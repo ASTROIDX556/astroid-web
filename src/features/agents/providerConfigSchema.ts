@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { httpEndpointUrlSchema } from './schema';
+
 export const agentProviderTypes = [
   'nvidia',
   'openai',
@@ -35,7 +37,7 @@ const baseFields = {
 export const agentProviderConfigSchema = z
   .object({
     ...baseFields,
-    endpointUrl: z.string().url('Enter a valid URL.').optional().or(z.literal('')),
+    endpointUrl: httpEndpointUrlSchema('Enter a valid URL.').optional().or(z.literal('')),
     apiKey: z.string().max(200).optional().or(z.literal('')),
   })
   .superRefine((values, ctx) => {

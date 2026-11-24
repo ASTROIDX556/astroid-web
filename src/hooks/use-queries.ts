@@ -1,8 +1,21 @@
 'use client';
 
-import { useQuery, useMutation, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
+import {
+  AGENT_STATUS_REFETCH_INTERVAL_MS,
+  AGENT_STATUS_STALE_TIME_MS,
+  ASSET_RATE_REFETCH_INTERVAL_MS,
+  ASSET_RATE_STALE_TIME_MS,
+  WALLET_BALANCE_REFETCH_INTERVAL_MS,
+  WALLET_BALANCE_STALE_TIME_MS,
+} from '@/lib/query-config';
 import { queryKeys } from '@/services/query-keys';
-import { resources } from '@/services/resources';
+import { resources, type AgentConfigPatch } from '@/services/resources';
 import type {
   ActivityPoint,
   Agent,
@@ -73,17 +86,26 @@ export const useWalletBalances = (id: string): UseQueryResult<AssetBalance[]> =>
     queryKey: queryKeys.walletBalances(id),
     queryFn: () => resources.getWalletBalances(id),
     enabled: Boolean(id),
+    staleTime: WALLET_BALANCE_STALE_TIME_MS,
+    refetchInterval: WALLET_BALANCE_REFETCH_INTERVAL_MS,
   });
 
 // -- agents -----------------------------------------------------------------
 export const useAgents = (): UseQueryResult<Agent[]> =>
-  useQuery({ queryKey: queryKeys.agents, queryFn: resources.getAgents });
+  useQuery({
+    queryKey: queryKeys.agents,
+    queryFn: resources.getAgents,
+    staleTime: AGENT_STATUS_STALE_TIME_MS,
+    refetchInterval: AGENT_STATUS_REFETCH_INTERVAL_MS,
+  });
 
 export const useAgent = (id: string): UseQueryResult<Agent> =>
   useQuery({
     queryKey: queryKeys.agent(id),
     queryFn: () => resources.getAgent(id),
     enabled: Boolean(id),
+    staleTime: AGENT_STATUS_STALE_TIME_MS,
+    refetchInterval: AGENT_STATUS_REFETCH_INTERVAL_MS,
   });
 
 // -- policies ---------------------------------------------------------------
@@ -152,7 +174,8 @@ export const useAssetRates = (): UseQueryResult<AssetRate[]> =>
   useQuery({
     queryKey: queryKeys.rates,
     queryFn: resources.getAssetRates,
-    refetchInterval: 30_000,
+    staleTime: ASSET_RATE_STALE_TIME_MS,
+    refetchInterval: ASSET_RATE_REFETCH_INTERVAL_MS,
   });
 
 // -- notifications ----------------------------------------------------------
@@ -165,3 +188,49 @@ export const useApiKeys = (): UseQueryResult<ApiKey[]> =>
 
 export const useWebhooks = (): UseQueryResult<Webhook[]> =>
   useQuery({ queryKey: queryKeys.webhooks, queryFn: resources.getWebhooks });
+
+// -- mutations --------------------------------------------------------------
+
+/**
+ * Persist an agent configuration change, then refresh every query whose data
+ * derives from that agent: the detail cache is patched optimistically from the
+ * response, while collections and activity are invalidated.
+ */
+export const useUpdateAgentConfig = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<Agent, Error, { id: string; patch: AgentConfigPatch }>({
+    mutationFn: ({ id, patch }) => resources.updateAgent(id, patch),
+    onSuccess: (agent) => {
+      queryClient.setQueryData(queryKeys.agent(agent.id), agent);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.agents });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.activity });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.overview });
+    },
+  });
+};
+
+/**
+ * Submit a signed transaction and invalidate the ledgers it touches — the
+ * transaction list, the source wallet and its balances, budgets, and the
+ * dashboard overview — so no stale balance survives a successful submission.
+ */
+export const useSubmitTransaction = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<Transaction, Error, { xdr: string }>({
+    mutationFn: ({ xdr }) => resources.submitTransaction(xdr),
+    onSuccess: (transaction) => {
+      queryClient.setQueryData(queryKeys.transaction(transaction.id), transaction);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallet(transaction.walletId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.walletBalances(transaction.walletId),
+      });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.budgets });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.overview });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
+  });
+};

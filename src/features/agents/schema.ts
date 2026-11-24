@@ -43,6 +43,24 @@ const CUSTOM_ENDPOINT_PROVIDERS: readonly AgentProviderId[] = ['Ollama', 'Custom
 export const requiresEndpoint = (provider: AgentProviderId): boolean =>
   CUSTOM_ENDPOINT_PROVIDERS.includes(provider);
 
+/**
+ * Endpoint URLs are called directly with inference requests, so only absolute
+ * HTTP(S) URLs are accepted. `z.string().url()` alone lets values such as
+ * `localhost:11434` through because they parse as an opaque scheme.
+ */
+export function httpEndpointUrlSchema(
+  message = 'Enter a valid URL, e.g. https://api.example.com/v1',
+) {
+  return z
+    .string()
+    .trim()
+    .url(message)
+    .refine(
+      (value) => /^https?:\/\//i.test(value),
+      'Endpoint must be an http:// or https:// URL.',
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Agent wizard (template wizard flow)
 // ---------------------------------------------------------------------------
@@ -54,10 +72,9 @@ export const agentWizardSchema = z
     provider: z.enum(providerOptions),
     model: z.string().min(2, 'Model name is required.').max(80),
     apiKey: z.string().max(200).optional().or(z.literal('')),
-    endpointUrl: z
-      .string()
-      .trim()
-      .url('Enter a properly formatted URL, e.g. https://api.example.com/v1')
+    endpointUrl: httpEndpointUrlSchema(
+      'Enter a properly formatted URL, e.g. https://api.example.com/v1',
+    )
       .optional()
       .or(z.literal('')),
     contextWindowTokens: z.coerce
@@ -110,10 +127,7 @@ export const agentConfigSchema = z
       .or(z.literal('')),
     provider: z.enum(AGENT_PROVIDER_IDS) as z.ZodType<AgentProviderId>,
     model: z.string().trim().min(1, 'Select a model for the chosen provider'),
-    endpointUrl: z
-      .string()
-      .trim()
-      .url('Enter a valid URL, e.g. http://localhost:11434')
+    endpointUrl: httpEndpointUrlSchema('Enter a valid URL, e.g. http://localhost:11434')
       .optional()
       .or(z.literal('')),
     mode: z.enum(['assisted', 'autonomous']),
