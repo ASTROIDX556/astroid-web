@@ -403,16 +403,25 @@ export const FREIGHTER_PERSIST_KEY = 'astroid-freighter-wallet';
  * from the extension and fail closed, never trust a stored value.
  */
 export interface PersistedFreighterState {
-  status: 'connected' | 'disconnected';
+  /** `locked` is recoverable: unlocking restores the session on the next `hydrate()`. */
+  status: 'connected' | 'locked' | 'disconnected';
   publicKey: string | null;
 }
 
-/** Persist the connection only while it is healthy and its key is valid. */
+/**
+ * A locked wallet is still a known wallet. Persisting it (with its key) means
+ * an unlock can resume the session instead of forcing a manual reconnect;
+ * every other non-connected status is not worth restoring.
+ */
+const isRecoverableStatus = (status: unknown): status is 'connected' | 'locked' =>
+  status === 'connected' || status === 'locked';
+
+/** Persist the connection while it is recoverable and its key is valid. */
 export const partializeFreighterState = (
   state: Pick<FreighterWalletState, 'status' | 'publicKey'>,
 ): PersistedFreighterState =>
-  state.status === 'connected' && isValidStellarAddress(state.publicKey)
-    ? { status: 'connected', publicKey: state.publicKey }
+  isRecoverableStatus(state.status) && isValidStellarAddress(state.publicKey)
+    ? { status: state.status, publicKey: state.publicKey }
     : { status: 'disconnected', publicKey: null };
 
 /**
@@ -426,9 +435,17 @@ export const mergePersistedFreighterState = (
 ): FreighterWalletState => {
   if (!persisted || typeof persisted !== 'object') return current;
   const { status, publicKey } = persisted as Partial<PersistedFreighterState>;
-  if (status !== 'connected' || !isValidStellarAddress(publicKey)) return current;
+  if (!isRecoverableStatus(status) || !isValidStellarAddress(publicKey)) return current;
   // Optimistic until `hydrate()` confirms the extension still agrees.
-  return { ...current, status: 'connected', publicKey };
+  return status === 'locked'
+    ? {
+        ...current,
+        status,
+        publicKey,
+        error: DEFAULT_ERROR_MESSAGES.LOCKED,
+        errorCode: 'LOCKED',
+      }
+    : { ...current, status, publicKey, error: null, errorCode: null };
 };
 
 const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', unknown]]> = (set, get) => ({
@@ -748,7 +765,9 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
           ...errorPatch(failure),
         });
       } else if (failure.code === 'LOCKED') {
-        set({ status: 'locked', publicKey: null, networkPassphrase: null, ...errorPatch(failure) });
+        // Keep the address so unlocking can resume the same session; the
+        // passphrase is dropped so signing still fails closed until re-synced.
+        set({ status: 'locked', networkPassphrase: null, ...errorPatch(failure) });
       } else {
         set(errorPatch(failure));
       }
@@ -809,10 +828,11 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
         // The extension answered but exposed no address: the wallet is locked
         // or access was not granted. Surface a dedicated `locked` state so the
         // top bar can alert and offer a reconnect instead of silently showing
-        // a generic disconnect.
+        // a generic disconnect. Keep the last known key: locking is temporary
+        // and erasing it would force a manual reconnect after unlock.
         set({
           status: 'locked',
-          publicKey: null,
+          publicKey: get().publicKey,
           network: null,
           networkPassphrase: null,
           isInstalled: true,
@@ -846,7 +866,9 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       const isLocked = failure.code === 'LOCKED';
       set({
         status: isLocked ? 'locked' : 'disconnected',
-        publicKey: null,
+        // A lock is recoverable, so keep the last known key for the unlock;
+        // every other failure invalidates the session.
+        publicKey: isLocked ? get().publicKey : null,
         network: null,
         networkPassphrase: null,
         isInstalled: isLocked,
