@@ -6,5 +6,5 @@ export { default as XdrSignatureStatus } from './XdrSignatureStatus';
 export * from './transactionFiltering';
 export * from './exportUtils';
 export * from './TransactionExportActions';
-export * from './transactionTimeline';
+export * from './transactionTimelineStages';
 export * from './TransactionTimeline';

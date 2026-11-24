@@ -23,7 +23,7 @@ import {
   type TransactionStageId,
   type TransactionStageStatus,
   type TransactionTimelineInput,
-} from './transactionTimeline';
+} from './transactionTimelineStages';
 
 /* -------------------------------------------------------------------------- */
 /* Presentation                                                               */
