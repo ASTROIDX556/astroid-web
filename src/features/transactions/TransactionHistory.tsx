@@ -18,39 +18,16 @@ import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { TransactionDetailDrawer } from './TransactionDetailDrawer';
 import { TransactionFilters } from './TransactionFilters';
-import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
+import {
+  compareTransactionRows,
+  filterTransactions,
+  parseTransactionFilters,
+  type TransactionFilterValues,
+} from './filterTransactions';
 import { downloadTransactionExport } from './exportUtils';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
-}
-
-const transactionStatuses: Transaction['status'][] = [
-  'draft',
-  'pending',
-  'approved',
-  'submitting',
-  'confirmed',
-  'completed',
-  'rejected',
-  'expired',
-  'cancelled',
-  'failed',
-];
-
-function initialFilters(searchParams: URLSearchParams): TransactionFilterValues {
-  const status = searchParams.get('status');
-  return {
-    query: searchParams.get('q') ?? '',
-    status:
-      status && transactionStatuses.includes(status as Transaction['status'])
-        ? (status as Transaction['status'])
-        : 'all',
-    asset: searchParams.get('asset') ?? 'all',
-    agentId: searchParams.get('agent') ?? 'all',
-    dateFrom: searchParams.get('from') ?? '',
-    dateTo: searchParams.get('to') ?? '',
-  };
 }
 
 export function TransactionHistory({ transactions }: TransactionHistoryProps) {
@@ -59,7 +36,7 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<TransactionFilterValues>(() =>
-    initialFilters(searchParams),
+    parseTransactionFilters(searchParams),
   );
 
   const filteredTransactions = useMemo(
@@ -169,6 +146,7 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
         data={filteredTransactions}
         pageSize={8}
         pageSizeOptions={[8, 16, 32, 64]}
+        initialSorting={[{ id: 'createdAt', desc: true }]}
         caption="Transaction activity"
         onRowClick={(transaction) => setSelectedId(transaction.id)}
         getRowId={(row) => row.id}
@@ -205,6 +183,8 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
           {
             accessorKey: 'purpose',
             header: 'Purpose',
+            sortingFn: (rowA, rowB) =>
+              compareTransactionRows(rowA.original, rowB.original, 'purpose'),
             cell: ({ row }) => (
               <span className="text-foreground-secondary">{row.original.purpose}</span>
             ),
@@ -212,6 +192,8 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
           {
             accessorKey: 'agentName',
             header: 'Agent',
+            sortingFn: (rowA, rowB) =>
+              compareTransactionRows(rowA.original, rowB.original, 'agentName'),
             cell: ({ row }) => (
               <span className="text-foreground-secondary">
                 {row.original.agentName ?? '—'}
@@ -221,6 +203,8 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
           {
             accessorKey: 'amount',
             header: 'Amount',
+            sortingFn: (rowA, rowB) =>
+              compareTransactionRows(rowA.original, rowB.original, 'amount'),
             cell: ({ row }) => {
               const tx = row.original;
               const outbound = tx.direction === 'outbound';
@@ -242,6 +226,8 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
           {
             accessorKey: 'status',
             header: 'Status',
+            sortingFn: (rowA, rowB) =>
+              compareTransactionRows(rowA.original, rowB.original, 'status'),
             cell: ({ row }) => {
               const status = transactionStatus(row.original.status);
               return <Badge variant={status.variant}>{status.label}</Badge>;
@@ -250,6 +236,8 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
           {
             accessorKey: 'riskScore',
             header: 'Risk',
+            sortingFn: (rowA, rowB) =>
+              compareTransactionRows(rowA.original, rowB.original, 'riskScore'),
             cell: ({ row }) => <RiskBadge score={row.original.riskScore} />,
           },
           {

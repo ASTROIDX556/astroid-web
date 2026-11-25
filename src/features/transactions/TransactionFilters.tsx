@@ -3,8 +3,12 @@
 import { Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
-import type { Transaction, TransactionStatus } from '@/types/domain';
-import type { TransactionFilterValues } from './filterTransactions';
+import type { Transaction } from '@/types/domain';
+import {
+  DEFAULT_TRANSACTION_FILTERS,
+  TRANSACTION_STATUS_OPTIONS,
+  type TransactionFilterValues,
+} from './filterTransactions';
 import { TransactionExportActions } from './TransactionExportActions';
 
 interface TransactionFiltersProps {
@@ -16,19 +20,6 @@ interface TransactionFiltersProps {
   onExportCSV?: (transactions: Transaction[]) => void;
   onExportJSON?: (transactions: Transaction[]) => void;
 }
-
-const STATUSES: TransactionStatus[] = [
-  'draft',
-  'pending',
-  'approved',
-  'submitting',
-  'confirmed',
-  'completed',
-  'rejected',
-  'expired',
-  'cancelled',
-  'failed',
-];
 
 export function TransactionFilters({
   transactions,
@@ -108,7 +99,7 @@ export function TransactionFilters({
             aria-label="Filter transactions by status"
           >
             <option value="all">All statuses</option>
-            {STATUSES.filter((status) =>
+            {TRANSACTION_STATUS_OPTIONS.filter((status) =>
               transactions.some((transaction) => transaction.status === status),
             ).map((status) => (
               <option key={status} value={status}>
@@ -170,16 +161,7 @@ export function TransactionFilters({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() =>
-                onChange({
-                  query: '',
-                  status: 'all',
-                  asset: 'all',
-                  agentId: 'all',
-                  dateFrom: '',
-                  dateTo: '',
-                })
-              }
+              onClick={() => onChange({ ...DEFAULT_TRANSACTION_FILTERS })}
             >
               <X className="h-3.5 w-3.5 mr-1" aria-hidden />
               Clear filters
