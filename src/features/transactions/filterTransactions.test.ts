@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Transaction } from '@/types/domain';
-import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
+import {
+  DEFAULT_TRANSACTION_FILTERS,
+  compareTransactionRows,
+  filterTransactions,
+  parseTransactionFilters,
+  sortTransactions,
+  type TransactionFilterValues,
+} from './filterTransactions';
 
 const records: Transaction[] = [
   {
@@ -407,4 +414,169 @@ test('filtering does not mutate the input collection or its records', () => {
   });
 
   assert.deepEqual(edgeCatalog, snapshot);
+});
+
+test('parses composite filter state from URL search params', () => {
+  const filters = parseTransactionFilters(
+    new URLSearchParams({
+      q: 'atlas',
+      status: 'completed',
+      asset: 'USDC',
+      agent: 'agent-atlas',
+      from: '2026-07-01',
+      to: '2026-07-31',
+    }),
+  );
+
+  assert.deepEqual(filters, {
+    query: 'atlas',
+    status: 'completed',
+    asset: 'USDC',
+    agentId: 'agent-atlas',
+    dateFrom: '2026-07-01',
+    dateTo: '2026-07-31',
+  });
+});
+
+test('unknown or blank URL filter values fall back to unconstrained defaults', () => {
+  assert.deepEqual(
+    parseTransactionFilters(new URLSearchParams()),
+    DEFAULT_TRANSACTION_FILTERS,
+  );
+  assert.deepEqual(
+    parseTransactionFilters(
+      new URLSearchParams('status=bogus&asset=&agent=%20&from=&to=&q='),
+    ),
+    DEFAULT_TRANSACTION_FILTERS,
+  );
+  assert.deepEqual(
+    parseTransactionFilters(
+      new URLSearchParams('status=pending&from=2026-02-30&to=2026-7-1'),
+    ),
+    { ...DEFAULT_TRANSACTION_FILTERS, status: 'pending' },
+  );
+});
+
+test('search requires every whitespace-separated term to match some field', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'atlas stellar-hash-gamma' })),
+    ['txn-gamma'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: '  ATLAS   Stellar-Hash-Gamma  ' })),
+    ['txn-gamma'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'orion vendor' })),
+    [],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, query: 'atlas usdc' })),
+    ['txn-alpha', 'txn-gamma'],
+  );
+});
+
+test('supports open-ended date ranges and excludes rows with invalid timestamps', () => {
+  assert.deepEqual(
+    ids(filterTransactions(records, { ...noFilters, dateFrom: '2026-07-11' })),
+    ['txn-beta'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(records, { ...noFilters, dateTo: '2026-07-10' })),
+    ['txn-alpha'],
+  );
+
+  const withoutTimestamp: Transaction[] = [
+    { ...records[0]!, id: 'txn-no-timestamp', createdAt: 'not-a-date' },
+  ];
+  assert.deepEqual(
+    filterTransactions(withoutTimestamp, { ...noFilters, dateFrom: '2026-01-01' }),
+    [],
+  );
+});
+
+test('rejects impossible calendar dates instead of shifting the range', () => {
+  // `2026-02-30` would otherwise be normalised by Date into March.
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        dateFrom: '2026-02-30',
+        dateTo: '2026-02-30',
+      }),
+    ),
+    ids(edgeCatalog),
+  );
+});
+
+test('sorts ascending and descending by date, amount, and text columns', () => {
+  assert.deepEqual(
+    ids(sortTransactions(amountRecords, { id: 'amount', desc: false })),
+    ['txn-negative', 'txn-zero', 'txn-ceiling'],
+  );
+  assert.deepEqual(
+    ids(sortTransactions(amountRecords, { id: 'amount', desc: true })),
+    ['txn-ceiling', 'txn-zero', 'txn-negative'],
+  );
+  assert.deepEqual(
+    ids(sortTransactions(records, { id: 'createdAt', desc: false })),
+    ['txn-alpha', 'txn-beta'],
+  );
+  assert.deepEqual(
+    ids(sortTransactions(records, { id: 'createdAt', desc: true })),
+    ['txn-beta', 'txn-alpha'],
+  );
+  assert.deepEqual(
+    ids(sortTransactions(records, { id: 'counterparty', desc: false })),
+    ['txn-beta', 'txn-alpha'],
+  );
+  assert.deepEqual(
+    ids(sortTransactions(records, { id: 'purpose', desc: false })),
+    ['txn-alpha', 'txn-beta'],
+  );
+  assert.deepEqual(
+    ids(sortTransactions(records, { id: 'agentName', desc: true })),
+    ['txn-beta', 'txn-alpha'],
+  );
+});
+
+test('sorts statuses in lifecycle order and missing agents as empty text', () => {
+  assert.deepEqual(
+    ids(sortTransactions(edgeCatalog, { id: 'status', desc: false })).slice(0, 2),
+    ['txn-beta', 'txn-gamma'],
+  );
+
+  const withoutAgent = records.map((transaction) =>
+    transaction.id === 'txn-beta' ? { ...transaction, agentName: undefined } : transaction,
+  );
+  assert.deepEqual(
+    ids(sortTransactions(withoutAgent, { id: 'agentName', desc: false })),
+    ['txn-beta', 'txn-alpha'],
+  );
+});
+
+test('equal sort values fall back to a deterministic id tiebreak', () => {
+  // Every amountRecords row shares the same status and risk score.
+  assert.deepEqual(
+    ids(sortTransactions(amountRecords, { id: 'status', desc: false })),
+    ['txn-ceiling', 'txn-negative', 'txn-zero'],
+  );
+  assert.deepEqual(
+    ids(sortTransactions(amountRecords, { id: 'riskScore', desc: false })),
+    ['txn-ceiling', 'txn-negative', 'txn-zero'],
+  );
+  const [first, second] = amountRecords;
+  assert.equal(
+    compareTransactionRows(first!, second!, 'status'),
+    -compareTransactionRows(second!, first!, 'status'),
+  );
+});
+
+test('sorting a copy does not mutate the input collection or its records', () => {
+  const snapshot = structuredClone(amountRecords);
+  const sorted = sortTransactions(amountRecords, { id: 'amount', desc: true });
+
+  assert.notEqual(sorted, amountRecords);
+  assert.deepEqual(amountRecords, snapshot);
+  assert.deepEqual(ids(sorted), ['txn-ceiling', 'txn-zero', 'txn-negative']);
 });
