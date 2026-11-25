@@ -40,7 +40,6 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
   const queryClient = useQueryClient();
   const currentUser = useCurrentUser();
   const entry = useProposalApprovalStore((state) => state.getEntry(proposal.id));
-  const beginDecision = useProposalApprovalStore((state) => state.beginDecision);
   const resolveDecision = useProposalApprovalStore((state) => state.resolveDecision);
   const failDecision = useProposalApprovalStore((state) => state.failDecision);
 
@@ -52,8 +51,21 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
 
   const decide = useCallback(
     async (decision: LocalApprovalDecision): Promise<boolean> => {
-      if (entry.isProcessing) return false;
-      if (entry.decision) return false;
+      // Read the live store instead of the render-time snapshot: two clicks in
+      // the same tick would both see the previous render's `isProcessing`.
+      const store = useProposalApprovalStore.getState();
+      const current = store.getEntry(proposal.id);
+
+      if (current.isProcessing) {
+        toast.error('A decision is already being recorded for this proposal.');
+        return false;
+      }
+
+      if (current.decision !== null) {
+        toast.error('You have already recorded a decision on this proposal.');
+        return false;
+      }
+
       if (proposal.status !== 'pending') {
         toast.error('This proposal is no longer pending.');
         return false;
@@ -63,7 +75,11 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
         return false;
       }
 
-      beginDecision(proposal.id);
+      // Atomic claim: fails if another handler won the race in this tick.
+      if (!store.tryBeginDecision(proposal.id)) {
+        toast.error('A decision is already being recorded for this proposal.');
+        return false;
+      }
 
       try {
         const latest = await fetchProposalApprovalState(proposal.id);
@@ -113,17 +129,7 @@ export function useProposalApproval(proposal: Proposal): UseProposalApprovalResu
         return false;
       }
     },
-    [
-      entry.isProcessing,
-      entry.decision,
-      proposal,
-      beginDecision,
-      resolveDecision,
-      failDecision,
-      mutation,
-      currentUser.data,
-      queryClient,
-    ],
+    [proposal, resolveDecision, failDecision],
   );
 
   const approve = useCallback(() => decide('approved'), [decide]);
