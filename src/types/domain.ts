@@ -234,11 +234,14 @@ export interface Proposal {
   id: string;
   organizationId: string;
   transactionId: string;
+  xdr?: string;
   title: string;
   description: string;
   status: ProposalStatus;
   kind: ApprovalKind;
   agentName: string;
+  proposerName?: string;
+  proposerId?: string;
   amount: number;
   asset: Asset;
   counterparty: string;

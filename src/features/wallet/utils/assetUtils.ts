@@ -1,17 +1,19 @@
+import { isValidStellarPublicKey } from '@/lib/stellar';
+
 /** Asset code: 1–12 alphanumeric characters. */
 const ASSET_CODE_RE = /^[A-Za-z0-9]{1,12}$/;
-
-/** Stellar public key: starts with 'G', followed by 55 base-32 characters. */
-const STELLAR_ISSUER_RE = /^G[A-Za-z0-9]{55}$/;
 
 /** Validate an asset code (1–12 alphanumeric characters). */
 export function validateAssetCode(code: string): boolean {
   return ASSET_CODE_RE.test(code.trim());
 }
 
-/** Validate a Stellar issuer public key (starts with 'G', 56 chars total). */
+/**
+ * Validate a Stellar issuer public key. Delegates to the canonical StrKey
+ * validator so the base32 alphabet and CRC-16 checksum are both enforced.
+ */
 export function validateStellarIssuer(issuer: string): boolean {
-  return STELLAR_ISSUER_RE.test(issuer.trim());
+  return isValidStellarPublicKey(issuer);
 }
 
 /** Copy text to the clipboard. Falls back to a hidden textarea if the Clipboard API is unavailable. */

@@ -4,7 +4,14 @@ import { Bell, LayoutDashboard, SunMoon } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Select, Switch } from '@/components/ui/input';
-import { usePreferencesStore, useHydrated, type NotificationPreferences, type DashboardDensity } from '@/stores';
+import {
+  usePreferencesStore,
+  useHydrated,
+  type CashflowDisplay,
+  type DashboardCurrency,
+  type NotificationPreferences,
+  type DashboardDensity,
+} from '@/stores';
 import type { ThemeMode } from '@/stores/theme-store';
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -37,6 +44,12 @@ export function PreferencesPanel() {
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
   const density = usePreferencesStore((s) => s.density);
   const setDensity = usePreferencesStore((s) => s.setDensity);
+  const sidebarCollapsed = usePreferencesStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = usePreferencesStore((s) => s.setSidebarCollapsed);
+  const activeCurrency = usePreferencesStore((s) => s.activeCurrency);
+  const setActiveCurrency = usePreferencesStore((s) => s.setActiveCurrency);
+  const cashflowDisplay = usePreferencesStore((s) => s.cashflowDisplay);
+  const setCashflowDisplay = usePreferencesStore((s) => s.setCashflowDisplay);
   const notifications = usePreferencesStore((s) => s.notifications);
   const toggleNotification = usePreferencesStore((s) => s.toggleNotification);
 
@@ -85,6 +98,49 @@ export function PreferencesPanel() {
               ))}
             </Select>
           </FormField>
+
+          <FormField
+            label="Dashboard currency"
+            htmlFor="pref-currency"
+            hint="Used for dashboard totals and cashflow labels."
+          >
+            <Select
+              id="pref-currency"
+              value={hydrated ? activeCurrency : 'USD'}
+              onChange={(event) => setActiveCurrency(event.target.value as DashboardCurrency)}
+            >
+              <option value="USD">USD</option>
+              <option value="USDC">USDC</option>
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Cashflow chart"
+            htmlFor="pref-cashflow-display"
+            hint="Choose a filled area or line-only display."
+          >
+            <Select
+              id="pref-cashflow-display"
+              value={hydrated ? cashflowDisplay : 'area'}
+              onChange={(event) => setCashflowDisplay(event.target.value as CashflowDisplay)}
+            >
+              <option value="area">Area</option>
+              <option value="line">Line</option>
+            </Select>
+          </FormField>
+
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium text-foreground">Compact navigation</p>
+              <p className="mt-1 text-2xs text-foreground-muted">Show navigation icons without labels.</p>
+            </div>
+            <Switch
+              id="pref-sidebar-collapsed"
+              checked={hydrated && sidebarCollapsed}
+              onCheckedChange={setSidebarCollapsed}
+              aria-label="Compact navigation"
+            />
+          </div>
         </CardContent>
       </Card>
 

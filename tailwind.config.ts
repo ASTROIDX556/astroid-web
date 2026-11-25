@@ -51,6 +51,7 @@ const config: Config = {
           DEFAULT: 'rgb(var(--background-primary) / <alpha-value>)',
           primary: 'rgb(var(--background-primary) / <alpha-value>)',
           secondary: 'rgb(var(--background-secondary) / <alpha-value>)',
+          tertiary: 'rgb(var(--background-tertiary, var(--surface-secondary)) / <alpha-value>)',
         },
         surface: {
           DEFAULT: 'rgb(var(--surface-primary) / <alpha-value>)',

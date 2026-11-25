@@ -1,4 +1,5 @@
 import type { MultisigRequest } from '@/features/approvals/components/MultisigProgressCard';
+import type { ProposalSigner } from '@/features/approvals/components/ProposalTimeline';
 
 /**
  * Fixture used when `NEXT_PUBLIC_API_URL` is unset (mock mode).
@@ -41,3 +42,45 @@ export const mockMultisigRequest: MultisigRequest = {
     },
   ],
 };
+
+/**
+ * Review timeline fixture used when `NEXT_PUBLIC_API_URL` is unset.
+ *
+ * Deliberately covers every status the timeline renders — an approval, a
+ * rejection with a note, and two still-pending signers — so the component's
+ * visual states are all exercised without a backend.
+ */
+export const mockProposalSigners: ProposalSigner[] = [
+  {
+    publicKey: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
+    label: 'Ada Okonkwo',
+    role: 'Treasury ops',
+    weight: 2,
+    status: 'approved',
+    respondedAt: '2026-09-01T09:14:00Z',
+    note: 'Vendor and invoice reference match the Q3 infrastructure PO.',
+  },
+  {
+    publicKey: 'GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2',
+    label: 'Marco Deng',
+    role: 'Risk review',
+    weight: 1,
+    status: 'rejected',
+    respondedAt: '2026-09-01T11:42:00Z',
+    note: 'Amount exceeds the standing vendor cap — needs a policy exception first.',
+  },
+  {
+    publicKey: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
+    label: 'Priya Raman',
+    role: 'Finance controller',
+    weight: 2,
+    status: 'pending',
+  },
+  {
+    publicKey: 'GDQNY3PBOJOKYZSRMK2S7LHHGWZIUISD4QORETLMXEWXBI7KFZZMKTL3',
+    label: 'Sam Herrera',
+    role: 'Security officer',
+    weight: 1,
+    status: 'pending',
+  },
+];

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDown, ArrowUp, XCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, Search, XCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { proposalStatus } from '@/lib/status';
@@ -9,6 +9,8 @@ import type { ProposalStatus, RiskLevel } from '@/types/domain';
 import {
   APPROVAL_QUEUE_SORT_IDS,
   APPROVAL_QUEUE_SORT_LABELS,
+  APPROVAL_SIGNATURE_FILTER_IDS,
+  APPROVAL_SIGNATURE_FILTER_LABELS,
   type ApprovalQueueFilters,
   type ApprovalQueueSort,
   type ApprovalQueueSortId,
@@ -61,6 +63,21 @@ export function ApprovalQueueToolbar({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
+        <label className="relative flex min-w-56 flex-1 flex-col gap-1">
+          <span className={FILTER_LABEL_CLASS}>Search proposals</span>
+          <Search
+            className="pointer-events-none absolute bottom-2.5 left-3 h-4 w-4 text-foreground-muted"
+            aria-hidden
+          />
+          <input
+            type="search"
+            aria-label="Search proposals by agent, proposer, asset, or amount"
+            value={filters.query}
+            onChange={(event) => onFilterChange('query', event.target.value)}
+            placeholder="Agent, proposer, asset, amount…"
+            className="h-9 rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </label>
         <label className="flex items-center gap-2">
           <span className={FILTER_LABEL_CLASS}>Status</span>
           <select
@@ -92,6 +109,24 @@ export function ApprovalQueueToolbar({
             {agentOptions.map((agent) => (
               <option key={agent} value={agent}>
                 {agent}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2">
+          <span className={FILTER_LABEL_CLASS}>Signatures</span>
+          <select
+            aria-label="Filter proposals by signature threshold state"
+            value={filters.signature}
+            onChange={(event) =>
+              onFilterChange('signature', event.target.value as ApprovalQueueFilters['signature'])
+            }
+            className={SELECT_CLASS}
+          >
+            {APPROVAL_SIGNATURE_FILTER_IDS.map((id) => (
+              <option key={id} value={id}>
+                {APPROVAL_SIGNATURE_FILTER_LABELS[id]}
               </option>
             ))}
           </select>

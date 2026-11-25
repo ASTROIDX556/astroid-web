@@ -15,7 +15,8 @@ import {
   XCircle,
   type LucideIcon,
 } from 'lucide-react';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Tooltip, XAxis, YAxis } from 'recharts';
+import { ChartFrame } from '@/components/charts/chart-frame';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -259,14 +260,14 @@ export function SimulationTimeline({ simulation, className = '' }: SimulationTim
             <p className="text-2xs text-foreground-muted">{simulation.fee.asset} reserved for submission</p>
           </div>
           <div className="h-32" aria-label="Fee estimate breakdown chart">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartFrame label="Fee estimate breakdown" height="100%">
               <BarChart data={chartData} margin={{ top: 4, right: 0, bottom: 0, left: -20 }}>
                 <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: 'currentColor' }} />
                 <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: 'currentColor' }} />
                 <Tooltip formatter={(value) => `${Number(value).toLocaleString()} stroops`} cursor={{ fill: 'transparent' }} />
                 <Bar dataKey="value" fill="currentColor" className="fill-gold" radius={[3, 3, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartFrame>
           </div>
           <dl className="space-y-2 border-t border-border pt-3 text-2xs">
             {chartData.map((item) => (

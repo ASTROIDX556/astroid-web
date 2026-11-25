@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Sparkles, ChevronsUpDown, Check, Menu } from 'lucide-react';
+import { Search, Sparkles, ChevronsUpDown, Check, Menu, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Dropdown, type DropdownItem } from '@/components/ui/dropdown';
 import { Avatar } from '@/components/ui/avatar';
 import { NotificationCenter } from '@/components/NotificationCenter';
@@ -10,8 +12,11 @@ import { useAgentTelemetrySubscription } from '@/hooks/useAgentTelemetrySubscrip
 import { usePreferencesStore } from '@/stores/preferences-store';
 import { useCommandStore, useAssistantStore } from '@/stores/ui-store';
 import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
+import { WalletNetworkSwitcher } from '@/features/network/WalletNetworkSwitcher';
 import { CircuitBreakerControl } from '@/features/security';
 import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
+import { useFreighterStore } from '@/stores/freighter-store';
+import { getFreighterRecovery } from '@/features/wallet/freighterErrorRecovery';
 import { cn } from '@/lib/cn';
 
 /** Shared, brand-tinted focus ring for every top-bar control (WCAG AA). */
@@ -37,8 +42,74 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
 
   const activeOrgId = usePreferencesStore((s) => s.activeOrgId);
   const setActiveOrg = usePreferencesStore((s) => s.setActiveOrg);
+  const commandOpen = useCommandStore((s) => s.open);
   const openCommand = useCommandStore((s) => s.setOpen);
   const openAssistant = useAssistantStore((s) => s.setOpen);
+  const walletStatus = useFreighterStore((state) => state.status);
+  const walletAddress = useFreighterStore((state) => state.publicKey);
+  const walletNetwork = useFreighterStore((state) => state.network);
+  const reconnectWallet = useFreighterStore((state) => state.connect);
+
+  useEffect(() => {
+    const walletStore = useFreighterStore;
+    const refreshWallet = () => void walletStore.getState().hydrate();
+    refreshWallet();
+
+    const interval = window.setInterval(refreshWallet, 5000);
+    window.addEventListener('focus', refreshWallet);
+    const unsubscribe = walletStore.subscribe((state, previousState) => {
+      if (previousState.status === 'connected' && state.status === 'locked') {
+        toast.warning('Freighter wallet locked', {
+          description: 'Unlock Freighter and reconnect to continue using Stellar features.',
+        });
+      } else if (previousState.status === 'connected' && state.status === 'disconnected') {
+        toast.warning('Freighter disconnected', {
+          description: 'Reconnect your wallet to continue using Stellar features.',
+        });
+      }
+
+      if (state.error && state.error !== previousState.error && state.status !== 'locked') {
+        const recovery = getFreighterRecovery(state.errorCode, state.retryCount);
+        const retryable =
+          recovery.action === 'retry' || recovery.action === 'unlock_and_retry';
+        const options = {
+          id: 'freighter-error',
+          description: state.error,
+          action: retryable
+            ? {
+                label: recovery.actionLabel,
+                onClick: () => void walletStore.getState().retryConnection(),
+              }
+            : undefined,
+        };
+        // A dismissed prompt is a user choice, not a failure: warn instead of
+        // raising an error toast. Everything else stays an error.
+        if (state.errorCode === 'USER_DECLINED') {
+          toast.warning(recovery.title, options);
+        } else {
+          toast.error(recovery.title, options);
+        }
+      }
+
+      if (
+        previousState.status === 'connected' &&
+        state.status === 'connected' &&
+        previousState.network &&
+        state.network &&
+        previousState.network !== state.network
+      ) {
+        toast.info('Stellar network changed', {
+          description: `Freighter is now connected to ${state.network}.`,
+        });
+      }
+    });
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshWallet);
+      unsubscribe();
+    };
+  }, []);
 
   const orgs = orgsQuery.data ?? [];
   const activeOrg = orgs.find((o) => o.id === activeOrgId) ?? orgs[0];
@@ -61,9 +132,9 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-30 flex flex-col border-b border-border bg-background/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 flex flex-col border-b border-border bg-background-primary/95 backdrop-blur-xl">
       {/* Top Tier: Brand & Global Actions */}
-      <div className="min-h-16 flex flex-wrap items-center gap-3 px-4 py-2 sm:px-6 lg:py-0 lg:min-h-0">
+      <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
         <Link
           href="/overview"
           className={cn(
@@ -71,7 +142,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
             TOPBAR_FOCUS,
           )}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button bg-accent-gradient text-white shadow-gold">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button bg-accent-gradient text-accent-foreground shadow-gold">
             <Sparkles className="h-4 w-4" aria-hidden />
           </span>
           <span className="sr-only">Astroid home</span>
@@ -85,7 +156,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
           type="button"
           onClick={onOpenNav}
           className={cn(
-            'grid h-9 w-9 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground lg:hidden',
+            'grid h-9 w-9 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground md:hidden',
             TOPBAR_FOCUS,
           )}
           aria-label="Open navigation menu"
@@ -102,7 +173,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
           aria-label="Switch organization"
           trigger={
             <span className="px-2.5 py-1.5 flex items-center gap-2 rounded-button text-sm font-medium transition-colors duration-fast hover:bg-surface-secondary">
-              <span className="grid h-6 w-6 place-items-center rounded-xs bg-accent-gradient text-2xs font-bold text-white">
+              <span className="grid h-6 w-6 place-items-center rounded-xs bg-accent-gradient text-2xs font-bold text-accent-foreground">
                 {(activeOrg?.name ?? 'A').charAt(0)}
               </span>
               <span className="hidden max-w-[140px] truncate sm:inline-block">
@@ -129,6 +200,8 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
           )}
           aria-label="Open command palette"
           aria-haspopup="dialog"
+          aria-expanded={commandOpen}
+          aria-controls="command-palette"
         >
           <Search className="h-3.5 w-3.5" aria-hidden />
           <span>Search command…</span>
@@ -139,6 +212,55 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
 
         {/* Live agent telemetry connection status */}
         <TelemetryStatusIndicator status={telemetry.status} />
+
+        {/* Freighter wallet status + Stellar network switcher */}
+        <WalletNetworkSwitcher />
+
+        {/* Freighter wallet connection and active Stellar network */}
+        <div
+          className="flex items-center gap-1.5 rounded-button border border-border bg-surface px-2 py-1.5 text-2xs sm:gap-2 sm:px-2.5"
+          aria-live="polite"
+          aria-label="Stellar wallet status"
+        >
+          <span
+            className={cn(
+              'h-2 w-2 shrink-0 rounded-full',
+              walletStatus === 'connected'
+                ? 'bg-success'
+                : walletStatus === 'connecting'
+                  ? 'bg-warning'
+                  : 'bg-danger',
+            )}
+            aria-hidden
+          />
+          <span className="max-w-24 truncate font-medium text-foreground">
+            {walletStatus === 'connected' && walletAddress
+              ? `${walletAddress.slice(0, 5)}…${walletAddress.slice(-4)}`
+              : walletStatus === 'locked'
+                ? 'Wallet locked'
+                : walletStatus === 'connecting'
+                  ? 'Connecting'
+                  : 'Disconnected'}
+          </span>
+          <span className="max-w-16 truncate border-l border-border pl-2 text-foreground-muted sm:max-w-20">
+            {walletNetwork ?? 'No network'}
+          </span>
+          {walletStatus !== 'connected' && (
+            <button
+              type="button"
+              onClick={() => void reconnectWallet()}
+              disabled={walletStatus === 'connecting'}
+              className={cn(
+                'grid h-7 w-7 shrink-0 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground disabled:cursor-wait disabled:opacity-50',
+                TOPBAR_FOCUS,
+              )}
+              aria-label="Reconnect Stellar wallet"
+              title="Reconnect Stellar wallet"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          )}
+        </div>
 
         {/* Stellar Network Health & RPC Latency Widget */}
         <NetworkHealthWidget />
@@ -196,6 +318,8 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
             )}
             aria-label="Open command palette"
             aria-haspopup="dialog"
+            aria-expanded={commandOpen}
+            aria-controls="command-palette"
           >
             <Search className="h-5 w-5" aria-hidden />
           </button>

@@ -14,22 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ProgressBar } from '@/components/dashboard/risk-badge';
 import { formatCurrency } from '@/lib/format';
-import { AssetSymbol, AssetRate, BudgetLimitConfig, SimulationResult } from './types';
-
-const ASSET_RATES: Record<AssetSymbol, AssetRate> = {
-  XLM: { symbol: 'XLM', name: 'Stellar Lumens', usdRate: 0.12, decimals: 7 },
-  USDC: { symbol: 'USDC', name: 'USD Coin (Stellar)', usdRate: 1.0, decimals: 2 },
-  BTC: { symbol: 'BTC', name: 'Bitcoin (Wrapped)', usdRate: 65000.0, decimals: 8 },
-  ETH: { symbol: 'ETH', name: 'Ethereum (Wrapped)', usdRate: 3200.0, decimals: 8 },
-  EURC: { symbol: 'EURC', name: 'Euro Coin', usdRate: 1.08, decimals: 2 },
-};
-
-const DEFAULT_CONFIG: BudgetLimitConfig = {
-  dailyLimitUsd: 10000,
-  dailySpentUsd: 6800,
-  singleTxCeilingUsd: 2500,
-  networkBaseFeeXlm: 0.00001,
-};
+import {
+  ASSET_RATES,
+  DEFAULT_CONFIG,
+  AssetSymbol,
+  BudgetLimitConfig,
+  SimulationResult,
+} from './types';
+import { calculateBudgetSimulation } from './spendingPolicySimulation';
 
 export interface BudgetSimulatorProps {
   config?: Partial<BudgetLimitConfig>;
@@ -47,61 +39,12 @@ export function BudgetSimulator({ config = {}, className = '' }: BudgetSimulator
   const [customFeeXlm, setCustomFeeXlm] = useState<string>('0.00001');
 
   const simulation = useMemo<SimulationResult>(() => {
-    const rawAmount = parseFloat(assetAmount);
-    const validAmount = isNaN(rawAmount) || rawAmount < 0 ? 0 : rawAmount;
-    const rate = ASSET_RATES[selectedAsset] || ASSET_RATES.USDC;
-
-    const amountUsd = validAmount * rate.usdRate;
-    const feeXlm = parseFloat(customFeeXlm) || mergedConfig.networkBaseFeeXlm;
-    const networkFeeUsd = feeXlm * ASSET_RATES.XLM.usdRate;
-    const totalCostUsd = amountUsd + networkFeeUsd;
-
-    const currentSpentUsd = mergedConfig.dailySpentUsd;
-    const updatedSpentUsd = currentSpentUsd + totalCostUsd;
-    const dailyLimitUsd = mergedConfig.dailyLimitUsd > 0 ? mergedConfig.dailyLimitUsd : 1;
-
-    const currentUtilizationPct = Math.min(100, (currentSpentUsd / dailyLimitUsd) * 100);
-    const updatedUtilizationPct = Math.min(100, (updatedSpentUsd / dailyLimitUsd) * 100);
-
-    const exceedsSingleTxCeiling =
-      mergedConfig.singleTxCeilingUsd > 0 && amountUsd > mergedConfig.singleTxCeilingUsd;
-    const exceedsDailyLimit = updatedSpentUsd > dailyLimitUsd;
-
-    const warnings: string[] = [];
-    if (exceedsSingleTxCeiling) {
-      warnings.push(
-        `Transaction value (${formatCurrency(amountUsd, 'USD')}) exceeds single transaction ceiling of ${formatCurrency(mergedConfig.singleTxCeilingUsd, 'USD')}.`
-      );
-    }
-    if (exceedsDailyLimit) {
-      const over = updatedSpentUsd - dailyLimitUsd;
-      warnings.push(
-        `Simulation breaches daily organization cap by ${formatCurrency(over, 'USD')}.`
-      );
-    }
-    if (updatedUtilizationPct >= 80 && !exceedsDailyLimit) {
-      warnings.push(
-        `Simulated budget utilization will reach ${Math.round(updatedUtilizationPct)}% of daily envelope.`
-      );
-    }
-
-    return {
-      assetAmount: validAmount,
-      assetSymbol: selectedAsset,
-      amountUsd,
-      networkFeeXlm: feeXlm,
-      networkFeeUsd,
-      totalCostUsd,
-      currentSpentUsd,
-      updatedSpentUsd,
-      dailyLimitUsd,
-      currentUtilizationPct,
-      updatedUtilizationPct,
-      exceedsSingleTxCeiling,
-      exceedsDailyLimit,
-      isPolicyViolation: exceedsSingleTxCeiling || exceedsDailyLimit,
-      warnings,
-    };
+    return calculateBudgetSimulation({
+      amount: assetAmount,
+      selectedAsset,
+      customFeeXlm,
+      config: mergedConfig,
+    });
   }, [assetAmount, selectedAsset, customFeeXlm, mergedConfig]);
 
   const handleReset = useCallback(() => {

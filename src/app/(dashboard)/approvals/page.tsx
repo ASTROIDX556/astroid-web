@@ -2,12 +2,16 @@
 
 import { PageHeader } from '@/components/dashboard/page-header';
 import { QueryBoundary } from '@/components/dashboard/query-boundary';
+import { SectionLabel } from '@/components/dashboard/stat-card';
 import { SkeletonCard } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BellIllustration } from '@/components/illustrations';
 import { useProposals } from '@/hooks/use-queries';
 import { ApprovalQueue } from '@/features/approvals/ApprovalQueue';
+import { MultisigProgressCard } from '@/features/approvals/components/MultisigProgressCard';
+import { mockMultisigRequest } from '@/features/approvals/fixtures/multisig';
 import { PageTransition } from '@/components/ui/motion';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function ApprovalsPage() {
   const proposals = useProposals();
@@ -38,8 +42,25 @@ export default function ApprovalsPage() {
           />
         }
       >
-        {(data) => <ApprovalQueue proposals={data} />}
+        {(data) => (
+          <ErrorBoundary section="Approval queue">
+            <ApprovalQueue proposals={data} />
+          </ErrorBoundary>
+        )}
       </QueryBoundary>
+
+      <section className="space-y-4">
+        <div className="space-y-1.5">
+          <SectionLabel>Multi-party approval progress</SectionLabel>
+          <p className="max-w-prose text-xs text-foreground-secondary">
+            Threshold status for the pending multi-signature signing request — collected
+            weight, remaining signatures, and each approver&apos;s decision.
+          </p>
+        </div>
+        <ErrorBoundary section="Signing progress">
+          <MultisigProgressCard request={mockMultisigRequest} />
+        </ErrorBoundary>
+      </section>
     </PageTransition>
   );
 }

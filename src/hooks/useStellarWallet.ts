@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export type StellarWalletStatus = 'idle' | 'checking' | 'connected' | 'missing' | 'error';
+import { deriveWalletStatus, type StellarWalletStatus } from '@/lib/wallet-status';
+import { useFreighterStore } from '@/stores/freighter-store';
+
+export type { StellarWalletStatus };
 
 /**
  * Classification of Freighter connection failures so UI surfaces (banners,
@@ -47,6 +50,17 @@ const RETRY_BASE_DELAY_MS = 400;
 
 const MISSING_EXTENSION_MESSAGE =
   'Freighter is not installed. Please install the wallet extension and try again.';
+
+/**
+ * Publishes this widget's view of the connection to the shared Freighter store
+ * so every wallet-dependent widget (header, network switcher, signing and
+ * approval dialogs) reflects it at once instead of each holding its own copy.
+ */
+function adoptSharedConnection(publicKey: string | null): void {
+  const store = useFreighterStore.getState();
+  store.adoptConnection(publicKey);
+  if (publicKey) void store.refreshNetwork();
+}
 
 const wait = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -151,8 +165,12 @@ export function normalizeFreighterError(err: unknown, fallbackMessage = 'Freight
 }
 
 export function useStellarWallet() {
-  const [status, setStatus] = useState<StellarWalletStatus>('checking');
-  const [publicKey, setPublicKey] = useState<string | null>(null);
+  // Transient, per-widget state (validating, missing extension, last failure).
+  const [localStatus, setStatus] = useState<StellarWalletStatus>('checking');
+  // Whether a wallet is connected, and as whom, lives in the shared store.
+  const publicKey = useFreighterStore((s) => s.publicKey);
+  const sharedStatus = useFreighterStore((s) => s.status);
+  const status = deriveWalletStatus(localStatus, sharedStatus, publicKey);
   const [walletError, setWalletError] = useState<FreighterWalletError | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [retryState, setRetryState] = useState<StellarWalletRetryState>({
@@ -239,7 +257,7 @@ export function useStellarWallet() {
 
     if (!api) {
       setStatus('missing');
-      setPublicKey(null);
+      adoptSharedConnection(null);
       setFailure({
         kind: 'missing',
         message: MISSING_EXTENSION_MESSAGE,
@@ -259,9 +277,11 @@ export function useStellarWallet() {
         const address = await withRetry(() => withTimeout(api.getAddress()), () => {}, runId);
         if (activeRun.current !== runId) return Boolean(connected);
         const nextKey = typeof address === 'string' ? address : address?.address ?? null;
-        setPublicKey(nextKey);
+        adoptSharedConnection(nextKey);
         setFailure(null);
       } else {
+        // Freighter reports no connection: clear it for every widget too.
+        adoptSharedConnection(null);
         setFailure(null);
       }
       setRetryState((prev) => ({ ...prev, attempt: 0, isRetrying: false, canRetry: false }));
@@ -332,7 +352,7 @@ export function useStellarWallet() {
       if (activeRun.current !== runId) return null;
       const nextKey = typeof address === 'string' ? address : address?.address ?? null;
 
-      setPublicKey(nextKey);
+      adoptSharedConnection(nextKey);
       setStatus(nextKey ? 'connected' : 'idle');
       setFailure(null);
       setRetryState({ attempt: 0, maxAttempts: MAX_AUTOMATIC_RETRIES, isRetrying: false, canRetry: false });

@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { Topbar } from '@/components/shell/topbar';
 import { CommandDock } from '@/components/shell/command-dock';
 import { MobileNav } from '@/components/shell/mobile-nav';
-import { CommandPalette } from '@/components/shell/command-palette';
 import { AssistantDrawer } from '@/components/shell/assistant-drawer';
+import { PageTransition } from '@/components/ui/page-transition';
 import { usePreferencesStore, useHydrated } from '@/stores';
 import { cn } from '@/lib/cn';
 
@@ -44,13 +44,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         <div className="pb-28 lg:pb-28 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </div>
       </main>
 
       <CommandDock />
       <MobileNav open={navOpen} onClose={() => setNavOpen(false)} />
-      <CommandPalette />
       <AssistantDrawer />
     </div>
   );

@@ -6,9 +6,9 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ChartIllustration } from '@/components/illustrations';
 import { useTransactions } from '@/hooks/use-queries';
 import { PageTransition } from '@/components/ui/motion';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { XdrSignatureStatus } from '@/features/transactions/XdrSignatureStatus';
 import { FeeOptimizationPanel } from '@/features/transactions/FeeOptimizationPanel';
-import { TransactionAuditToolbar } from '@/features/transactions/TransactionAuditToolbar';
 import { TransactionHistory } from '@/features/transactions/TransactionHistory';
 
 export default function TransactionsPage() {
@@ -22,7 +22,9 @@ export default function TransactionsPage() {
         description="Every value movement your agents have proposed, approved and settled on Stellar."
       />
 
-      <XdrSignatureStatus />
+      <ErrorBoundary section="Signature status">
+        <XdrSignatureStatus />
+      </ErrorBoundary>
 
       <QueryBoundary
         query={transactions}
@@ -38,25 +40,14 @@ export default function TransactionsPage() {
       >
         {(data) => (
           <div className="space-y-8">
-            <FeeOptimizationPanel />
+            <ErrorBoundary section="Fee optimization">
+              <FeeOptimizationPanel />
+            </ErrorBoundary>
 
-            <div className="space-y-4 pt-4 border-t border-border">
-              <TransactionAuditToolbar
-                totalRecordsCount={data.length}
-                filteredRecordsCount={data.length}
-                onExportCSV={() => {
-                  const headers = ['ID', 'Counterparty', 'Purpose', 'Agent', 'Amount', 'Asset', 'Status'];
-                  const rows = data.map((t) => [t.id, `"${t.counterparty}"`, `"${t.purpose}"`, `"${t.agentName || ''}"`, t.amount, t.asset, t.status]);
-                  const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `agent-transactions-${Date.now()}.csv`;
-                  a.click();
-                }}
-              />
-              <TransactionHistory transactions={data} />
+            <div className="space-y-4 border-t border-border pt-4">
+              <ErrorBoundary section="Transaction history">
+                <TransactionHistory transactions={data} />
+              </ErrorBoundary>
             </div>
           </div>
         )}

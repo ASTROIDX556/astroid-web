@@ -30,7 +30,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { FormField, Input, Select } from '@/components/ui/input';
 import { useCurrentUser } from '@/hooks/use-queries';

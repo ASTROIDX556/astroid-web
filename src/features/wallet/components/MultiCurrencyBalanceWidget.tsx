@@ -14,6 +14,16 @@ type AssetFilter = 'all' | 'native' | 'stablecoin' | 'custom';
 const STABLECOIN_CODES = new Set(['USDC', 'EURC']);
 const NATIVE_CODES = new Set(['XLM']);
 
+/** Shared WCAG AA focus ring for the focusable balance card and asset rows. */
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+
+const CATEGORY_LABEL: Record<Exclude<AssetFilter, 'all'>, string> = {
+  native: 'Native',
+  stablecoin: 'Stablecoin',
+  custom: 'Custom',
+};
+
 function classifyAsset(code: string): Exclude<AssetFilter, 'all'> {
   if (NATIVE_CODES.has(code)) return 'native';
   if (STABLECOIN_CODES.has(code)) return 'stablecoin';
@@ -77,7 +87,12 @@ export function MultiCurrencyBalanceWidget({
   const hasZeroBalances = balances.some((b) => b.balance === 0);
 
   return (
-    <Card className={cn('p-5', className)}>
+    <Card
+      role="region"
+      aria-label="Multi-currency asset balances"
+      tabIndex={0}
+      className={cn('rounded-card p-5', FOCUS_RING, className)}
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-2xs font-medium uppercase tracking-[0.12em] text-foreground-secondary">
@@ -131,18 +146,27 @@ export function MultiCurrencyBalanceWidget({
         </label>
       )}
 
-      <div className="mt-4 divide-y divide-border">
+      <ul className="mt-4 divide-y divide-border" aria-label="Asset balances">
         {visibleBalances.length === 0 ? (
-          <p className="py-6 text-center text-sm text-foreground-secondary">
+          <li className="py-6 text-center text-sm text-foreground-secondary">
             No assets match this filter.
-          </p>
+          </li>
         ) : (
           visibleBalances.map((b) => {
             const category = classifyAsset(b.asset);
+            const balanceLabel = `${formatNumber(b.balance)} ${b.asset}`;
+            const valueLabel = formatCurrency(b.usdValue, 'USDC');
+            const rowLabel = `${b.asset}, ${CATEGORY_LABEL[category].toLowerCase()} asset. Balance ${balanceLabel}. Value ${valueLabel}.`;
+
             return (
-              <div
+              <li
                 key={b.asset}
-                className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                tabIndex={0}
+                aria-label={rowLabel}
+                className={cn(
+                  'flex items-center justify-between gap-4 rounded-sm py-3 first:pt-0 last:pb-0',
+                  FOCUS_RING,
+                )}
               >
                 <div className="flex items-center gap-3">
                   <span
@@ -166,32 +190,22 @@ export function MultiCurrencyBalanceWidget({
                         }
                         size="sm"
                       >
-                        {category === 'native'
-                          ? 'Native'
-                          : category === 'stablecoin'
-                            ? 'Stablecoin'
-                            : 'Custom'}
+                        {CATEGORY_LABEL[category]}
                       </Badge>
                     </div>
-                    <span
-                      className="tabular text-2xs text-foreground-muted"
-                      aria-label={`${b.asset} balance ${formatNumber(b.balance)}`}
-                    >
-                      {formatNumber(b.balance)} {b.asset}
+                    <span className="tabular text-2xs text-foreground-muted">
+                      {balanceLabel}
                     </span>
                   </div>
                 </div>
-                <span
-                  className="tabular text-sm font-medium text-foreground"
-                  aria-label={`${b.asset} value ${formatCurrency(b.usdValue, 'USDC')}`}
-                >
-                  {formatCurrency(b.usdValue, 'USDC')}
+                <span className="tabular text-sm font-medium text-foreground">
+                  {valueLabel}
                 </span>
-              </div>
+              </li>
             );
           })
         )}
-      </div>
+      </ul>
     </Card>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import {
   useReactTable,
@@ -23,24 +23,25 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
+import { transactionStatus } from '@/lib/status';
 import type { Transaction } from '@/types/domain';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
+import {
+  collectTransactionAgentOptions,
+  collectTransactionAssetOptions,
+  countActiveTransactionFilters,
+  matchesTransactionFilters,
+  TRANSACTION_DATE_RANGES,
+  TRANSACTION_STATUS_FILTERS,
+  type TransactionDateRange,
+  type TransactionFilters,
+  type TransactionStatusFilter,
+} from './transactionFilters';
 
 interface TransactionHistoryTableProps {
   transactions: Transaction[];
   className?: string;
 }
-
-type StatusFilter = 'all' | 'completed' | 'pending' | 'failed';
-type AssetFilter = 'all' | string;
-type DateRangeFilter = 'all' | '24h' | '7d' | '30d' | '90d';
-
-const DATE_RANGE_MS: Record<Exclude<DateRangeFilter, 'all'>, number> = {
-  '24h': 24 * 60 * 60 * 1000,
-  '7d': 7 * 24 * 60 * 60 * 1000,
-  '30d': 30 * 24 * 60 * 60 * 1000,
-  '90d': 90 * 24 * 60 * 60 * 1000,
-};
 
 /** Shared focus ring for every filter and sort control (WCAG AA). */
 const CONTROL_FOCUS =
@@ -51,42 +52,37 @@ const SELECT_CLASS = cn(
   CONTROL_FOCUS,
 );
 
-/** Count of active non-"all" filters, used for the reset affordance. */
-function useActiveFilterCount(
-  status: StatusFilter,
-  asset: AssetFilter,
-  range: DateRangeFilter,
-  agent: string,
-): number {
-  return useMemo(
-    () =>
-      [status !== 'all', asset !== 'all', range !== 'all', agent !== 'all'].filter(
-        Boolean,
-      ).length,
-    [status, asset, range, agent],
-  );
-}
-
 export function TransactionHistoryTable({ transactions, className }: TransactionHistoryTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [assetFilter, setAssetFilter] = useState<AssetFilter>('all');
-  const [dateRange, setDateRange] = useState<DateRangeFilter>('all');
+  const [statusFilter, setStatusFilter] =
+    useState<TransactionStatusFilter>('all');
+  const [assetFilter, setAssetFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<TransactionDateRange>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
 
-  const agents = useMemo(() => {
-    const unique = Array.from(new Set(transactions.map((t) => t.agentName).filter(Boolean)));
-    return ['all', ...unique];
-  }, [transactions]);
+  const filters: TransactionFilters = useMemo(
+    () => ({
+      status: statusFilter,
+      asset: assetFilter,
+      agent: agentFilter,
+      dateRange,
+    }),
+    [statusFilter, assetFilter, agentFilter, dateRange],
+  );
 
-  const assets = useMemo(() => {
-    const unique = Array.from(new Set(transactions.map((t) => t.asset).filter(Boolean)));
-    return ['all', ...unique];
-  }, [transactions]);
+  const agents = useMemo(
+    () => collectTransactionAgentOptions(transactions),
+    [transactions],
+  );
 
-  const activeFilterCount = useActiveFilterCount(statusFilter, assetFilter, dateRange, agentFilter);
+  const assets = useMemo(
+    () => collectTransactionAssetOptions(transactions),
+    [transactions],
+  );
+
+  const activeFilterCount = countActiveTransactionFilters(filters);
 
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
@@ -128,7 +124,14 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
         accessorKey: 'status',
         enableSorting: false,
         header: 'Status',
-        cell: ({ row }) => <Badge size="sm">{row.original.status}</Badge>,
+        cell: ({ row }) => {
+          const status = transactionStatus(row.original.status);
+          return (
+            <Badge variant={status.variant} size="sm">
+              {status.label}
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: 'createdAt',
@@ -176,27 +179,19 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
   });
 
   // Apply UI-level filters (agent + status + asset + date range) on top of the
-  // table's own filtered rows.
-  const filteredRows = useMemo(() => {
-    const rows = table.getFilteredRowModel().rows;
-
-    const minTimestamp =
-      dateRange === 'all' ? null : Date.now() - DATE_RANGE_MS[dateRange];
-
-    return rows.filter((r) => {
-      const tx = r.original;
-
-      if (statusFilter !== 'all' && tx.status !== statusFilter) return false;
-      if (agentFilter !== 'all' && (tx.agentName ?? '—') !== agentFilter) return false;
-      if (assetFilter !== 'all' && tx.asset !== assetFilter) return false;
-      if (minTimestamp !== null && new Date(tx.createdAt).getTime() < minTimestamp) return false;
-
-      return true;
-    });
-  }, [table, statusFilter, agentFilter, assetFilter, dateRange]);
+  // table's own search-filtered rows.
+  const filteredRows = useMemo(
+    () =>
+      table
+        .getFilteredRowModel()
+        .rows.filter((row) =>
+          matchesTransactionFilters(row.original, filters),
+        ),
+    [table, filters],
+  );
 
   // Keep the current page in bounds whenever the filter set shrinks the rows.
-  React.useEffect(() => {
+  useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(filteredRows.length / pagination.pageSize) - 1);
     if (pagination.pageIndex > maxPage) {
       setPagination((p) => ({ ...p, pageIndex: maxPage }));
@@ -255,15 +250,16 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
                 aria-label="Filter by transaction status"
                 value={statusFilter}
                 onChange={(e) => {
-                  setStatusFilter(e.target.value as StatusFilter);
+                  setStatusFilter(e.target.value as TransactionStatusFilter);
                   setPagination((p) => ({ ...p, pageIndex: 0 }));
                 }}
                 className={SELECT_CLASS}
               >
-                <option value="all">All</option>
-                <option value="completed">Completed</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
+                {TRANSACTION_STATUS_FILTERS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -278,9 +274,10 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
                 }}
                 className={SELECT_CLASS}
               >
-                {assets.map((a) => (
-                  <option key={a} value={a}>
-                    {a === 'all' ? 'All assets' : a}
+                <option value="all">All assets</option>
+                {assets.map((asset) => (
+                  <option key={asset} value={asset}>
+                    {asset}
                   </option>
                 ))}
               </select>
@@ -293,16 +290,16 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
                 aria-label="Filter by date range"
                 value={dateRange}
                 onChange={(e) => {
-                  setDateRange(e.target.value as DateRangeFilter);
+                  setDateRange(e.target.value as TransactionDateRange);
                   setPagination((p) => ({ ...p, pageIndex: 0 }));
                 }}
                 className={SELECT_CLASS}
               >
-                <option value="all">All time</option>
-                <option value="24h">Last 24 hours</option>
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
+                {TRANSACTION_DATE_RANGES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -317,9 +314,10 @@ export function TransactionHistoryTable({ transactions, className }: Transaction
                 }}
                 className={SELECT_CLASS}
               >
-                {agents.map((a) => (
-                  <option key={a} value={a}>
-                    {a === 'all' ? 'All agents' : a}
+                <option value="all">All agents</option>
+                {agents.map((agent) => (
+                  <option key={agent.value} value={agent.value}>
+                    {agent.label}
                   </option>
                 ))}
               </select>

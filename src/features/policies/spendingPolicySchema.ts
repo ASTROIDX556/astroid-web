@@ -34,3 +34,18 @@ export const spendingPolicySchema = z.object({
 });
 
 export type SpendingPolicyFormValues = z.infer<typeof spendingPolicySchema>;
+
+/**
+ * Zod schema for validating spending rule simulation test parameters.
+ */
+export const policySimulationInputSchema = z.object({
+  amount: z.coerce.number().positive('Amount must be greater than zero.'),
+  recipientAddress: z
+    .string()
+    .trim()
+    .refine((val) => isValidStellarPublicKey(val), 'Recipient address must be a valid Stellar public key.'),
+  assetType: z.string().trim().min(1, 'Asset type is required.'),
+  agentId: z.string().trim().min(1, 'Agent ID is required.'),
+});
+
+export type PolicySimulationInputValues = z.infer<typeof policySimulationInputSchema>;

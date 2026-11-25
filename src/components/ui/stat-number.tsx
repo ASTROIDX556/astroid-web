@@ -66,7 +66,7 @@ export function StatNumber({
             good ? 'text-success' : 'text-danger',
           )}
         >
-          <Arrow className="h-3.5 w-3.5" aria-hidden />
+          <Arrow className="h-4 w-4" aria-hidden />
           {positive ? '+' : ''}
           {delta.toFixed(1)}%
           {deltaLabel && (
