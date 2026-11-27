@@ -3,7 +3,7 @@
 import type { ReactElement } from 'react';
 import { ResponsiveContainer } from 'recharts';
 
-import { RESPONSIVE_CHART_DEBOUNCE_MS } from '@/components/charts/responsive';
+import { ChartErrorBoundary } from '@/components/ui/chart-error-boundary';
 import { cn } from '@/lib/cn';
 
 interface BudgetChartWrapperProps {
@@ -31,15 +31,20 @@ export function BudgetChartWrapper({
           : { aspectRatio, minHeight }
       }
     >
-      <ResponsiveContainer
-        width="100%"
-        height="100%"
-        minHeight={minHeight}
-        minWidth={0}
-        debounce={RESPONSIVE_CHART_DEBOUNCE_MS}
+      <ChartErrorBoundary
+        compact
+        title="Chart unavailable"
+        description="This budget chart hit a rendering error. Retry to remount it without reloading the dashboard."
       >
-        {children}
-      </ResponsiveContainer>
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          minHeight={minHeight}
+          debounce={80}
+        >
+          {children}
+        </ResponsiveContainer>
+      </ChartErrorBoundary>
     </div>
   );
 }
