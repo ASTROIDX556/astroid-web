@@ -73,7 +73,9 @@ export function ProposalApprovalConfirmDialog({
       : 'Recording your decision.'
     : decision
       ? `Your decision (${decision}) has been recorded.`
-      : `Reviewing ${isApprove ? 'approval' : 'rejection'} of proposal ${proposal.title}.`;
+      : `Reviewing ${
+          isApprove ? 'approval' : isRequestChanges ? 'change request' : 'rejection'
+        } of proposal ${proposal.title}.`;
 
   // Reset transient signing state whenever the dialog is (re)opened.
   useEffect(() => {
