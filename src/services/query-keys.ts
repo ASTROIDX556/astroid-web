@@ -30,6 +30,8 @@ export const queryKeys = {
   /** Live Stellar (Horizon) balance for a connected Freighter account. */
   stellarBalance: (publicKey: string, networkUrl: string) =>
     ['stellar', 'wallet', networkUrl, publicKey, 'balance'] as const,
+  /** Polled Stellar RPC / Horizon network health. */
+  stellarHealth: ['stellar', 'health'] as const,
   notifications: ['notifications'] as const,
   apiKeys: ['developer', 'keys'] as const,
   webhooks: ['developer', 'webhooks'] as const,
