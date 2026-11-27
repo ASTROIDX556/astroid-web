@@ -5,4 +5,4 @@ export * from './transactionFiltering';
 export * from './exportUtils';
 export * from './TransactionExportActions';
 export * from './transactionTimeline';
-export * from './TransactionTimeline';
+export * from './TransactionTimelineCard';
