@@ -3,8 +3,9 @@
 import { useEffect, useMemo } from 'react';
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Activity, Bot, CalendarDays, Coins, Cpu, Gauge, Link2, Sparkles } from 'lucide-react';
+import { Activity, Bot, CalendarDays, Coins, Gauge, Link2, Sparkles } from 'lucide-react';
 
+import { RangeSlider, RangeSliderValue } from './RangeSlider';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +58,8 @@ export function AgentConfigForm() {
 
   const provider = watch('provider');
   const model = watch('model');
+  const temperature = watch('temperature') ?? 0.2;
+  const tokenThreshold = watch('tokenThreshold') ?? 4_096;
 
   // Model options flip with the provider; `Custom` offers a free-form model id.
   const modelOptions = useMemo(() => PROVIDER_MODELS[provider], [provider]);
@@ -257,18 +260,59 @@ export function AgentConfigForm() {
             error={errors.temperature?.message}
             hint="0 – 2 · sampling creativity"
           >
-            <Input
+            <RangeSlider
               id="agent-config-temperature"
-              type="number"
-              step="0.1"
+              label="Temperature"
+              value={temperature}
+              step={0.1}
               min={0}
               max={2}
-              invalid={Boolean(errors.temperature)}
-              aria-describedby={
-                errors.temperature ? 'agent-config-temperature-error' : undefined
-              }
-              {...register('temperature', { valueAsNumber: true })}
+              onChange={(val) => setValue('temperature', val)}
+              describedBy="agent-config-temperature-description"
             />
+            <RangeSliderValue
+              value={temperature}
+              min={0}
+              step={0.1}
+              className="left-1/2"
+            />
+            <span
+              id="agent-config-temperature-description"
+              className="sr-only"
+            >
+              Temperature from 0 (less creative) to 2 (more creative)
+            </span>
+          </FormField>
+
+          <FormField
+            label="Token threshold"
+            htmlFor="agent-config-token-threshold"
+            required
+            error={errors.tokenThreshold?.message}
+            hint="Pause the agent for review once a run exceeds this many tokens."
+          >
+            <RangeSlider
+              id="agent-config-token-threshold"
+              label="Token threshold"
+              value={tokenThreshold}
+              step={256}
+              min={1000}
+              max={10_000_000}
+              onChange={(val) => setValue('tokenThreshold', val)}
+              describedBy="agent-config-token-threshold-description"
+            />
+            <RangeSliderValue
+              value={tokenThreshold}
+              min={1000}
+              step={256}
+              className="left-1/2"
+            />
+            <span
+              id="agent-config-token-threshold-description"
+              className="sr-only"
+            >
+              Token threshold from 1000 to 10000000
+            </span>
           </FormField>
 
           <FormField
@@ -380,23 +424,6 @@ export function AgentConfigForm() {
               />
             </FormField>
           </div>
-
-          <FormField
-            label="Token threshold"
-            required
-            error={errors.tokenThreshold?.message}
-            hint="Pause the agent for review once a run exceeds this many tokens."
-          >
-            <Input
-              id="agent-token-threshold"
-              type="number"
-              min={1000}
-              step="256"
-              invalid={Boolean(errors.tokenThreshold)}
-              leftIcon={<Cpu className="h-4 w-4" aria-hidden />}
-              {...register('tokenThreshold', { valueAsNumber: true })}
-            />
-          </FormField>
         </fieldset>
 
         <FormField
