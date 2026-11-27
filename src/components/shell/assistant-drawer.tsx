@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { env, isMockMode } from '@/lib/env';
 import type { ChatMessage } from '@/types/domain';
 import { FinancialBriefingPanel } from '@/features/ai/FinancialBriefingPanel';
+import type { AssistantGenerationState } from '@/features/ai/assistantStream';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const defaultSuggestions = [
