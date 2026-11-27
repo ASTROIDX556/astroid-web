@@ -123,6 +123,17 @@ export function evaluatePolicyRules(
         break;
       }
 
+      case 'min_amount': {
+        if (rule.threshold !== undefined) {
+          passed = validated.amount >= rule.threshold;
+          message = passed
+            ? `Amount $${validated.amount.toLocaleString()} meets the $${rule.threshold.toLocaleString()} minimum.`
+            : `Amount $${validated.amount.toLocaleString()} is below the $${rule.threshold.toLocaleString()} minimum threshold.`;
+          reasonCode = passed ? 'AMOUNT_MEETS_MINIMUM' : 'AMOUNT_BELOW_THRESHOLD';
+        }
+        break;
+      }
+
       case 'allowed_assets': {
         const allowed = rule.allowedAssets ?? [];
         passed = allowed.includes(validated.asset);
@@ -224,6 +235,7 @@ export function evaluatePolicyRules(
     const hasBlocking = failedSteps.some(
       (s) =>
         s.reasonCode === 'AMOUNT_EXCEEDS_THRESHOLD' ||
+        s.reasonCode === 'AMOUNT_BELOW_THRESHOLD' ||
         s.reasonCode === 'ASSET_BLOCKED' ||
         s.reasonCode === 'RECIPIENT_BLOCKED' ||
         s.reasonCode === 'EMERGENCY_ACTIVE' ||

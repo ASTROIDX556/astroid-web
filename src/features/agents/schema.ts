@@ -9,6 +9,7 @@ import {
   agentProviderSchema,
   agentProviderTypes,
   maxTokensSchema,
+  providerModelOptions,
   requiresEndpoint,
   temperatureSchema,
 } from '../../lib/validations/agent';
@@ -50,19 +51,30 @@ export {
  * the provider is one of the supported ids, the model is non-empty, the
  * temperature stays within 0–2, and max tokens is a positive whole number.
  */
-export const agentConfigPanelSchema = z.object({
-  provider: z.enum(agentProviderTypes, {
-    errorMap: () => ({ message: 'Select a supported provider.' }),
-  }),
-  model: agentModelSchema,
-  temperature: temperatureSchema,
-  maxTokens: maxTokensSchema,
-  systemPrompt: z
-    .string({ required_error: 'System prompt is required' })
-    .trim()
-    .min(1, 'System prompt is required.'),
-  systemPromptTemplate: z.string().optional().or(z.literal('')),
-});
+export const agentConfigPanelSchema = z
+  .object({
+    provider: z.enum(agentProviderTypes, {
+      errorMap: () => ({ message: 'Select a supported provider.' }),
+    }),
+    model: agentModelSchema,
+    temperature: temperatureSchema,
+    maxTokens: maxTokensSchema,
+    systemPrompt: z
+      .string({ required_error: 'System prompt is required' })
+      .trim()
+      .min(1, 'System prompt is required.'),
+    systemPromptTemplate: z.string().optional().or(z.literal('')),
+  })
+  .superRefine((values, ctx) => {
+    const catalog = providerModelOptions[values.provider];
+    if (catalog.length > 0 && values.model && !catalog.includes(values.model)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['model'],
+        message: 'Select a model offered by the chosen provider.',
+      });
+    }
+  });
 
 export type AgentConfigPanelValues = z.infer<typeof agentConfigPanelSchema>;
 
