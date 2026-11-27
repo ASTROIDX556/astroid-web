@@ -23,6 +23,15 @@ import {
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartTooltipShell, type TooltipPayloadItem } from '@/components/charts';
+import {
+  chartLegendMetrics,
+  chartMarginsFor,
+  chartTickFontSize,
+  chartYAxisWidth,
+  isCompactChartWidth,
+  responsiveContainerProps,
+} from '@/components/charts/responsive';
+import { useChartWidth } from '@/components/charts/use-chart-width';
 import { utilizationPercent } from '@/components/charts/theme';
 import { formatCurrency, formatPercent } from '@/lib/format';
 import { buildConsumptionHistory } from './components/BudgetAllocationDashboard';
@@ -135,6 +144,12 @@ export function DepartmentBudgetConsumptionChart({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Axis, legend and margin metrics follow the measured plot width so labels
+  // never overlap or clip on mobile.
+  const { ref: chartRef, width: chartWidth } = useChartWidth<HTMLDivElement>();
+  const compact = isCompactChartWidth(chartWidth);
+  const legend = chartLegendMetrics(chartWidth);
+
   const department = useMemo(
     () => departments.find((item) => item.id === selectedId) ?? departments[0],
     [departments, selectedId],
@@ -170,10 +185,10 @@ export function DepartmentBudgetConsumptionChart({
           </div>
 
           {!isBusy && departments.length > 1 && (
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center gap-2 sm:w-auto">
               <label
                 htmlFor="budget-consumption-department"
-                className="text-2xs font-medium text-foreground-secondary"
+                className="shrink-0 text-2xs font-medium text-foreground-secondary"
               >
                 Department
               </label>
@@ -181,7 +196,7 @@ export function DepartmentBudgetConsumptionChart({
                 id="budget-consumption-department"
                 value={department?.id ?? ''}
                 onChange={(event) => setSelectedId(event.target.value)}
-                className="py-1.5 rounded-button border border-border bg-surface px-3 text-xs font-medium text-foreground focus:border-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full min-w-0 rounded-button border border-border bg-surface py-1.5 px-3 text-xs font-medium text-foreground focus:border-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto"
               >
                 {departments.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -231,15 +246,13 @@ export function DepartmentBudgetConsumptionChart({
             )}
 
             <div
-              className="h-72 w-full"
+              ref={chartRef}
+              className="h-64 w-full min-w-0 sm:h-72"
               role="img"
               aria-label={`${department!.departmentName} cumulative spend versus allocated threshold`}
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={series}
-                  margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
-                >
+              <ResponsiveContainer {...responsiveContainerProps()}>
+                <LineChart data={series} margin={chartMarginsFor(chartWidth)}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
@@ -247,17 +260,17 @@ export function DepartmentBudgetConsumptionChart({
                   />
                   <XAxis
                     dataKey="label"
-                    tick={{ fill: 'rgb(var(--text-muted))', fontSize: 11 }}
+                    tick={{ fill: 'rgb(var(--text-muted))', fontSize: chartTickFontSize(chartWidth) }}
                     axisLine={{ stroke: 'rgb(var(--chart-axis))' }}
                     tickLine={false}
-                    minTickGap={24}
+                    minTickGap={compact ? 12 : 24}
                     interval="preserveStartEnd"
                   />
                   <YAxis
-                    tick={{ fill: 'rgb(var(--text-muted))', fontSize: 11 }}
+                    tick={{ fill: 'rgb(var(--text-muted))', fontSize: chartTickFontSize(chartWidth) }}
                     axisLine={false}
                     tickLine={false}
-                    width={56}
+                    width={chartYAxisWidth(chartWidth, 56)}
                     tickFormatter={(value: number) =>
                       formatCurrency(value, asset, { compact: true })
                     }
@@ -267,7 +280,11 @@ export function DepartmentBudgetConsumptionChart({
                     content={<ConsumptionTooltip asset={asset} />}
                   />
                   <Legend
-                    wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+                    iconSize={legend.iconSize}
+                    wrapperStyle={{
+                      fontSize: `${legend.fontSize}px`,
+                      paddingTop: `${legend.paddingTop}px`,
+                    }}
                     formatter={(value) => (
                       <span className="font-medium text-foreground-secondary">
                         {value}
