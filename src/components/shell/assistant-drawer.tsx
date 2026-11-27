@@ -10,6 +10,7 @@ import { env, isMockMode } from '@/lib/env';
 import type { ChatMessage } from '@/types/domain';
 import { FinancialBriefingPanel } from '@/features/ai/FinancialBriefingPanel';
 import type { AssistantGenerationState } from '@/features/ai/assistantStream';
+import { chunkForSimulatedStream, isStreamingContentType, createSseDecoder, extractReply } from '@/features/ai/assistantStream';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const defaultSuggestions = [
@@ -58,13 +59,6 @@ const sleep = (ms: number, signal: AbortSignal) =>
       { once: true },
     );
   });
-
-/** Splits text into fixed-size chunks for the simulated streaming pipeline. */
-function* chunkForSimulatedStream(text: string, size = 4): Generator<string> {
-  for (let i = 0; i < text.length; i += size) {
-    yield text.slice(i, i + size);
-  }
-}
 
 /** Replays a canned reply through the streaming pipeline (mock mode only). */
 async function simulateStream(text: string, emit: (delta: string) => void, signal: AbortSignal) {
