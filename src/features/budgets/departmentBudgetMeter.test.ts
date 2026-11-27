@@ -26,8 +26,8 @@ const TEST_DEPARTMENTS: DepartmentBudget[] = [
     departmentCode: 'MKT',
     managerName: 'Bob',
     totalLimit: 100_000,
-    totalSpent: 75_000,
-    totalRemaining: 25_000,
+    totalSpent: 85_000,
+    totalRemaining: 15_000,
     asset: 'USDC',
     period: 'monthly',
     updatedAt: new Date().toISOString(),
@@ -39,8 +39,8 @@ const TEST_DEPARTMENTS: DepartmentBudget[] = [
     departmentCode: 'OPS',
     managerName: 'Charlie',
     totalLimit: 100_000,
-    totalSpent: 95_000,
-    totalRemaining: 5_000,
+    totalSpent: 105_000,
+    totalRemaining: 0,
     asset: 'USDC',
     period: 'monthly',
     updatedAt: new Date().toISOString(),
@@ -48,22 +48,27 @@ const TEST_DEPARTMENTS: DepartmentBudget[] = [
   },
 ];
 
-test('getBudgetThresholdStatus assigns status based on utilization thresholds', () => {
+test('getBudgetThresholdStatus warns above 80% and turns critical at 100%', () => {
   assert.equal(getBudgetThresholdStatus(0), 'normal');
-  assert.equal(getBudgetThresholdStatus(69.9), 'normal');
-  assert.equal(getBudgetThresholdStatus(70), 'warning');
-  assert.equal(getBudgetThresholdStatus(89.9), 'warning');
-  assert.equal(getBudgetThresholdStatus(90), 'critical');
+  assert.equal(getBudgetThresholdStatus(79.9), 'normal');
+  assert.equal(getBudgetThresholdStatus(80), 'warning');
+  assert.equal(getBudgetThresholdStatus(99.9), 'warning');
+  assert.equal(getBudgetThresholdStatus(100), 'critical');
   assert.equal(getBudgetThresholdStatus(105), 'critical');
+});
+
+test('getBudgetThresholdStatus treats a non-finite utilization as normal', () => {
+  assert.equal(getBudgetThresholdStatus(Number.NaN), 'normal');
+  assert.equal(getBudgetThresholdStatus(Number.POSITIVE_INFINITY), 'normal');
 });
 
 test('aggregateDepartmentBudgets computes correct sums and percentages', () => {
   const result = aggregateDepartmentBudgets(TEST_DEPARTMENTS);
 
   assert.equal(result.totalAllocated, 300_000);
-  assert.equal(result.totalSpent, 220_000);
-  assert.equal(result.totalRemaining, 80_000);
-  assert.equal(Math.round(result.orgUtilization), 73);
+  assert.equal(result.totalSpent, 240_000);
+  assert.equal(result.totalRemaining, 65_000);
+  assert.equal(result.orgUtilization, 80);
   assert.equal(result.status, 'warning');
 
   assert.equal(result.counts.total, 3);
@@ -74,6 +79,13 @@ test('aggregateDepartmentBudgets computes correct sums and percentages', () => {
   assert.equal(result.departments[0]?.status, 'normal');
   assert.equal(result.departments[1]?.status, 'warning');
   assert.equal(result.departments[2]?.status, 'critical');
+
+  // Only the department past its limit has an over-budget figure, and it is
+  // the amount beyond the limit rather than the (floored) remaining budget.
+  assert.equal(result.departments[0]?.overBudget, 0);
+  assert.equal(result.departments[1]?.overBudget, 0);
+  assert.equal(result.departments[2]?.overBudget, 5_000);
+  assert.equal(result.departments[2]?.remaining, 0);
 });
 
 test('aggregateDepartmentBudgets handles zero allocation safely', () => {

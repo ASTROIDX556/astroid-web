@@ -12,7 +12,7 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "test": "tsx --test src/stores/freighter-store.test.ts src/components/common/ErrorBoundary.test.ts src/lib/nav-breakpoint.test.ts src/features/agents/schema.test.ts src/features/transactions/filterTransactions.test.ts src/features/transactions/exportUtils.test.ts src/features/transactions/transactionTimeline.test.ts src/lib/xdr.test.ts src/services/mock/handlers.test.ts src/lib/query-config.test.ts src/hooks/focusTrapStack.test.ts src/lib/query-error-handling.test.ts src/features/budgets/departmentBudgetMeter.test.ts src/features/budgets/departmentBudgetTable.test.ts src/components/approval-modal.test.ts",
+    "test": "tsx --test src/stores/freighter-store.test.ts src/components/common/ErrorBoundary.test.ts src/lib/nav-breakpoint.test.ts src/features/agents/schema.test.ts src/features/transactions/filterTransactions.test.ts src/features/transactions/exportUtils.test.ts src/features/transactions/transactionTimeline.test.ts src/lib/xdr.test.ts src/services/mock/handlers.test.ts src/lib/query-config.test.ts src/hooks/focusTrapStack.test.ts src/lib/query-error-handling.test.ts src/features/budgets/departmentBudgetMeter.test.ts src/features/budgets/departmentBudgetTable.test.ts src/components/approval-modal.test.ts src/features/policies/policySimulationEdgeCases.test.ts src/features/policies/spendingPolicySimulation.test.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
@@ -46,6 +46,7 @@
     "autoprefixer": "10.4.20",
     "eslint": "8.57.1",
     "eslint-config-next": "14.2.16",
+    "eslint-plugin-local-rules": "^3.0.6",
     "postcss": "8.4.47",
     "prettier": "3.3.3",
     "prettier-plugin-tailwindcss": "0.6.8",

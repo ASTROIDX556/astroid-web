@@ -86,8 +86,8 @@ export function AssistantDrawer() {
   const briefingQuery = useBriefing();
   // Keyboard/a11y: focus moves to the composer on open and returns to the
   // trigger on close; Escape defers to stacked modals; when closed the
-  // widget is hidden from the tab order and assistive tech.
-  // The drawer renders once in the dashboard shell, so a static id is unique.
+  // widget is hidden from the tab order and assistive tech. The drawer
+  // renders once in the dashboard shell, so a static id is unique.
   const headingId = 'assistant-drawer-title';
   const panelRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -322,6 +322,7 @@ export function AssistantDrawer() {
         aria-hidden={!open}
       >
         <div
+          id="ai-assistant-drawer"
           ref={panelRef}
           role="dialog"
           aria-labelledby={headingId}
