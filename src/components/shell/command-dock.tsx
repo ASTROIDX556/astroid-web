@@ -27,6 +27,7 @@ export function CommandDock() {
   const pathname = usePathname();
   const commandOpen = useCommandStore((s) => s.open);
   const openCommand = useCommandStore((s) => s.setOpen);
+  const assistantOpen = useAssistantStore((s) => s.open);
   const openAssistant = useAssistantStore((s) => s.setOpen);
   const hydrated = useHydrated();
   const sidebarCollapsed = usePreferencesStore((s) => s.sidebarCollapsed);
@@ -130,6 +131,8 @@ export function CommandDock() {
           label="AI assistant"
           icon={<Sparkles className="h-[18px] w-[18px] text-gold" aria-hidden />}
           focusRing={DOCK_FOCUS}
+          expanded={assistantOpen}
+          controls="ai-assistant-drawer"
         />
       </div>
     </nav>

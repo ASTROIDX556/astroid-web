@@ -1,3 +1,19 @@
+import { z } from 'zod';
+
+import {
+  AGENT_PERMISSION_SCOPES,
+  MAX_BUDGET,
+  PROVIDER_MODELS,
+  agentEndpointUrlSchema,
+  agentModelSchema,
+  agentProviderSchema,
+  agentProviderTypes,
+  maxTokensSchema,
+  providerModelOptions,
+  requiresEndpoint,
+  temperatureSchema,
+} from '../../lib/validations/agent';
+
 /**
  * Agent form schemas live in `@/lib/validations/agent`. This module re-exports
  * them for the imports that predate that file, plus the aliases the agent
@@ -22,3 +38,116 @@ export {
   createAgentSchema as agentConfigSchema,
   type CreateAgentInput as AgentConfigFormValues,
 } from '../../lib/validations/agent';
+
+// ---------------------------------------------------------------------------
+// Agent configuration panel (components/AgentConfigPanel)
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates the configuration panel's form values before they are saved.
+ *
+ * Kept here rather than inline in the component so the same rules are covered
+ * by the unit tests and reused by any other consumer of the panel's payload:
+ * the provider is one of the supported ids, the model is non-empty, the
+ * temperature stays within 0–2, and max tokens is a positive whole number.
+ */
+export const agentConfigPanelSchema = z
+  .object({
+    provider: z.enum(agentProviderTypes, {
+      errorMap: () => ({ message: 'Select a supported provider.' }),
+    }),
+    model: agentModelSchema,
+    temperature: temperatureSchema,
+    maxTokens: maxTokensSchema,
+    systemPrompt: z
+      .string({ required_error: 'System prompt is required' })
+      .trim()
+      .min(1, 'System prompt is required.'),
+    systemPromptTemplate: z.string().optional().or(z.literal('')),
+  })
+  .superRefine((values, ctx) => {
+    const catalog = providerModelOptions[values.provider];
+    if (catalog.length > 0 && values.model && !catalog.includes(values.model)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['model'],
+        message: 'Select a model offered by the chosen provider.',
+      });
+    }
+  });
+
+export type AgentConfigPanelValues = z.infer<typeof agentConfigPanelSchema>;
+
+// ---------------------------------------------------------------------------
+// Agent configuration editor (create / edit submission payload)
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates the payload produced by the agent configuration editor before it
+ * reaches the API or a state store. Budget and token rules are shared with the
+ * other agent forms (see `@/lib/validations/agent`); the editor-specific part is
+ * the `allowedScopes` permission list and the provider/model consistency check.
+ *
+ * `allowedScopes` is the editor's name for the `capabilities` field on the
+ * Agent domain model. Strict types are inferred from this schema — there are
+ * no loose `any` casts — so callers cannot submit an unknown provider or scope.
+ */
+export const agentConfigurationEditorSchema = z
+  .object({
+    provider: agentProviderSchema,
+    model: agentModelSchema,
+    maxBudget: z
+      .number({
+        required_error: 'Max budget is required',
+        invalid_type_error: 'Max budget must be a number',
+      })
+      .positive('Max budget must be greater than 0')
+      .max(MAX_BUDGET, `Max budget cannot exceed ${MAX_BUDGET.toLocaleString('en-US')}`),
+    allowedScopes: z
+      .array(
+        z.enum(AGENT_PERMISSION_SCOPES, {
+          errorMap: () => ({ message: 'Unsupported permission scope.' }),
+        }),
+      )
+      .min(1, 'Grant at least one allowed scope.')
+      .refine((scopes) => new Set(scopes).size === scopes.length, {
+        message: 'Allowed scopes must be unique.',
+      }),
+    tokenAllocation: z
+      .number({
+        required_error: 'Token allocation is required',
+        invalid_type_error: 'Token allocation must be a number',
+      })
+      .int('Token allocation must be a whole number')
+      .positive('Token allocation must be greater than 0')
+      .max(10_000_000, 'Token allocation cannot exceed 10,000,000'),
+    endpointUrl: agentEndpointUrlSchema,
+  })
+  .superRefine((values, ctx) => {
+    requireEditorEndpoint(values, ctx);
+
+    const catalog = PROVIDER_MODELS[values.provider];
+    if (values.provider !== 'Custom' && catalog.length > 0 && !catalog.includes(values.model)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['model'],
+        message: `Select a model offered by ${values.provider}.`,
+      });
+    }
+  });
+
+/** Inferred editor payload: no `any`, no hand-written duplicate of the form type. */
+export type AgentConfigurationEditorInput = z.infer<typeof agentConfigurationEditorSchema>;
+
+/** `Custom` models are free-form but still need a reachable endpoint. */
+function requireEditorEndpoint(
+  values: { provider?: AgentConfigurationEditorInput['provider']; endpointUrl?: string },
+  ctx: z.RefinementCtx,
+): void {
+  if (!values.provider || !requiresEndpoint(values.provider) || values.endpointUrl) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ['endpointUrl'],
+    message: 'A valid API endpoint URL is required for this provider.',
+  });
+}

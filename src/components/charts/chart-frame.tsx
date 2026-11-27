@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { ResponsiveContainer } from 'recharts';
+import { RESPONSIVE_CHART_DEBOUNCE_MS } from '@/components/charts/responsive';
 import { ChartIllustration } from '@/components/illustrations';
+import { ChartErrorBoundary } from '@/components/ui/chart-error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 
@@ -11,7 +13,7 @@ import { cn } from '@/lib/cn';
  * resize to settle keeps the chart from redrawing (and jittering) on each
  * pixel of a window drag or a sidebar animation.
  */
-export const RESIZE_DEBOUNCE_MS = 120;
+export const RESIZE_DEBOUNCE_MS = RESPONSIVE_CHART_DEBOUNCE_MS;
 
 /** True after the first client render. Charts measure the DOM, so they skip server rendering. */
 export function useMounted(): boolean {
@@ -104,15 +106,21 @@ export function ChartFrame({
       role="group"
       aria-label={label}
     >
-      <ResponsiveContainer
-        width="100%"
-        height={aspect ? undefined : '100%'}
-        aspect={aspect}
-        minHeight={minHeight}
-        debounce={RESIZE_DEBOUNCE_MS}
+      <ChartErrorBoundary
+        compact
+        title={`${label} unavailable`}
+        description="This chart hit a rendering error. Retry to remount it without reloading the dashboard."
       >
-        {children}
-      </ResponsiveContainer>
+        <ResponsiveContainer
+          width="100%"
+          height={aspect ? undefined : '100%'}
+          aspect={aspect}
+          minHeight={minHeight}
+          debounce={RESIZE_DEBOUNCE_MS}
+        >
+          {children}
+        </ResponsiveContainer>
+      </ChartErrorBoundary>
     </div>
   );
 }

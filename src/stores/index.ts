@@ -10,10 +10,17 @@ export {
   type DashboardCurrency,
 } from './preferences-store';
 export { useHydrated } from '@/hooks/use-hydrated';
-export { useFreighterStore, isValidStellarPublicKey } from './freighter-store';
+export {
+  useFreighterStore,
+  isValidStellarPublicKey,
+  classifyFreighterError,
+  FreighterError,
+  FREIGHTER_ERROR_TITLES,
+} from './freighter-store';
 export { useWalletStore } from '@/lib/useWalletStore';
 export type {
   FreighterConnectionStatus,
+  FreighterErrorCode,
   FreighterWalletState,
   StellarWalletNetwork,
   WalletActions,
@@ -22,3 +29,17 @@ export type {
 export { useCircuitBreakerStore } from './circuit-breaker-store';
 export type { CircuitBreakerStatus } from './circuit-breaker-store';
 export { useNotificationStore } from './notification-store';
+export type { NotificationSeverityFilter } from './notification-store';
+export {
+  useWalletAccountStore,
+  truncateWalletAddress,
+  walletAccountLabel,
+} from './wallet-store';
+export type {
+  WalletAccount,
+  WalletAccountActivator,
+  WalletAccountSource,
+  WalletAccountsState,
+  WalletConnectionStatus,
+  WalletQueryInvalidator,
+} from './wallet-store';
