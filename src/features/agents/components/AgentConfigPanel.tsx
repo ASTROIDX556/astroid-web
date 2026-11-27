@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Copy, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { FormField, Input, Select, Textarea } from '@/components/ui/input';
 import {
   providerModelOptions,
   agentProviderTypes,
+  getFirstValidationMessage,
   type AgentProviderType,
 } from '@/lib/validations/agent';
 import {
@@ -65,9 +66,12 @@ export function AgentConfigPanel({
   const provider = form.watch('provider');
   const modelOptions = providerModelOptions[provider];
   const systemPromptTemplate = form.watch('systemPromptTemplate');
+  const previousProvider = useRef<AgentProviderType>(provider);
 
   // When provider changes, reset only the model to the first available for that provider
   useEffect(() => {
+    if (previousProvider.current === provider) return;
+    previousProvider.current = provider;
     form.setValue('model', modelOptions[0] ?? '', { shouldValidate: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
@@ -94,8 +98,18 @@ export function AgentConfigPanel({
     }
   };
 
+  const handleInvalid = (fieldErrors: FieldErrors<AgentConfigPanelValues>) => {
+    toast.error('Invalid agent configuration.', {
+      description:
+        getFirstValidationMessage(fieldErrors) ??
+        'Please resolve the highlighted validation errors before saving.',
+    });
+  };
+
+  const watchedTemperature = form.watch('temperature');
+  const safeTemperature = Number.isFinite(watchedTemperature) ? watchedTemperature : 0;
   // Compute temperature percentage for visual feedback (0 to 100%)
-  const temperaturePercent = (form.watch('temperature') / 2) * 100;
+  const temperaturePercent = (safeTemperature / 2) * 100;
 
   return (
     <Card className={className}>
@@ -107,7 +121,7 @@ export function AgentConfigPanel({
       </CardHeader>
       <CardContent>
         <form
-          onSubmit={form.handleSubmit(handleSubmit)}
+          onSubmit={form.handleSubmit(handleSubmit, handleInvalid)}
           className="space-y-6"
           noValidate
         >
@@ -191,10 +205,10 @@ export function AgentConfigPanel({
                     className="h-2 w-full cursor-pointer rounded-full bg-border appearance-none accent-gold"
                     aria-valuemin={0}
                     aria-valuemax={2}
-                    aria-valuenow={form.watch('temperature')}
+                    aria-valuenow={safeTemperature}
                   />
                   <span className="w-12 text-right text-sm font-medium text-foreground">
-                    {form.watch('temperature').toFixed(1)}
+                    {safeTemperature.toFixed(1)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-2xs text-foreground-secondary">

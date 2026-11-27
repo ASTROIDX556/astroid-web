@@ -426,10 +426,23 @@ export function DepartmentBudgetMeterWidget({
                         </span>
                       </p>
                       <p className="tabular text-2xs text-foreground-secondary">
-                        {formatCurrency(dept.remaining, dept.currency, {
-                          compact: true,
-                        })}{' '}
-                        remaining
+                        {dept.overBudget > 0 ? (
+                          <>
+                            <span className="font-medium text-danger">
+                              {formatCurrency(dept.overBudget, dept.currency, {
+                                compact: true,
+                              })}
+                            </span>{' '}
+                            over budget
+                          </>
+                        ) : (
+                          <>
+                            {formatCurrency(dept.remaining, dept.currency, {
+                              compact: true,
+                            })}{' '}
+                            remaining
+                          </>
+                        )}
                       </p>
                     </div>
 

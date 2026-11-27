@@ -45,6 +45,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
   const setActiveOrg = usePreferencesStore((s) => s.setActiveOrg);
   const commandOpen = useCommandStore((s) => s.open);
   const openCommand = useCommandStore((s) => s.setOpen);
+  const assistantOpen = useAssistantStore((s) => s.open);
   const openAssistant = useAssistantStore((s) => s.setOpen);
 
   useEffect(() => {
@@ -232,6 +233,8 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
           )}
           aria-label="Open AI assistant"
           aria-haspopup="dialog"
+          aria-expanded={assistantOpen}
+          aria-controls="ai-assistant-drawer"
         >
           <Sparkles className="h-[18px] w-[18px]" aria-hidden />
         </button>
@@ -260,6 +263,8 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
             )}
             aria-label="Open AI assistant"
             aria-haspopup="dialog"
+            aria-expanded={assistantOpen}
+            aria-controls="ai-assistant-drawer"
           >
             <Sparkles className="h-[18px] w-[18px]" aria-hidden />
           </button>

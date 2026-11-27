@@ -47,7 +47,7 @@ const GROUP_CLASS =
   '[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-2xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-foreground-muted';
 
 const ITEM_CLASS =
-  'group flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-sm text-foreground transition-colors duration-fast data-[selected=true]:bg-surface-secondary data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-60';
+  'group flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-sm text-foreground outline-none transition-colors duration-fast data-[selected=true]:bg-surface-secondary data-[selected=true]:ring-2 data-[selected=true]:ring-inset data-[selected=true]:ring-ring data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-60';
 
 /**
  * Global command palette (⌘K / Ctrl+K) for navigation and entity search.
@@ -183,16 +183,22 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Command.Dialog
+      id="command-palette"
       open
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onClose();
       }}
       label="Search Astroid pages and entities"
       aria-label="Search Astroid pages and entities"
+      aria-describedby="command-palette-help"
       loop
       overlayClassName="fixed inset-0 z-[100] animate-fade-in bg-foreground/40 backdrop-blur-sm"
       contentClassName="fixed left-1/2 top-[12vh] z-[101] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 animate-fade-up overflow-hidden rounded-dialog border border-border bg-surface shadow-soft-3"
     >
+      <p id="command-palette-help" className="sr-only">
+        Use the up and down arrow keys to navigate, Enter to select a command, and
+        Escape to close the palette.
+      </p>
       <div className="flex items-center gap-3 border-b border-border px-4">
         <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden="true" />
         <Command.Input
