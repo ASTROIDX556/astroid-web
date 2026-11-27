@@ -15,7 +15,8 @@ import { NetworkHealthWidget } from '@/features/network/NetworkHealthWidget';
 import { WalletNetworkSwitcher } from '@/features/network/WalletNetworkSwitcher';
 import { CircuitBreakerControl } from '@/features/security';
 import { TelemetryStatusIndicator } from '@/components/shell/telemetry-status-indicator';
-import { FREIGHTER_ERROR_TITLES, useFreighterStore } from '@/stores/freighter-store';
+import { useFreighterStore } from '@/stores/freighter-store';
+import { getFreighterRecovery } from '@/features/wallet/freighterErrorRecovery';
 import { cn } from '@/lib/cn';
 
 /** Shared, brand-tinted focus ring for every top-bar control (WCAG AA). */
@@ -43,6 +44,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
   const setActiveOrg = usePreferencesStore((s) => s.setActiveOrg);
   const commandOpen = useCommandStore((s) => s.open);
   const openCommand = useCommandStore((s) => s.setOpen);
+  const assistantOpen = useAssistantStore((s) => s.open);
   const openAssistant = useAssistantStore((s) => s.setOpen);
   const walletStatus = useFreighterStore((state) => state.status);
   const walletAddress = useFreighterStore((state) => state.publicKey);
@@ -68,14 +70,25 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
       }
 
       if (state.error && state.error !== previousState.error && state.status !== 'locked') {
-        const code = state.errorCode ?? 'UNKNOWN';
-        const title = FREIGHTER_ERROR_TITLES[code];
+        const recovery = getFreighterRecovery(state.errorCode, state.retryCount);
+        const retryable =
+          recovery.action === 'retry' || recovery.action === 'unlock_and_retry';
+        const options = {
+          id: 'freighter-error',
+          description: state.error,
+          action: retryable
+            ? {
+                label: recovery.actionLabel,
+                onClick: () => void walletStore.getState().retryConnection(),
+              }
+            : undefined,
+        };
         // A dismissed prompt is a user choice, not a failure: warn instead of
         // raising an error toast. Everything else stays an error.
-        if (code === 'USER_DECLINED') {
-          toast.warning(title, { id: 'freighter-error', description: state.error });
+        if (state.errorCode === 'USER_DECLINED') {
+          toast.warning(recovery.title, options);
         } else {
-          toast.error(title, { id: 'freighter-error', description: state.error });
+          toast.error(recovery.title, options);
         }
       }
 
@@ -144,7 +157,7 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
           type="button"
           onClick={onOpenNav}
           className={cn(
-            'grid h-9 w-9 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground lg:hidden',
+            'grid h-9 w-9 place-items-center rounded-button text-foreground-secondary transition-colors duration-fast hover:bg-surface-secondary hover:text-foreground md:hidden',
             TOPBAR_FOCUS,
           )}
           aria-label="Open navigation menu"
@@ -266,6 +279,8 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
           )}
           aria-label="Open AI assistant"
           aria-haspopup="dialog"
+          aria-expanded={assistantOpen}
+          aria-controls="ai-assistant-drawer"
         >
           <Sparkles className="h-[18px] w-[18px]" aria-hidden />
         </button>
@@ -294,6 +309,8 @@ export function Topbar({ navOpen, onOpenNav }: TopbarProps) {
             )}
             aria-label="Open AI assistant"
             aria-haspopup="dialog"
+            aria-expanded={assistantOpen}
+            aria-controls="ai-assistant-drawer"
           >
             <Sparkles className="h-[18px] w-[18px]" aria-hidden />
           </button>

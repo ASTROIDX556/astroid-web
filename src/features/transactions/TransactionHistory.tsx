@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import { downloadCsv } from '@/lib/csv';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -25,16 +24,13 @@ import {
   writeTransactionFilterParams,
   type TransactionFilterValues,
 } from './filterTransactions';
+import { downloadTransactionExport } from './exportUtils';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
-  onExportCSV?: (transactions: Transaction[]) => void;
 }
 
-export function TransactionHistory({
-  transactions,
-  onExportCSV,
-}: TransactionHistoryProps) {
+export function TransactionHistory({ transactions }: TransactionHistoryProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -69,27 +65,13 @@ export function TransactionHistory({
     [selectedId, transactions],
   );
 
-  const exportTransactions = (rows: Transaction[]) => {
-    downloadCsv(
-      rows,
-      [
-        { header: 'ID', value: (transaction) => transaction.id },
-        { header: 'Recipient', value: (transaction) => transaction.counterparty },
-        { header: 'Recipient address', value: (transaction) => transaction.counterpartyAddress },
-        { header: 'Purpose', value: (transaction) => transaction.purpose },
-        { header: 'Agent', value: (transaction) => transaction.agentName ?? '' },
-        {
-          header: 'Amount',
-          value: (transaction) => transaction.direction === 'outbound'
-            ? -transaction.amount
-            : transaction.amount,
-        },
-        { header: 'Asset', value: (transaction) => transaction.asset },
-        { header: 'Status', value: (transaction) => transaction.status },
-        { header: 'Timestamp', value: (transaction) => transaction.createdAt },
-      ],
-      `transactions-${new Date().toISOString().slice(0, 10)}.csv`,
-    );
+  const exportTransactions = (
+    rows: readonly Transaction[],
+    format: 'csv' | 'json',
+  ) => {
+    // The active filters are passed to the utility so the file contents match
+    // the table even if a caller hands us the unfiltered collection.
+    downloadTransactionExport(rows, { format, filters });
   };
 
   const summary = useMemo(
@@ -147,7 +129,8 @@ export function TransactionHistory({
         value={filters}
         filteredCount={filteredTransactions.length}
         onChange={setFilters}
-        onExportCSV={onExportCSV}
+        onExportCSV={(rows) => exportTransactions(rows, 'csv')}
+        onExportJSON={(rows) => exportTransactions(rows, 'json')}
       />
 
       <DataTable
@@ -155,7 +138,6 @@ export function TransactionHistory({
         pageSize={8}
         pageSizeOptions={[8, 16, 32, 64]}
         caption="Transaction activity"
-        onExportCSV={exportTransactions}
         onRowClick={(transaction) => setSelectedId(transaction.id)}
         getRowId={(row) => row.id}
         emptyState={

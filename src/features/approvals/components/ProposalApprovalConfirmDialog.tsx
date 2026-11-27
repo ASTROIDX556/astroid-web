@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, ShieldCheck, Wallet } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
@@ -15,6 +15,8 @@ import type { LocalApprovalDecision } from '@/stores/proposal-approval-store';
 import { cn } from '@/lib/cn';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import type { Proposal } from '@/types/domain';
+
+import { ApprovalStatusLiveRegion } from './ApprovalStatusLiveRegion';
 
 export interface ProposalApprovalConfirmDialogProps {
   proposal: Proposal;
@@ -59,11 +61,21 @@ export function ProposalApprovalConfirmDialog({
   // Safe default focus target for a destructive confirmation.
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
-  const riskNoteId = useId();
   const isApprove = action === 'approved';
-  const isHighRisk = proposal.riskScore >= 70;
   const isRequestChanges = action === 'changes_requested';
   const busy = isProcessing || isSigning;
+  // The risk note is the only target of the confirm button's aria-describedby.
+  // Never leave a dangling ID reference for lower-scored proposals.
+  const showRiskNote = proposal.riskScore >= 70;
+  const liveMessage = busy
+    ? isSigning
+      ? 'Waiting for wallet signature.'
+      : 'Recording your decision.'
+    : decision
+      ? `Your decision (${decision}) has been recorded.`
+      : `Reviewing ${
+          isApprove ? 'approval' : isRequestChanges ? 'change request' : 'rejection'
+        } of proposal ${proposal.title}.`;
 
   // Reset transient signing state whenever the dialog is (re)opened.
   useEffect(() => {
@@ -186,7 +198,7 @@ export function ProposalApprovalConfirmDialog({
                   ? `Request changes to ${proposal.title}`
                   : `Confirm rejection of ${proposal.title}`
             }
-            aria-describedby={isHighRisk ? riskNoteId : undefined}
+            aria-describedby={showRiskNote ? 'proposal-confirm-risk-note' : undefined}
           >
             {isApprove
               ? 'Confirm approval'
@@ -199,15 +211,7 @@ export function ProposalApprovalConfirmDialog({
     >
       <div className="space-y-4" aria-busy={busy}>
         {/* Screen reader context ------------------------------------------- */}
-        <p role="status" aria-live="polite" className="sr-only">
-          {busy
-            ? isSigning
-              ? 'Waiting for wallet signature.'
-              : 'Recording your decision.'
-            : `Reviewing ${
-                isApprove ? 'approval' : isRequestChanges ? 'change request' : 'rejection'
-              } of proposal ${proposal.title}.`}
-        </p>
+        <ApprovalStatusLiveRegion message={liveMessage} />
 
         {/* Proposal summary ------------------------------------------------- */}
         <div className="flex items-center justify-between rounded-card border border-border bg-surface-secondary/40 px-4 py-3">
@@ -285,9 +289,9 @@ export function ProposalApprovalConfirmDialog({
           </div>
         )}
 
-        {isHighRisk && (
+        {showRiskNote && (
           <p
-            id={riskNoteId}
+            id="proposal-confirm-risk-note"
             className={cn(
               'flex items-start gap-2 rounded-card border border-danger/30 bg-danger-soft/40 p-3 text-2xs text-danger',
             )}
@@ -307,7 +311,7 @@ export function ProposalApprovalConfirmDialog({
           </p>
         )}
         {decision && (
-          <p role="status" className="text-xs font-medium text-success">
+          <p className="text-xs font-medium text-success">
             Your decision ({decision}) has been recorded.
           </p>
         )}

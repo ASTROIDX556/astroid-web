@@ -7,6 +7,7 @@ import { PanelLeftClose, PanelLeftOpen, X, Sparkles } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { navSections } from '@/lib/nav';
+import { SIDEBAR_DESKTOP_QUERY } from '@/lib/nav-breakpoint';
 import { cn } from '@/lib/cn';
 import { usePreferencesStore } from '@/stores/preferences-store';
 import { useHydrated } from '@/hooks/use-hydrated';
@@ -20,8 +21,8 @@ interface MobileNavProps {
 const DRAWER_FOCUS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
-/** Matches the `lg` breakpoint, above which the drawer is replaced by the dock. */
-const DESKTOP_QUERY = '(min-width: 1024px)';
+/** Matches the `md` breakpoint, from which the pinned sidebar replaces the drawer. */
+const DESKTOP_QUERY = SIDEBAR_DESKTOP_QUERY;
 
 /**
  * Slide-in navigation for narrow viewports (mirrors the desktop command dock).
@@ -81,7 +82,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   return (
     <AnimatePresence>
       {open && (
-        <div className="lg:hidden">
+        <div className="md:hidden">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -108,7 +109,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
       >
         <div className={cn('flex h-16 items-center justify-between', compactNavigation ? 'px-3' : 'px-5')}>
           <span className="gap-2.5 flex items-center">
-            <span className="grid h-8 w-8 place-items-center rounded-button bg-accent-gradient text-white shadow-gold">
+            <span className="grid h-8 w-8 place-items-center rounded-button bg-accent-gradient text-accent-foreground shadow-gold">
               <Sparkles className="h-4 w-4" aria-hidden />
             </span>
             <span className={cn('font-display text-lg font-semibold tracking-tight', compactNavigation && 'sr-only')}>
@@ -145,7 +146,10 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
           </div>
         </div>
 
-        <nav className={cn('flex-1 space-y-6 overflow-y-auto py-4', compactNavigation ? 'px-2' : 'px-3')}>
+        <nav
+          aria-label="Primary"
+          className={cn('flex-1 space-y-6 overflow-y-auto py-4', compactNavigation ? 'px-2' : 'px-3')}
+        >
           {navSections.map((section) => (
             <div key={section.heading} className="space-y-1">
               {!compactNavigation && (

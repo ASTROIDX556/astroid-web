@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useRef } from 'react';
-import { FileSpreadsheet, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
 import { transactionStatus } from '@/lib/status';
@@ -13,10 +13,11 @@ import {
   TRANSACTION_STATUS_OUTCOME_LABELS,
   countActiveTransactionFilters,
   fromStatusSelectValue,
-  parseFilterDate,
+  isReversedDateRange,
   toStatusSelectValue,
   type TransactionFilterValues,
 } from './filterTransactions';
+import { TransactionExportActions } from './TransactionExportActions';
 
 interface TransactionFiltersProps {
   transactions: Transaction[];
@@ -25,6 +26,7 @@ interface TransactionFiltersProps {
   filteredCount: number;
   onChange: (value: TransactionFilterValues) => void;
   onExportCSV?: (transactions: Transaction[]) => void;
+  onExportJSON?: (transactions: Transaction[]) => void;
 }
 
 /**
@@ -44,6 +46,7 @@ export function TransactionFilters({
   filteredCount,
   onChange,
   onExportCSV,
+  onExportJSON,
 }: TransactionFiltersProps) {
   const idPrefix = useId();
   const fieldId = (name: string) => `${idPrefix}-${name}`;
@@ -66,9 +69,7 @@ export function TransactionFilters({
 
   const activeCount = countActiveTransactionFilters(value);
   const hasFilters = activeCount > 0;
-  const dateRangeInverted =
-    (parseFilterDate(value.dateFrom, 'start') ?? -Infinity) >
-    (parseFilterDate(value.dateTo, 'end') ?? Infinity);
+  const dateRangeInverted = isReversedDateRange(value.dateFrom, value.dateTo);
 
   const update = (patch: Partial<TransactionFilterValues>) => onChange({ ...value, ...patch });
 
@@ -207,7 +208,8 @@ export function TransactionFilters({
               id={fieldId('date-note')}
               className="col-span-2 text-2xs text-foreground-secondary"
             >
-              The start date is after the end date, so the range is applied in reverse.
+              The start date is after the end date, so no transactions can match.
+              Swap the dates to see results.
             </p>
           )}
         </fieldset>
@@ -230,17 +232,11 @@ export function TransactionFilters({
             </Button>
           )}
         </div>
-        {onExportCSV && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => onExportCSV(visibleTransactions)}
-          >
-            <FileSpreadsheet className="mr-1.5 h-4 w-4" aria-hidden />
-            Export CSV
-          </Button>
-        )}
+        <TransactionExportActions
+          rows={visibleTransactions}
+          onExportCSV={onExportCSV}
+          onExportJSON={onExportJSON}
+        />
       </div>
     </section>
   );

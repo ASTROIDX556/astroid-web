@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   classifyFreighterError,
+  FREIGHTER_MAX_RETRIES,
   FREIGHTER_PERSIST_KEY,
   type FreighterApi,
   FreighterError,
@@ -11,6 +12,7 @@ import {
   STELLAR_NETWORKS,
   useFreighterStore,
 } from './freighter-store';
+import { getFreighterRecovery } from '../features/wallet/freighterErrorRecovery';
 import {
   fetchStellarWithFailover,
   normalizeEndpointUrl,
@@ -42,6 +44,7 @@ function resetStore(api: FreighterApi | null = null): void {
     isSigning: false,
     error: null,
     errorCode: null,
+    retryCount: 0,
   });
 }
 
@@ -195,6 +198,55 @@ test('declining a re-connect prompt keeps an existing healthy session', async ()
   assert.equal(state.publicKey, validPublicKey);
   assert.equal(state.networkPassphrase, testnetPassphrase);
   assert.equal(state.errorCode, 'USER_DECLINED');
+});
+
+test('a re-connect that times out keeps an existing healthy session', async () => {
+  resetStore(healthyApi({ setAllowed: async () => Promise.reject(new Error('Freighter request timed out')) }));
+  markConnected();
+
+  const result = await useFreighterStore.getState().connect();
+  const state = useFreighterStore.getState();
+
+  assert.equal(result, null);
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.networkPassphrase, testnetPassphrase);
+  assert.equal(state.isInstalled, true);
+  assert.equal(state.errorCode, 'TIMEOUT');
+});
+
+test('a first connect that times out still ends disconnected, not stuck connecting', async () => {
+  resetStore(healthyApi({ setAllowed: async () => Promise.reject(new Error('Freighter request timed out')) }));
+
+  await useFreighterStore.getState().connect();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.publicKey, null);
+  assert.equal(state.errorCode, 'TIMEOUT');
+});
+
+test('a hydrate poll that times out keeps a connected wallet and its installed flag', async () => {
+  resetStore(healthyApi({ isConnected: async () => Promise.reject(new Error('Freighter request timed out')) }));
+  markConnected();
+
+  await useFreighterStore.getState().hydrate();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.isInstalled, true);
+  assert.equal(state.errorCode, 'TIMEOUT');
+});
+
+test('a hydrate poll that times out with no session stays disconnected', async () => {
+  resetStore(healthyApi({ isConnected: async () => Promise.reject(new Error('Freighter request timed out')) }));
+
+  await useFreighterStore.getState().hydrate();
+  const state = useFreighterStore.getState();
+
+  assert.equal(state.status, 'disconnected');
+  assert.equal(state.errorCode, 'TIMEOUT');
 });
 
 test('connect flags a malformed address payload as INVALID_RESPONSE', async () => {
@@ -371,12 +423,37 @@ test('switchNetwork always releases the switching flag', async () => {
 });
 
 test('clearError resets the message and the category together', () => {
+  resetStore();
   useFreighterStore.setState({ error: 'Declined', errorCode: 'USER_DECLINED' });
 
   useFreighterStore.getState().clearError();
 
   assert.equal(useFreighterStore.getState().error, null);
   assert.equal(useFreighterStore.getState().errorCode, null);
+  assert.equal(useFreighterStore.getState().status, 'disconnected');
+  resetStore();
+});
+
+test('hydrate classifies a locked wallet', async () => {
+  resetStore(healthyApi({ getAddress: async () => ({ address: '' }) }));
+  markConnected();
+
+  await useFreighterStore.getState().hydrate();
+
+  assert.equal(useFreighterStore.getState().status, 'locked');
+  assert.equal(useFreighterStore.getState().errorCode, 'LOCKED');
+  resetStore();
+});
+
+test('recovery copy offers a distinct action per error code', () => {
+  assert.equal(getFreighterRecovery('NOT_INSTALLED').action, 'install');
+  assert.equal(getFreighterRecovery('USER_DECLINED').action, 'retry');
+  assert.equal(getFreighterRecovery('TIMEOUT').action, 'retry');
+  assert.equal(getFreighterRecovery('LOCKED').action, 'unlock_and_retry');
+  assert.equal(getFreighterRecovery(null).action, 'retry');
+  assert.equal(getFreighterRecovery('TIMEOUT', FREIGHTER_MAX_RETRIES).action, 'reload');
+  // Installing is never replaced by a reload suggestion.
+  assert.equal(getFreighterRecovery('NOT_INSTALLED', FREIGHTER_MAX_RETRIES).action, 'install');
 });
 
 /* -------------------------------------------------------------------------- */
@@ -653,21 +730,27 @@ const readPersisted = (storage: ReturnType<typeof createMemoryStorage>) => {
   return raw ? (JSON.parse(raw) as { state: Record<string, unknown>; version: number }) : null;
 };
 
-test('partialize keeps only a healthy connection and never the network passphrase', () => {
+test('partialize keeps recoverable sessions and never the network passphrase', () => {
   assert.deepEqual(partializeFreighterState({ status: 'connected', publicKey: validPublicKey }), {
     status: 'connected',
     publicKey: validPublicKey,
   });
-  for (const status of ['disconnected', 'connecting', 'locked'] as const) {
+  assert.deepEqual(partializeFreighterState({ status: 'locked', publicKey: validPublicKey }), {
+    status: 'locked',
+    publicKey: validPublicKey,
+  });
+  for (const status of ['disconnected', 'connecting'] as const) {
     assert.deepEqual(partializeFreighterState({ status, publicKey: validPublicKey }), {
       status: 'disconnected',
       publicKey: null,
     });
   }
-  assert.deepEqual(partializeFreighterState({ status: 'connected', publicKey: 'bogus' }), {
-    status: 'disconnected',
-    publicKey: null,
-  });
+  for (const status of ['connected', 'locked'] as const) {
+    assert.deepEqual(partializeFreighterState({ status, publicKey: 'bogus' }), {
+      status: 'disconnected',
+      publicKey: null,
+    });
+  }
 });
 
 test('merge ignores malformed persisted snapshots', () => {
@@ -680,6 +763,20 @@ test('merge ignores malformed persisted snapshots', () => {
     mergePersistedFreighterState({ status: 'disconnected', publicKey: validPublicKey }, current),
     current,
   );
+});
+
+test('merge restores a locked session with its key and recovery message', () => {
+  const current = useFreighterStore.getState();
+
+  const merged = mergePersistedFreighterState(
+    { status: 'locked', publicKey: validPublicKey },
+    current,
+  );
+
+  assert.equal(merged.status, 'locked');
+  assert.equal(merged.publicKey, validPublicKey);
+  assert.equal(merged.errorCode, 'LOCKED');
+  assert.match(merged.error ?? '', /locked/i);
 });
 
 test('connection status and public key are written to storage', async () => {
@@ -738,6 +835,95 @@ test('rehydrate rejects a tampered public key', async () => {
 
   assert.equal(useFreighterStore.getState().status, 'disconnected');
   assert.equal(useFreighterStore.getState().publicKey, null);
+});
+
+test('a locked extension keeps the persisted session instead of erasing it', async () => {
+  const storage = createMemoryStorage();
+  await withWindowStorage(storage, () => {
+    useFreighterStore.getState().updatePublicKey(validPublicKey);
+    useFreighterStore.setState({ status: 'locked' });
+  });
+
+  assert.deepEqual(readPersisted(storage)?.state, {
+    status: 'locked',
+    publicKey: validPublicKey,
+  });
+});
+
+test('rehydrate restores a locked session so unlocking can resume it', async () => {
+  const storage = createMemoryStorage();
+
+  await withWindowStorage(storage, async () => {
+    useFreighterStore.setState({ status: 'disconnected', publicKey: null });
+    storage.setItem(
+      FREIGHTER_PERSIST_KEY,
+      JSON.stringify({ state: { status: 'locked', publicKey: validPublicKey }, version: 1 }),
+    );
+    await useFreighterStore.persist.rehydrate();
+  });
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'locked');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.errorCode, 'LOCKED');
+  resetStore();
+});
+
+test('hydrate keeps the stored key while locked and reconnects after unlock', async () => {
+  resetStore(healthyApi({ getAddress: async () => ({ address: '' }) }));
+  markConnected();
+
+  await useFreighterStore.getState().hydrate();
+  assert.equal(useFreighterStore.getState().status, 'locked');
+  assert.equal(useFreighterStore.getState().errorCode, 'LOCKED');
+  assert.equal(useFreighterStore.getState().publicKey, validPublicKey, 'key must survive the lock');
+
+  // The user unlocks Freighter; the next background hydrate resumes the session.
+  __setFreighterLoaderForTests(async () => healthyApi());
+  await useFreighterStore.getState().hydrate();
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.networkPassphrase, testnetPassphrase);
+  assert.equal(state.error, null);
+  assert.equal(state.errorCode, null);
+  resetStore();
+});
+
+test('hydrate preserves the session when the extension throws a locked error', async () => {
+  resetStore(
+    healthyApi({
+      getAddress: async () => Promise.reject({ message: 'Wallet is locked' }),
+    }),
+  );
+  markConnected();
+
+  await useFreighterStore.getState().hydrate();
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'locked');
+  assert.equal(state.isInstalled, true);
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.errorCode, 'LOCKED');
+  resetStore();
+});
+
+test('a locked signature prompt keeps the public key for recovery', async () => {
+  resetStore(healthyApi({ signTransaction: async () => ({ error: { message: 'Wallet is locked' } }) }));
+  markConnected();
+
+  await assert.rejects(
+    () => useFreighterStore.getState().requestSignature('AAAA'),
+    (error: unknown) => error instanceof FreighterError && error.code === 'LOCKED',
+  );
+
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'locked');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.networkPassphrase, null, 'network must be re-verified before signing again');
+  assert.equal(state.isSigning, false);
+  resetStore();
 });
 
 test('rehydrate survives corrupt JSON in storage', async () => {

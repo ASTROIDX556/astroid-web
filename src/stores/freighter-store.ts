@@ -109,6 +109,12 @@ export class FreighterError extends Error {
   }
 }
 
+/** Deadline for any single Freighter extension call before it is treated as TIMEOUT. */
+export const FREIGHTER_TIMEOUT_MS = 15000;
+
+/** Manual retries allowed before the recovery UI suggests reloading the page. */
+export const FREIGHTER_MAX_RETRIES = 3;
+
 /** Short toast/banner headline for each error category. */
 export const FREIGHTER_ERROR_TITLES: Record<FreighterErrorCode, string> = {
   NOT_INSTALLED: 'Freighter not detected',
@@ -205,6 +211,8 @@ export interface FreighterWalletState {
   error: string | null;
   /** Category of `error`, null whenever `error` is null. */
   errorCode: FreighterErrorCode | null;
+  /** Manual reconnect attempts since the last successful connection. */
+  retryCount: number;
   /** Clears the last error without touching connection state. */
   clearError: () => void;
   checkExtension: () => Promise<boolean>;
@@ -228,6 +236,8 @@ export interface FreighterWalletState {
   updatePublicKey: (publicKey: string) => void;
   requestSignature: (xdr: string, options?: { networkPassphrase?: string }) => Promise<string>;
   hydrate: () => Promise<void>;
+  /** Re-runs the connection flow after a failure, tracking the attempt count. */
+  retryConnection: () => Promise<string | null>;
 }
 
 /** Backward-compatible names retained for consumers of the previous wallet store API. */
@@ -242,7 +252,7 @@ export type WalletActions = Pick<
 
 const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
 
-const withTimeout = async <T>(promise: Promise<T>, ms = 15000): Promise<T> => {
+const withTimeout = async <T>(promise: Promise<T>, ms = FREIGHTER_TIMEOUT_MS): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return await new Promise<T>((resolve, reject) => {
@@ -393,16 +403,25 @@ export const FREIGHTER_PERSIST_KEY = 'astroid-freighter-wallet';
  * from the extension and fail closed, never trust a stored value.
  */
 export interface PersistedFreighterState {
-  status: 'connected' | 'disconnected';
+  /** `locked` is recoverable: unlocking restores the session on the next `hydrate()`. */
+  status: 'connected' | 'locked' | 'disconnected';
   publicKey: string | null;
 }
 
-/** Persist the connection only while it is healthy and its key is valid. */
+/**
+ * A locked wallet is still a known wallet. Persisting it (with its key) means
+ * an unlock can resume the session instead of forcing a manual reconnect;
+ * every other non-connected status is not worth restoring.
+ */
+const isRecoverableStatus = (status: unknown): status is 'connected' | 'locked' =>
+  status === 'connected' || status === 'locked';
+
+/** Persist the connection while it is recoverable and its key is valid. */
 export const partializeFreighterState = (
   state: Pick<FreighterWalletState, 'status' | 'publicKey'>,
 ): PersistedFreighterState =>
-  state.status === 'connected' && isValidStellarAddress(state.publicKey)
-    ? { status: 'connected', publicKey: state.publicKey }
+  isRecoverableStatus(state.status) && isValidStellarAddress(state.publicKey)
+    ? { status: state.status, publicKey: state.publicKey }
     : { status: 'disconnected', publicKey: null };
 
 /**
@@ -416,9 +435,17 @@ export const mergePersistedFreighterState = (
 ): FreighterWalletState => {
   if (!persisted || typeof persisted !== 'object') return current;
   const { status, publicKey } = persisted as Partial<PersistedFreighterState>;
-  if (status !== 'connected' || !isValidStellarAddress(publicKey)) return current;
+  if (!isRecoverableStatus(status) || !isValidStellarAddress(publicKey)) return current;
   // Optimistic until `hydrate()` confirms the extension still agrees.
-  return { ...current, status: 'connected', publicKey };
+  return status === 'locked'
+    ? {
+        ...current,
+        status,
+        publicKey,
+        error: DEFAULT_ERROR_MESSAGES.LOCKED,
+        errorCode: 'LOCKED',
+      }
+    : { ...current, status, publicKey, error: null, errorCode: null };
 };
 
 const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', unknown]]> = (set, get) => ({
@@ -432,6 +459,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
   isSigning: false,
   error: null,
   errorCode: null,
+  retryCount: 0,
 
   clearError: () => {
     set({ error: null, errorCode: null });
@@ -516,15 +544,21 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
           networkPassphrase,
           error: null,
           errorCode: null,
+          retryCount: 0,
         });
 
         return publicKey;
       } catch (error) {
         const failure = classifyFreighterError(error);
 
-        // Dismissing a re-connect prompt must not tear down a session that was
-        // already healthy: restore it and only surface the decline.
-        if (failure.code === 'USER_DECLINED' && previous.status === 'connected' && previous.publicKey) {
+        // Dismissing a re-connect prompt, or the extension being slow to answer
+        // it, must not tear down a session that was already healthy: restore it
+        // and only surface the failure so the user can retry.
+        if (
+          (failure.code === 'USER_DECLINED' || failure.code === 'TIMEOUT') &&
+          previous.status === 'connected' &&
+          previous.publicKey
+        ) {
           set({
             status: 'connected',
             publicKey: previous.publicKey,
@@ -554,6 +588,11 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
     return connectInFlight;
   },
 
+  retryConnection: async () => {
+    set((state) => ({ retryCount: state.retryCount + 1 }));
+    return await get().connect();
+  },
+
   disconnect: () => {
     set({
       status: 'disconnected',
@@ -563,6 +602,7 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       isSigning: false,
       error: null,
       errorCode: null,
+      retryCount: 0,
     });
   },
 
@@ -656,14 +696,14 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       return;
     }
     if (get().status === 'connected' && get().publicKey === publicKey) return;
-    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null });
+    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null, retryCount: 0 });
   },
 
   updatePublicKey: (publicKey) => {
     if (!isValidStellarAddress(publicKey)) {
       throw new Error('Invalid Stellar public key.');
     }
-    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null });
+    set({ status: 'connected', isInstalled: true, publicKey, error: null, errorCode: null, retryCount: 0 });
   },
 
   requestSignature: async (xdr: string, options?: { networkPassphrase?: string }) => {
@@ -730,7 +770,9 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
           ...errorPatch(failure),
         });
       } else if (failure.code === 'LOCKED') {
-        set({ status: 'locked', publicKey: null, networkPassphrase: null, ...errorPatch(failure) });
+        // Keep the address so unlocking can resume the same session; the
+        // passphrase is dropped so signing still fails closed until re-synced.
+        set({ status: 'locked', networkPassphrase: null, ...errorPatch(failure) });
       } else {
         set(errorPatch(failure));
       }
@@ -791,10 +833,11 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
         // The extension answered but exposed no address: the wallet is locked
         // or access was not granted. Surface a dedicated `locked` state so the
         // top bar can alert and offer a reconnect instead of silently showing
-        // a generic disconnect.
+        // a generic disconnect. Keep the last known key: locking is temporary
+        // and erasing it would force a manual reconnect after unlock.
         set({
           status: 'locked',
-          publicKey: null,
+          publicKey: get().publicKey,
           network: null,
           networkPassphrase: null,
           isInstalled: true,
@@ -825,10 +868,22 @@ const storeCreator: StateCreator<FreighterWalletState, [], [['zustand/persist', 
       });
     } catch (error) {
       const failure = classifyFreighterError(error);
+
+      // `hydrate()` also runs as a background poll. One slow answer from the
+      // extension says nothing about the wallet itself, so keep a healthy
+      // session (and its installed flag) and only record the failure.
+      const current = get();
+      if (failure.code === 'TIMEOUT' && current.status === 'connected' && current.publicKey) {
+        set(errorPatch(failure));
+        return;
+      }
+
       const isLocked = failure.code === 'LOCKED';
       set({
         status: isLocked ? 'locked' : 'disconnected',
-        publicKey: null,
+        // A lock is recoverable, so keep the last known key for the unlock;
+        // every other failure invalidates the session.
+        publicKey: isLocked ? get().publicKey : null,
         network: null,
         networkPassphrase: null,
         isInstalled: isLocked,

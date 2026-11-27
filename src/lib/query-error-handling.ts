@@ -36,6 +36,59 @@ const RETRYABLE_API_ERROR_CODES = new Set([
   'SERVICE_UNAVAILABLE',
 ]);
 
+const NON_RETRYABLE_CLIENT_ERROR_CODES = new Set([
+  'BAD_REQUEST',
+  'UNAUTHORIZED',
+  'FORBIDDEN',
+  'NOT_FOUND',
+  'METHOD_NOT_ALLOWED',
+  'CONFLICT',
+  'UNPROCESSABLE_ENTITY',
+  'VALIDATION_ERROR',
+  'INVALID_REQUEST',
+]);
+
+/**
+ * Retry ceiling for the shared query client: one initial attempt plus three
+ * retries. Kept here (rather than inline in the provider) so the policy is
+ * testable and every call site can reason about it.
+ */
+export const QUERY_RETRY_LIMIT = 3;
+
+/** First retry delay; doubles per attempt with full jitter. */
+const RETRY_BASE_DELAY_MS = 800;
+
+/** Upper bound for a single backoff wait. */
+const RETRY_MAX_DELAY_MS = 8_000;
+
+/** True when the browser reports no connectivity. */
+export function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
+/**
+ * Bounded exponential backoff with full jitter.
+ *
+ * Without this, TanStack Query retries immediately and every mounted
+ * dashboard widget hits a degraded Stellar RPC node at the same instant. The
+ * jitter spreads those retries out so a recovering node is not stampeded.
+ */
+export function queryRetryDelay(failureCount: number): number {
+  const attempt = Math.max(0, Math.trunc(failureCount) - 1);
+  const ceiling = Math.min(RETRY_BASE_DELAY_MS * 2 ** attempt, RETRY_MAX_DELAY_MS);
+  return Math.round(ceiling / 2 + Math.random() * (ceiling / 2));
+}
+
+/**
+ * Combined retry decision used by the shared query client: attempt ceiling,
+ * deterministic failures, and connectivity all in one place.
+ */
+export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
+  if (failureCount >= QUERY_RETRY_LIMIT) return false;
+  if (isOffline()) return false;
+  return isRetryableQueryError(error);
+}
+
 /**
  * Turns an unknown thrown value from a queryFn/mutationFn into a message that
  * is safe to show a user. `AstroidApiError` messages are already server-authored
@@ -57,21 +110,62 @@ export function getQueryErrorMessage(error: unknown): string {
 }
 
 /**
- * Retry policy input: only transient failures are retried, and never in mock
- * mode (`NEXT_PUBLIC_API_URL` unset), where the resource layer already serves
- * fixture data and a rejection is deterministic app logic, not a blip.
+ * Retry policy input: only transient failures (network drops, 5xx server errors,
+ * rate limits) are retried, while client-side 4xx errors (e.g. 400, 401, 403, 404)
+ * fail immediately without pointless retries.
+ * Never retries in mock mode (`NEXT_PUBLIC_API_URL` unset), where the resource layer
+ * already serves fixture data and a rejection is deterministic app logic, not a blip.
  */
-export function isRetryableQueryError(error: unknown): boolean {
-  if (isMockMode) {
+export function isRetryableQueryError(
+  error: unknown,
+  mockMode: boolean = isMockMode,
+): boolean {
+  if (mockMode) {
     return false;
   }
-  if (error instanceof AstroidApiError) {
-    return RETRYABLE_API_ERROR_CODES.has(error.code.toUpperCase());
+
+  // Check HTTP status code if present on the error object
+  if (typeof error === 'object' && error !== null) {
+    const status = (error as { status?: unknown; statusCode?: unknown }).status ??
+      (error as { status?: unknown; statusCode?: unknown }).statusCode;
+    if (typeof status === 'number') {
+      if (status >= 400 && status < 500 && status !== 429) {
+        return false;
+      }
+      if (status >= 500 || status === 429) {
+        return true;
+      }
+    }
   }
-  // fetch() rejects with TypeError on DNS/connection failures — retry those.
+
+  if (error instanceof AstroidApiError) {
+    const code = error.code.toUpperCase();
+    if (NON_RETRYABLE_CLIENT_ERROR_CODES.has(code)) {
+      return false;
+    }
+    return RETRYABLE_API_ERROR_CODES.has(code);
+  }
+
+  // fetch() rejects with TypeError on DNS/connection drops — retry those.
   if (error instanceof TypeError) {
     return true;
   }
+
+  // Common network or timeout error signatures
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (
+      msg.includes('failed to fetch') ||
+      msg.includes('network error') ||
+      msg.includes('network request failed') ||
+      msg.includes('timeout') ||
+      msg.includes('econnreset') ||
+      msg.includes('etimedout')
+    ) {
+      return true;
+    }
+  }
+
   return false;
 }
 
