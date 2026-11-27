@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FormField, Input, Select } from '@/components/ui/input';
-import { toast } from 'sonner';
 import {
   AGENT_PROVIDER_IDS,
   PROVIDER_LABELS,
@@ -19,6 +18,7 @@ import {
   requiresEndpoint,
   type CreateAgentInput,
 } from './schema';
+import { useAgentMutation } from './hooks/useAgentMutation';
 
 /**
  * Controlled agent configuration form. Model options are derived from the
@@ -84,13 +84,17 @@ export function AgentConfigForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
+  const mutation = useAgentMutation('agent-mock-id');
+
   const onSubmit = (values: CreateAgentInput) => {
-    // Mock-mode deployment: the API contract is defined in astroid-api
-    // (POST /agents); wire the payload there once the backend ships.
-    toast.success(`${values.name} configured`, {
-      description: `${PROVIDER_LABELS[values.provider]} · ${values.model || 'custom model'} deployed to the Stellar testnet control plane.`,
-    });
-    reset();
+    mutation.mutate(
+      { id: 'agent-mock-id', data: values },
+      {
+        onSuccess: () => {
+          reset();
+        },
+      },
+    );
   };
 
   const onInvalid = (fieldErrors: FieldErrors<CreateAgentInput>) => {
