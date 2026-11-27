@@ -58,6 +58,13 @@ const sleep = (ms: number, signal: AbortSignal) =>
     );
   });
 
+/** Splits text into fixed-size chunks for the simulated streaming pipeline. */
+function* chunkForSimulatedStream(text: string, size = 4): Generator<string> {
+  for (let i = 0; i < text.length; i += size) {
+    yield text.slice(i, i + size);
+  }
+}
+
 /** Replays a canned reply through the streaming pipeline (mock mode only). */
 async function simulateStream(text: string, emit: (delta: string) => void, signal: AbortSignal) {
   await sleep(MOCK_FIRST_TOKEN_DELAY_MS, signal);
