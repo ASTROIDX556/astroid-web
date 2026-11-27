@@ -1,7 +1,6 @@
 import type { Transaction, TransactionStatus } from '@/types/domain';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Presets that can be tagged onto the transaction filter state. */
 export type TransactionPresetId = 'last-24h' | 'pending-approvals' | 'high-value';
@@ -57,75 +56,6 @@ export interface TransactionFilterValues {
   presets?: readonly TransactionPresetId[];
 }
 
-export interface TransactionDateRange {
-  /** Inclusive lower bound in epoch milliseconds, or null when unbounded. */
-  from: number | null;
-  /** Inclusive upper bound in epoch milliseconds, or null when unbounded. */
-  to: number | null;
-}
-
-/**
- * Parse a single date bound. Date-only values (`YYYY-MM-DD`) cover the whole UTC
- * day, so `from` starts at 00:00:00.000 and `to` ends at 23:59:59.999. Full
- * timestamps are used as-is. Empty or unparseable values become unbounded.
- */
-function parseDateBoundary(value: string, edge: 'start' | 'end'): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  const edgeTime = edge === 'start' ? '00:00:00.000' : '23:59:59.999';
-  const normalized = DATE_ONLY_PATTERN.test(trimmed)
-    ? `${trimmed}T${edgeTime}Z`
-    : trimmed;
-  const timestamp = Date.parse(normalized);
-  return Number.isNaN(timestamp) ? null : timestamp;
-}
-
-/** Resolve the picker's date inputs into inclusive epoch bounds without side effects. */
-export function resolveTransactionDateRange(
-  dateFrom: string,
-  dateTo: string,
-): TransactionDateRange {
-  return {
-    from: parseDateBoundary(dateFrom, 'start'),
-    to: parseDateBoundary(dateTo, 'end'),
-  };
-}
-
-/** Returns false for timestamps outside the inclusive range; invalid dates never match. */
-export function isWithinTransactionDateRange(
-  createdAt: string,
-  range: TransactionDateRange,
-): boolean {
-  const timestamp = Date.parse(createdAt);
-  if (Number.isNaN(timestamp)) return false;
-  if (range.from !== null && timestamp < range.from) return false;
-  if (range.to !== null && timestamp > range.to) return false;
-  return true;
-}
-
-/** Pure matcher for a single preset tag. */
-export function matchesTransactionPreset(
-  transaction: Transaction,
-  preset: TransactionPresetId,
-  now: number,
-): boolean {
-  switch (preset) {
-    case 'last-24h': {
-      const createdAt = Date.parse(transaction.createdAt);
-      return (
-        Number.isFinite(createdAt) &&
-        createdAt >= now - DAY_MS &&
-        createdAt <= now
-      );
-    }
-    case 'pending-approvals':
-      return transaction.status === 'pending';
-    case 'high-value':
-      return transaction.usdValue >= HIGH_VALUE_USD_THRESHOLD;
-  }
-}
-
 export interface DateRangeBounds {
   from: number | null;
   to: number | null;
@@ -178,23 +108,42 @@ export function resolveDateRange(dateFrom: string, dateTo: string): DateRangeBou
   };
 }
 
+/** Pure matcher for a single preset tag. */
+export function matchesTransactionPreset(
+  transaction: Transaction,
+  preset: TransactionPresetId,
+  now: number,
+): boolean {
+  switch (preset) {
+    case 'last-24h': {
+      const createdAt = Date.parse(transaction.createdAt);
+      return (
+        Number.isFinite(createdAt) &&
+        createdAt >= now - DAY_MS &&
+        createdAt <= now
+      );
+    }
+    case 'pending-approvals':
+      return transaction.status === 'pending';
+    case 'high-value':
+      return transaction.usdValue >= HIGH_VALUE_USD_THRESHOLD;
+  }
+}
+
 export function filterTransactions(
   transactions: readonly Transaction[],
   filters: TransactionFilterValues,
   now: number = Date.now(),
 ): Transaction[] {
   const query = filters.query.trim().toLowerCase();
-  const dateRange = resolveTransactionDateRange(filters.dateFrom, filters.dateTo);
+  const statusSet =
+    filters.statuses && filters.statuses.length > 0 ? new Set(filters.statuses) : null;
+  const { from: dateFrom, to: dateTo } = resolveDateRange(
+    filters.dateFrom,
+    filters.dateTo,
+  );
+  const hasDateRange = dateFrom !== null || dateTo !== null;
   const presets = filters.presets ?? [];
-
-  // An inverted range can never match; bail out before scanning the list.
-  if (
-    dateRange.from !== null &&
-    dateRange.to !== null &&
-    dateRange.from > dateRange.to
-  ) {
-    return [];
-  }
 
   return transactions.filter((transaction) => {
     if (filters.status !== 'all' && transaction.status !== filters.status) return false;
@@ -203,7 +152,12 @@ export function filterTransactions(
     if (filters.agentId !== 'all' && transaction.agentId !== filters.agentId)
       return false;
 
-    if (!isWithinTransactionDateRange(transaction.createdAt, dateRange)) return false;
+    if (hasDateRange) {
+      const createdAt = Date.parse(transaction.createdAt);
+      if (!Number.isFinite(createdAt)) return false;
+      if (dateFrom !== null && createdAt < dateFrom) return false;
+      if (dateTo !== null && createdAt > dateTo) return false;
+    }
 
     for (const preset of presets) {
       if (!matchesTransactionPreset(transaction, preset, now)) return false;
