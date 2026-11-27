@@ -101,7 +101,7 @@ export function AssistantDrawer() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [generationState, setGenerationState] = useState<AssistantGenerationState>('idle');
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [_streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [seeded, setSeeded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
