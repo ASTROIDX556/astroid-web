@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Activity, Bot, CalendarDays, Coins, Cpu, Gauge, Link2, Sparkles } from 'lucide-react';
 
@@ -15,6 +15,7 @@ import {
   PROVIDER_LABELS,
   PROVIDER_MODELS,
   createAgentSchema,
+  getFirstValidationMessage,
   requiresEndpoint,
   type CreateAgentInput,
 } from './schema';
@@ -92,11 +93,17 @@ export function AgentConfigForm() {
     reset();
   };
 
+  const onInvalid = (fieldErrors: FieldErrors<CreateAgentInput>) => {
+    toast.error('Invalid agent configuration.', {
+      description: getFirstValidationMessage(fieldErrors) ?? 'Please resolve the highlighted validation errors before saving.',
+    });
+  };
+
   return (
     <Card className="p-6">
       <form
         noValidate
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit, onInvalid)}
         aria-label="Agent configuration"
         className="space-y-5"
       >
