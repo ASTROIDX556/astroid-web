@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Transaction } from '@/types/domain';
-import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
+import {
+  filterTransactions,
+  parseDateBoundary,
+  resolveDateRange,
+  type TransactionFilterValues,
+} from './filterTransactions';
 
 const records: Transaction[] = [
   {
@@ -407,4 +412,133 @@ test('filtering does not mutate the input collection or its records', () => {
   });
 
   assert.deepEqual(edgeCatalog, snapshot);
+});
+
+test('filters by an array of statuses', () => {
+  const filtered = filterTransactions(edgeCatalog, {
+    ...noFilters,
+    statuses: ['pending', 'failed'],
+  });
+
+  assert.deepEqual(ids(filtered), ['txn-beta', 'txn-delta']);
+});
+
+test('an empty statuses array applies no status restriction', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, statuses: [] })),
+    ids(edgeCatalog),
+  );
+});
+
+test('single status and multi-status filters combine with AND semantics', () => {
+  assert.deepEqual(
+    ids(
+      filterTransactions(edgeCatalog, {
+        ...noFilters,
+        status: 'completed',
+        statuses: ['completed', 'pending'],
+      }),
+    ),
+    ['txn-alpha', 'txn-epsilon'],
+  );
+  assert.deepEqual(
+    filterTransactions(edgeCatalog, {
+      ...noFilters,
+      status: 'completed',
+      statuses: ['pending'],
+    }),
+    [],
+  );
+});
+
+test('combines a multi-status filter with a date range', () => {
+  const filtered = filterTransactions(edgeCatalog, {
+    ...noFilters,
+    statuses: ['completed', 'pending'],
+    dateFrom: '2026-07-10',
+    dateTo: '2026-07-20',
+  });
+
+  assert.deepEqual(ids(filtered), ['txn-alpha', 'txn-beta']);
+});
+
+test('supports open-ended date ranges', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, dateFrom: '2026-07-20' })),
+    ['txn-epsilon'],
+  );
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, dateTo: '2026-07-01' })),
+    ['txn-delta'],
+  );
+});
+
+test('ignores impossible calendar dates such as February 31st', () => {
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, dateTo: '2026-02-31' })),
+    ids(edgeCatalog),
+  );
+});
+
+test('accepts full ISO timestamps as date boundaries', () => {
+  const filtered = filterTransactions(edgeCatalog, {
+    ...noFilters,
+    dateFrom: '2026-07-11T00:00:00.000Z',
+    dateTo: '2026-07-11T23:59:59.999Z',
+  });
+
+  assert.deepEqual(ids(filtered), ['txn-beta']);
+});
+
+test('excludes transactions with unparseable timestamps only when a date range is set', () => {
+  const broken: Transaction = { ...records[0], id: 'txn-broken', createdAt: 'garbage' };
+  const withBroken = [...records, broken];
+
+  assert.deepEqual(
+    ids(filterTransactions(withBroken, { ...noFilters, dateFrom: '2026-07-01' })),
+    ['txn-alpha', 'txn-beta'],
+  );
+  assert.ok(ids(filterTransactions(withBroken, noFilters)).includes('txn-broken'));
+});
+
+test('matches search queries case-insensitively alongside a multi-status filter', () => {
+  const filtered = filterTransactions(edgeCatalog, {
+    ...noFilters,
+    query: '  ATLAS ',
+    statuses: ['approved', 'failed'],
+  });
+
+  assert.deepEqual(ids(filtered), ['txn-gamma', 'txn-delta']);
+});
+
+test('accepts a readonly transaction list and statuses without mutating them', () => {
+  const statuses = ['pending'] as const;
+  const input: readonly Transaction[] = Object.freeze([...records]);
+
+  assert.deepEqual(ids(filterTransactions(input, { ...noFilters, statuses })), [
+    'txn-beta',
+  ]);
+  assert.deepEqual(ids([...input]), ['txn-alpha', 'txn-beta']);
+});
+
+test('parseDateBoundary snaps date-only values to day edges', () => {
+  assert.equal(
+    parseDateBoundary('2026-07-10', 'start'),
+    new Date(2026, 6, 10, 0, 0, 0, 0).getTime(),
+  );
+  assert.equal(
+    parseDateBoundary('2026-07-10', 'end'),
+    new Date(2026, 6, 10, 23, 59, 59, 999).getTime(),
+  );
+  assert.equal(parseDateBoundary('', 'start'), null);
+  assert.equal(parseDateBoundary('   ', 'end'), null);
+  assert.equal(parseDateBoundary(undefined, 'start'), null);
+  assert.equal(parseDateBoundary('2026-13-01', 'start'), null);
+  assert.equal(parseDateBoundary('2026-02-31', 'end'), null);
+  assert.equal(parseDateBoundary('not-a-date', 'start'), null);
+});
+
+test('resolveDateRange returns null bounds for unset or invalid input', () => {
+  assert.deepEqual(resolveDateRange('', ''), { from: null, to: null });
+  assert.deepEqual(resolveDateRange('nope', '2026-02-30'), { from: null, to: null });
 });
