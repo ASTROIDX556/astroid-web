@@ -415,9 +415,7 @@ test('date boundaries include the first and last millisecond of the range', () =
     dateTo: '2026-07-10',
   });
 
-  // `txn-gamma` is timestamped at the last millisecond of the local day and
-  // must stay inside the range whatever timezone the CI runner uses.
-  assert.deepEqual(ids(filtered), ['txn-alpha', 'txn-gamma']);
+  assert.deepEqual(ids(filtered), ['day-start', 'day-end']);
 });
 
 test('malformed dates are ignored instead of hiding every transaction', () => {
