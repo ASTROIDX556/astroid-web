@@ -1,5 +1,38 @@
 import type { Transaction, TransactionStatus } from '@/types/domain';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Presets that can be tagged onto the transaction filter state. */
+export type TransactionPresetId = 'last-24h' | 'pending-approvals' | 'high-value';
+
+export interface TransactionFilterPreset {
+  id: TransactionPresetId;
+  label: string;
+  description: string;
+}
+
+/** Display metadata for the presets; matching itself lives in `matchesTransactionPreset`. */
+export const TRANSACTION_FILTER_PRESETS: readonly TransactionFilterPreset[] = [
+  {
+    id: 'last-24h',
+    label: 'Last 24 hours',
+    description: 'Transactions created in the 24 hours up to now.',
+  },
+  {
+    id: 'pending-approvals',
+    label: 'Pending approvals',
+    description: 'Transactions still waiting for a decision.',
+  },
+  {
+    id: 'high-value',
+    label: 'High value',
+    description: 'Transactions worth at least 10,000 USD.',
+  },
+];
+
+/** USD value at or above which a transaction counts as high value. */
+export const HIGH_VALUE_USD_THRESHOLD = 10_000;
+
 export interface TransactionFilterValues {
   query: string;
   status: 'all' | TransactionStatus;
@@ -21,6 +54,12 @@ export interface TransactionFilterValues {
   minUsdValue?: number;
   /** Inclusive upper bound on `usdValue`. */
   maxUsdValue?: number;
+  /**
+   * Preset tags to apply alongside the explicit filters. Every active preset must
+   * match, so selecting "last 24h" and "high value" narrows to high-value
+   * transactions from the last day. Omitted or empty means no preset constraint.
+   */
+  presets?: readonly TransactionPresetId[];
 }
 
 export type TransactionSortKey = 'createdAt' | 'amount' | 'usdValue' | 'riskScore' | 'status';
@@ -51,6 +90,7 @@ function searchableText(transaction: Transaction): string {
     transaction.agentName,
     transaction.asset,
     transaction.amount,
+    transaction.usdValue,
     transaction.purpose,
     transaction.memo,
     transaction.status,
@@ -111,9 +151,32 @@ export function resolveDateRange(dateFrom: string, dateTo: string): DateRangeBou
   };
 }
 
+/** Pure matcher for a single preset tag. */
+export function matchesTransactionPreset(
+  transaction: Transaction,
+  preset: TransactionPresetId,
+  now: number,
+): boolean {
+  switch (preset) {
+    case 'last-24h': {
+      const createdAt = Date.parse(transaction.createdAt);
+      return (
+        Number.isFinite(createdAt) &&
+        createdAt >= now - DAY_MS &&
+        createdAt <= now
+      );
+    }
+    case 'pending-approvals':
+      return transaction.status === 'pending';
+    case 'high-value':
+      return transaction.usdValue >= HIGH_VALUE_USD_THRESHOLD;
+  }
+}
+
 export function filterTransactions(
   transactions: readonly Transaction[],
   filters: TransactionFilterValues,
+  now: number = Date.now(),
 ): Transaction[] {
   if (transactions.length === 0) return [];
 
@@ -124,6 +187,7 @@ export function filterTransactions(
   const { from: dateFrom, to: dateTo } = resolveDateRange(filters.dateFrom, filters.dateTo);
   const hasDateRange = dateFrom !== null || dateTo !== null;
   const { minUsdValue, maxUsdValue } = filters;
+  const presets = filters.presets ?? [];
 
   return transactions.filter((transaction) => {
     if (filters.status !== 'all' && transaction.status !== filters.status) return false;
@@ -136,6 +200,10 @@ export function filterTransactions(
       if (!Number.isFinite(createdAt)) return false;
       if (dateFrom !== null && createdAt < dateFrom) return false;
       if (dateTo !== null && createdAt > dateTo) return false;
+    }
+
+    for (const preset of presets) {
+      if (!matchesTransactionPreset(transaction, preset, now)) return false;
     }
 
     if (isFiniteNumber(minUsdValue) && transaction.usdValue < minUsdValue) return false;

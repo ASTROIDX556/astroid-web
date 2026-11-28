@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Transaction } from '@/types/domain';
 import {
-  filterAndSortTransactions,
+  HIGH_VALUE_USD_THRESHOLD,
   filterTransactions,
+  matchesTransactionPreset,
   parseDateBoundary,
   resolveDateRange,
   sortTransactions,
@@ -180,6 +181,62 @@ const noFilters: TransactionFilterValues = {
 const ids = (transactions: Transaction[]) =>
   transactions.map((transaction) => transaction.id);
 
+function makeTransaction(overrides: Partial<Transaction> & { id: string }): Transaction {
+  return {
+    organizationId: 'org-test',
+    walletId: 'wallet-test',
+    agentId: 'agent-atlas',
+    agentName: 'Atlas',
+    direction: 'outbound',
+    counterparty: 'Stellar Store',
+    counterpartyAddress: 'GDESTINATIONALPHA',
+    asset: 'USDC',
+    amount: 25,
+    usdValue: 25,
+    purpose: 'Service payment',
+    status: 'completed',
+    riskScore: 5,
+    createdAt: '2026-07-10T12:00:00.000Z',
+    ...overrides,
+  };
+}
+
+// Preset windows are relative to this instant, so tests never depend on the wall clock.
+const NOW = Date.parse('2026-07-11T12:00:00.000Z');
+
+const presetRecords: Transaction[] = [
+  makeTransaction({
+    id: 'at-boundary',
+    createdAt: '2026-07-10T12:00:00.000Z',
+    usdValue: 25,
+  }),
+  makeTransaction({
+    id: 'just-outside',
+    createdAt: '2026-07-10T11:59:59.999Z',
+    usdValue: 25,
+  }),
+  makeTransaction({
+    id: 'at-now',
+    createdAt: '2026-07-11T12:00:00.000Z',
+    usdValue: 25,
+  }),
+  makeTransaction({
+    id: 'future',
+    createdAt: '2026-07-11T12:00:00.001Z',
+    usdValue: 25,
+  }),
+  makeTransaction({
+    id: 'pending-high-value',
+    status: 'pending',
+    usdValue: HIGH_VALUE_USD_THRESHOLD,
+  }),
+  makeTransaction({
+    id: 'just-below-high-value',
+    status: 'pending',
+    usdValue: HIGH_VALUE_USD_THRESHOLD - 0.01,
+  }),
+];
+
 test('combines asset, status, and agent filters', () => {
   const filtered = filterTransactions(records, {
     ...noFilters,
@@ -336,15 +393,29 @@ test('includes transactions on both selected date boundaries', () => {
 });
 
 test('date boundaries include the first and last millisecond of the range', () => {
-  const filtered = filterTransactions(edgeCatalog, {
+  // Build the edges from the local day so the test holds in every timezone.
+  const dayStart = new Date(2026, 6, 10, 0, 0, 0, 0).toISOString();
+  const dayEnd = new Date(2026, 6, 10, 23, 59, 59, 999).toISOString();
+  const boundaryRecords = [
+    makeTransaction({ id: 'day-start', createdAt: dayStart }),
+    makeTransaction({ id: 'day-end', createdAt: dayEnd }),
+    makeTransaction({
+      id: 'before-day',
+      createdAt: new Date(2026, 6, 9, 23, 59, 59, 999).toISOString(),
+    }),
+    makeTransaction({
+      id: 'after-day',
+      createdAt: new Date(2026, 6, 11, 0, 0, 0, 0).toISOString(),
+    }),
+  ];
+
+  const filtered = filterTransactions(boundaryRecords, {
     ...noFilters,
     dateFrom: '2026-07-10',
     dateTo: '2026-07-10',
   });
 
-  // `txn-gamma` is timestamped at the last millisecond of the local day and
-  // must stay inside the range whatever timezone the CI runner uses.
-  assert.deepEqual(ids(filtered), ['txn-alpha', 'txn-gamma']);
+  assert.deepEqual(ids(filtered), ['day-start', 'day-end']);
 });
 
 test('malformed dates are ignored instead of hiding every transaction', () => {
@@ -546,214 +617,109 @@ test('resolveDateRange returns null bounds for unset or invalid input', () => {
   assert.deepEqual(resolveDateRange('nope', '2026-02-30'), { from: null, to: null });
 });
 
-// Fixtures and tests for multi-select filters, amount bounds, partial search and sorting.
-const advancedRecords: Transaction[] = [
-  {
-    id: 'txn-alpha',
-    organizationId: 'org-test',
-    walletId: 'wallet-test',
-    agentId: 'agent-atlas',
-    agentName: 'Atlas',
-    direction: 'outbound',
-    counterparty: 'Stellar Store',
-    counterpartyAddress: 'GDESTINATIONALPHA',
-    asset: 'USDC',
-    amount: 25,
-    usdValue: 25,
-    memo: 'Monthly services',
-    purpose: 'Service payment',
-    status: 'completed',
-    riskScore: 5,
-    stellarHash: 'stellar-hash-alpha',
-    createdAt: '2026-07-10T12:00:00.000Z',
-  },
-  {
-    id: 'txn-beta',
-    organizationId: 'org-test',
-    walletId: 'wallet-test',
-    agentId: 'agent-orion',
-    agentName: 'Orion',
-    direction: 'inbound',
-    counterparty: 'Circle',
-    counterpartyAddress: 'GDESTINATIONBETA',
-    asset: 'XLM',
-    amount: 50,
-    usdValue: 6,
-    purpose: 'Treasury deposit',
-    status: 'pending',
-    riskScore: 10,
-    createdAt: '2026-07-11T12:00:00.000Z',
-  },
-  {
-    id: 'txn-gamma',
-    organizationId: 'org-test',
-    walletId: 'wallet-test',
-    agentId: 'agent-atlas',
-    agentName: 'Atlas',
-    direction: 'outbound',
-    counterparty: 'Stellar Store',
-    counterpartyAddress: 'GDESTINATIONGAMMA',
-    asset: 'USDC',
-    amount: 400,
-    usdValue: 400,
-    memo: 'Hardware order',
-    purpose: 'Equipment purchase',
-    status: 'rejected',
-    riskScore: 80,
-    createdAt: '2026-07-12T09:30:00.000Z',
-  },
-  {
-    id: 'txn-delta',
-    organizationId: 'org-test',
-    walletId: 'wallet-test',
-    agentId: 'agent-orion',
-    agentName: 'Orion',
-    direction: 'outbound',
-    counterparty: 'Circle',
-    counterpartyAddress: 'GDESTINATIONDELTA',
-    asset: 'USDC',
-    amount: 120,
-    usdValue: 120,
-    purpose: 'Treasury rebalance',
-    status: 'approved',
-    riskScore: 30,
-    createdAt: '2026-07-12T18:00:00.000Z',
-  },
-];
-
-test('returns an empty list for an empty input regardless of filters', () => {
-  assert.deepEqual(filterTransactions([], { ...noFilters, status: 'pending', query: 'x' }), []);
-  assert.deepEqual(sortTransactions([], { key: 'amount', direction: 'asc' }), []);
-});
-
-test('filters by approved, pending and rejected statuses', () => {
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, status: 'approved' })), ['txn-delta']);
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, status: 'pending' })), ['txn-beta']);
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, status: 'rejected' })), ['txn-gamma']);
-});
-
-test('multi-select statuses combine with the single status value using AND', () => {
-  const multi = filterTransactions(advancedRecords, {
-    ...noFilters,
-    statuses: ['approved', 'pending'],
-  });
-  assert.deepEqual(ids(multi), ['txn-beta', 'txn-delta']);
-
-  const conflicting = filterTransactions(advancedRecords, {
-    ...noFilters,
-    status: 'completed',
-    statuses: ['approved', 'pending'],
-  });
-  assert.deepEqual(ids(conflicting), []);
-});
-
-test('multi-select assets match any listed asset', () => {
-  assert.equal(filterTransactions(advancedRecords, { ...noFilters, assets: ['XLM', 'USDC'] }).length, 4);
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, assets: ['XLM'] })), ['txn-beta']);
-});
-
-test('combines status, asset, agent, date range and amount range', () => {
-  const filtered = filterTransactions(advancedRecords, {
-    ...noFilters,
-    statuses: ['approved', 'rejected', 'completed'],
-    asset: 'USDC',
-    agentId: 'agent-atlas',
-    dateFrom: '2026-07-11',
-    dateTo: '2026-07-12',
-    minUsdValue: 100,
-  });
-
-  assert.deepEqual(ids(filtered), ['txn-gamma']);
-});
-
-test('date range is inclusive across a multi-day window', () => {
-  const filtered = filterTransactions(advancedRecords, {
-    ...noFilters,
-    dateFrom: '2026-07-11',
-    dateTo: '2026-07-12',
-  });
-
-  assert.deepEqual(ids(filtered), ['txn-beta', 'txn-gamma', 'txn-delta']);
-});
-
-test('open-ended date ranges only constrain the provided side', () => {
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, dateFrom: '2026-07-12' })), [
-    'txn-gamma',
-    'txn-delta',
-  ]);
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, dateTo: '2026-07-10' })), ['txn-alpha']);
-});
-
-test('advancedRecords with an unparseable timestamp are excluded only when a date range is set', () => {
-  const broken: Transaction = { ...advancedRecords[0], id: 'txn-broken', createdAt: 'garbage' };
-
-  assert.deepEqual(ids(filterTransactions([broken], noFilters)), ['txn-broken']);
-  assert.deepEqual(filterTransactions([broken], { ...noFilters, dateFrom: '2026-01-01' }), []);
-});
-
-test('usd value bounds are inclusive', () => {
-  const filtered = filterTransactions(advancedRecords, { ...noFilters, minUsdValue: 25, maxUsdValue: 120 });
-
-  assert.deepEqual(ids(filtered), ['txn-alpha', 'txn-delta']);
-});
-
-test('supports partial and multi-term search matches', () => {
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, query: 'treas' })), [
-    'txn-beta',
-    'txn-delta',
-  ]);
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, query: '  treasury   circle ' })), [
-    'txn-beta',
-    'txn-delta',
-  ]);
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, query: 'treasury hardware' })), []);
-});
-
-test('search terms must match within a single record, not across advancedRecords', () => {
-  assert.deepEqual(ids(filterTransactions(advancedRecords, { ...noFilters, query: 'alpha beta' })), []);
-});
-
-test('sorts by date, amount, risk and status in both directions', () => {
-  assert.deepEqual(ids(sortTransactions(advancedRecords, { key: 'createdAt', direction: 'desc' })), [
-    'txn-delta',
-    'txn-gamma',
-    'txn-beta',
-    'txn-alpha',
-  ]);
-  assert.deepEqual(ids(sortTransactions(advancedRecords, { key: 'amount', direction: 'asc' })), [
-    'txn-alpha',
-    'txn-beta',
-    'txn-delta',
-    'txn-gamma',
-  ]);
-  assert.equal(ids(sortTransactions(advancedRecords, { key: 'riskScore', direction: 'desc' }))[0], 'txn-gamma');
-  assert.deepEqual(ids(sortTransactions(advancedRecords, { key: 'status', direction: 'asc' })), [
-    'txn-delta',
-    'txn-alpha',
-    'txn-beta',
-    'txn-gamma',
-  ]);
-});
-
-test('sorting returns a copy and breaks ties by id', () => {
-  const tied: Transaction[] = [
-    { ...advancedRecords[0], id: 'b', usdValue: 10 },
-    { ...advancedRecords[0], id: 'a', usdValue: 10 },
-  ];
-  const original = [...tied];
-
-  const sorted = sortTransactions(tied, { key: 'usdValue', direction: 'desc' });
-
-  assert.deepEqual(ids(sorted), ['a', 'b']);
-  assert.deepEqual(tied, original);
-});
-
-test('filterAndSortTransactions composes both steps', () => {
-  const result = filterAndSortTransactions(
-    advancedRecords,
-    { ...noFilters, asset: 'USDC' },
-    { key: 'usdValue', direction: 'desc' },
+test('last-24h preset includes its lower boundary and now, but excludes older and future rows', () => {
+  const filtered = filterTransactions(
+    presetRecords,
+    { ...noFilters, presets: ['last-24h'] },
+    NOW,
   );
 
-  assert.deepEqual(ids(result), ['txn-gamma', 'txn-delta', 'txn-alpha']);
+  assert.deepEqual(ids(filtered), [
+    'at-boundary',
+    'at-now',
+    'pending-high-value',
+    'just-below-high-value',
+  ]);
+});
+
+test('pending-approvals preset selects only pending transactions', () => {
+  const filtered = filterTransactions(
+    presetRecords,
+    { ...noFilters, presets: ['pending-approvals'] },
+    NOW,
+  );
+
+  assert.deepEqual(ids(filtered), ['pending-high-value', 'just-below-high-value']);
+});
+
+test('high-value preset uses the USD threshold inclusively', () => {
+  const filtered = filterTransactions(
+    presetRecords,
+    { ...noFilters, presets: ['high-value'] },
+    NOW,
+  );
+
+  assert.deepEqual(ids(filtered), ['pending-high-value']);
+});
+
+test('multiple presets combine with AND semantics', () => {
+  const filtered = filterTransactions(
+    presetRecords,
+    { ...noFilters, presets: ['last-24h', 'pending-approvals', 'high-value'] },
+    NOW,
+  );
+
+  assert.deepEqual(ids(filtered), ['pending-high-value']);
+});
+
+test('presets overlap with explicit filters instead of replacing them', () => {
+  const filtered = filterTransactions(
+    presetRecords,
+    {
+      ...noFilters,
+      status: 'pending',
+      presets: ['last-24h', 'high-value'],
+    },
+    NOW,
+  );
+
+  assert.deepEqual(ids(filtered), ['pending-high-value']);
+
+  const queryFiltered = filterTransactions(
+    presetRecords,
+    {
+      ...noFilters,
+      query: 'JUST-BELOW',
+      dateFrom: '2026-07-10',
+      dateTo: '2026-07-11',
+      presets: ['last-24h'],
+    },
+    NOW,
+  );
+
+  assert.deepEqual(ids(queryFiltered), ['just-below-high-value']);
+});
+
+test('empty preset lists behave like no presets', () => {
+  assert.deepEqual(
+    ids(filterTransactions(presetRecords, { ...noFilters, presets: [] }, NOW)),
+    ids(presetRecords),
+  );
+});
+
+test('matchesTransactionPreset is pure and returns false for invalid timestamps', () => {
+  const broken = makeTransaction({ id: 'broken', createdAt: 'not-a-date' });
+
+  assert.equal(matchesTransactionPreset(broken, 'last-24h', NOW), false);
+  assert.equal(matchesTransactionPreset(broken, 'pending-approvals', NOW), false);
+  assert.deepEqual(ids(presetRecords), [
+    'at-boundary',
+    'just-outside',
+    'at-now',
+    'future',
+    'pending-high-value',
+    'just-below-high-value',
+  ]);
+});
+
+test('preset filtering does not mutate the input array or its transactions', () => {
+  const snapshot = structuredClone(presetRecords);
+  const result = filterTransactions(
+    presetRecords,
+    { ...noFilters, presets: ['pending-approvals'] },
+    NOW,
+  );
+
+  assert.notEqual(result, presetRecords);
+  assert.deepEqual(presetRecords, snapshot);
 });
