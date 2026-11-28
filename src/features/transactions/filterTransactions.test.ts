@@ -723,3 +723,77 @@ test('preset filtering does not mutate the input array or its transactions', () 
   assert.notEqual(result, presetRecords);
   assert.deepEqual(presetRecords, snapshot);
 });
+
+// ---------------------------------------------------------------------------
+// #515 regression coverage: null-safe queries, case-insensitive assets,
+// and sorting that never mutates the caller's data.
+// ---------------------------------------------------------------------------
+
+test('matches asset codes case-insensitively', () => {
+  assert.deepEqual(ids(filterTransactions(records, { ...noFilters, asset: 'usdc' })), [
+    'txn-alpha',
+  ]);
+  assert.deepEqual(
+    ids(filterTransactions(edgeCatalog, { ...noFilters, assets: ['aqua', 'xlm'] })),
+    ['txn-beta', 'txn-delta', 'txn-epsilon'],
+  );
+});
+
+test('handles null, undefined, empty, and whitespace queries safely', () => {
+  for (const query of [null, undefined, '', '   '] as const) {
+    assert.deepEqual(
+      ids(filterTransactions(records, { ...noFilters, query })),
+      ['txn-alpha', 'txn-beta'],
+      String(query),
+    );
+  }
+});
+
+test('sorts amounts ascending and descending without mutating the source', () => {
+  const originalIds = ids(records);
+
+  assert.deepEqual(
+    sortTransactions(records, { field: 'amount', direction: 'asc' }).map(
+      (transaction) => transaction.amount,
+    ),
+    [25, 50],
+  );
+  assert.deepEqual(
+    sortTransactions(records, { field: 'amount', direction: 'desc' }).map(
+      (transaction) => transaction.amount,
+    ),
+    [50, 25],
+  );
+  assert.deepEqual(ids(records), originalIds);
+});
+
+test('sorts timestamps ascending and descending', () => {
+  assert.deepEqual(ids(sortTransactions(records, { field: 'timestamp', direction: 'asc' })), [
+    'txn-alpha',
+    'txn-beta',
+  ]);
+  assert.deepEqual(ids(sortTransactions(records, { field: 'timestamp', direction: 'desc' })), [
+    'txn-beta',
+    'txn-alpha',
+  ]);
+});
+
+test('supports the domain sort key form as well', () => {
+  assert.deepEqual(ids(sortTransactions(records, { key: 'amount', direction: 'asc' })), [
+    'txn-alpha',
+    'txn-beta',
+  ]);
+  assert.deepEqual(ids(sortTransactions(records, { key: 'createdAt', direction: 'desc' })), [
+    'txn-beta',
+    'txn-alpha',
+  ]);
+});
+
+test('combines filters with sorting and handles missing optional fields', () => {
+  const filtered = filterTransactions(records, { ...noFilters, status: 'pending' });
+
+  assert.deepEqual(ids(sortTransactions(filtered, { field: 'amount', direction: 'asc' })), [
+    'txn-beta',
+  ]);
+  assert.equal(records[1]?.memo, undefined);
+});

@@ -34,7 +34,7 @@ export const TRANSACTION_FILTER_PRESETS: readonly TransactionFilterPreset[] = [
 export const HIGH_VALUE_USD_THRESHOLD = 10_000;
 
 export interface TransactionFilterValues {
-  query: string;
+  query: string | null | undefined;
   status: 'all' | TransactionStatus;
   /**
    * Optional multi-status filter. When non-empty, only transactions whose status is
@@ -64,19 +64,27 @@ export interface TransactionFilterValues {
 
 export type TransactionSortKey = 'createdAt' | 'amount' | 'usdValue' | 'riskScore' | 'status';
 export type SortDirection = 'asc' | 'desc';
+export type TransactionSortDirection = SortDirection;
+export type TransactionSortField = 'amount' | 'timestamp';
 
-export interface TransactionSort {
-  key: TransactionSortKey;
-  direction: SortDirection;
-}
+/**
+ * Sort descriptors may name a domain field directly (`key`) or use the
+ * chart/table vocabulary (`field: 'timestamp'`). Both forms are accepted so
+ * callers written against either API keep working.
+ */
+export type TransactionSort =
+  | { key: TransactionSortKey; direction: SortDirection; field?: never }
+  | { field: TransactionSortField; direction: SortDirection; key?: never };
 
 function isFiniteNumber(value: number | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
 function activeAssets(filters: TransactionFilterValues): ReadonlySet<string> | null {
-  if (filters.assets && filters.assets.length > 0) return new Set(filters.assets);
-  if (filters.asset !== 'all') return new Set([filters.asset]);
+  if (filters.assets && filters.assets.length > 0) {
+    return new Set(filters.assets.map((asset) => asset.toLowerCase()));
+  }
+  if (filters.asset !== 'all') return new Set([filters.asset.toLowerCase()]);
   return null;
 }
 
@@ -129,9 +137,7 @@ export function parseDateBoundary(
         ? new Date(year, month - 1, day, 0, 0, 0, 0)
         : new Date(year, month - 1, day, 23, 59, 59, 999);
     const isRealDate =
-      date.getFullYear() === year &&
-      date.getMonth() === month - 1 &&
-      date.getDate() === day;
+      date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
     return isRealDate ? date.getTime() : null;
   }
 
@@ -160,11 +166,7 @@ export function matchesTransactionPreset(
   switch (preset) {
     case 'last-24h': {
       const createdAt = Date.parse(transaction.createdAt);
-      return (
-        Number.isFinite(createdAt) &&
-        createdAt >= now - DAY_MS &&
-        createdAt <= now
-      );
+      return Number.isFinite(createdAt) && createdAt >= now - DAY_MS && createdAt <= now;
     }
     case 'pending-approvals':
       return transaction.status === 'pending';
@@ -180,7 +182,7 @@ export function filterTransactions(
 ): Transaction[] {
   if (transactions.length === 0) return [];
 
-  const terms = filters.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const terms = (filters.query ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
   const statusSet =
     filters.statuses && filters.statuses.length > 0 ? new Set(filters.statuses) : null;
   const assets = activeAssets(filters);
@@ -192,7 +194,7 @@ export function filterTransactions(
   return transactions.filter((transaction) => {
     if (filters.status !== 'all' && transaction.status !== filters.status) return false;
     if (statusSet && !statusSet.has(transaction.status)) return false;
-    if (assets && !assets.has(transaction.asset)) return false;
+    if (assets && !assets.has(transaction.asset.toLowerCase())) return false;
     if (filters.agentId !== 'all' && transaction.agentId !== filters.agentId) return false;
 
     if (hasDateRange) {
@@ -231,6 +233,11 @@ function compareValues(a: Transaction, b: Transaction, key: TransactionSortKey):
   }
 }
 
+function resolveSortKey(sort: TransactionSort): TransactionSortKey {
+  if ('key' in sort && sort.key) return sort.key;
+  return sort.field === 'amount' ? 'amount' : 'createdAt';
+}
+
 /**
  * Returns a sorted copy. Ties fall back to id so the order is deterministic
  * (Array.prototype.sort is stable, but ids make cross-run output predictable).
@@ -240,8 +247,9 @@ export function sortTransactions(
   sort: TransactionSort,
 ): Transaction[] {
   const factor = sort.direction === 'asc' ? 1 : -1;
+  const key = resolveSortKey(sort);
   return [...transactions].sort((a, b) => {
-    const result = compareValues(a, b, sort.key) * factor;
+    const result = compareValues(a, b, key) * factor;
     return result !== 0 ? result : a.id.localeCompare(b.id);
   });
 }

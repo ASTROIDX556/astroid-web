@@ -104,14 +104,14 @@ export default function AuthPage() {
       {/* Background Gradients */}
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:radial-gradient(ellipse_at_center,white,transparent_80%)] opacity-5" />
-        <motion.div 
+        <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-gold/10 blur-[120px]"
           animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.4, 0.3] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -159,8 +159,8 @@ export default function AuthPage() {
           />
 
           {error && (
-            <motion.p 
-              role="alert" 
+            <motion.p
+              role="alert"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               className="mt-4 text-center text-sm text-danger"

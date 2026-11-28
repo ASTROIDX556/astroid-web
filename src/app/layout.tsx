@@ -8,6 +8,7 @@ import { CommandPalette } from '@/components/layout/CommandPalette';
 import { THEME_COOKIE, readThemeCookie, resolveThemeValue } from '@/lib/theme-cookie';
 import '@/styles/tokens.css';
 import '@/styles/globals.css';
+import '@/lib/env';
 
 export const metadata: Metadata = {
   title: {

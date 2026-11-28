@@ -65,7 +65,7 @@ export function TransactionFilterBar({
           </span>
           <Input
             type="search"
-            value={value.query}
+            value={value.query ?? ''}
             onChange={(event) => update({ query: event.target.value })}
             placeholder="Counterparty, hash, purpose, agent..."
             leftIcon={<Search className="h-4 w-4" aria-hidden />}
