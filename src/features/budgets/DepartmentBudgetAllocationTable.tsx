@@ -18,11 +18,17 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  FileJson,
+  FileSpreadsheet,
   Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { formatCurrency, formatPercent } from '@/lib/format';
+import {
+  exportDepartmentBudgetAllocations,
+  type ExportFormat,
+} from '@/lib/export-utils';
 import { MOCK_DEPARTMENT_BUDGETS } from './mock-data';
 import type { DepartmentBudget } from './types';
 import {
@@ -139,6 +145,10 @@ export function DepartmentBudgetAllocationTable({
   const filterId = useId();
   const data = useMemo(() => toAllocationRows(departments), [departments]);
 
+  const exportAllocations = (format: ExportFormat) => {
+    exportDepartmentBudgetAllocations(departments, format);
+  };
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filter, setFilter] = useState('');
   const [pagination, setPagination] = useState<PaginationState>({
@@ -183,25 +193,55 @@ export function DepartmentBudgetAllocationTable({
         >
           {CAPTION}
         </p>
-        <div role="search" className="relative block w-full sm:max-w-xs">
-          <label htmlFor={filterId} className="sr-only">
-            Filter by department or asset
-          </label>
-          <Search
-            className="h-3.5 w-3.5 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted"
-            aria-hidden
-          />
-          <input
-            id={filterId}
-            type="search"
-            value={filter}
-            onChange={(event) => {
-              setFilter(event.target.value);
-              setPagination((current) => ({ ...current, pageIndex: 0 }));
-            }}
-            placeholder="Filter by department or asset..."
-            className="h-9 w-full rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
+        <div className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row sm:items-center sm:justify-end">
+          <div role="search" className="relative block w-full sm:max-w-xs">
+            <label htmlFor={filterId} className="sr-only">
+              Filter by department or asset
+            </label>
+            <Search
+              className="h-3.5 w-3.5 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted"
+              aria-hidden
+            />
+            <input
+              id={filterId}
+              type="search"
+              value={filter}
+              onChange={(event) => {
+                setFilter(event.target.value);
+                setPagination((current) => ({ ...current, pageIndex: 0 }));
+              }}
+              placeholder="Filter by department or asset..."
+              className="h-9 w-full rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <div
+            role="group"
+            aria-label="Export department budget allocations"
+            className="flex shrink-0 items-center gap-2"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => exportAllocations('csv')}
+              disabled={data.length === 0}
+              aria-label="Export department budget allocations as CSV"
+            >
+              <FileSpreadsheet className="h-4 w-4" aria-hidden />
+              CSV
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => exportAllocations('json')}
+              disabled={data.length === 0}
+              aria-label="Export department budget allocations as JSON"
+            >
+              <FileJson className="h-4 w-4" aria-hidden />
+              JSON
+            </Button>
+          </div>
         </div>
       </div>
 

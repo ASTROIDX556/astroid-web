@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import {
@@ -23,18 +23,31 @@ import { useThemeStore } from '@/stores/theme-store';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import {
+  filterCommandItems,
   isCommandShortcut,
   restoreFocusToElement,
+  type CommandFilterItem,
   type CommandShortcutEvent,
 } from './commandPaletteUtils';
 
-export { isCommandShortcut, restoreFocusToElement, type CommandShortcutEvent };
+export {
+  filterCommandItems,
+  isCommandShortcut,
+  restoreFocusToElement,
+  type CommandShortcutEvent,
+};
+
+interface ActionCommand extends CommandFilterItem {
+  id: string;
+  icon: React.ReactNode;
+  onSelect: () => void;
+}
 
 const GROUP_CLASS =
   '[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-2xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-foreground-muted';
 
 const ITEM_CLASS =
-  'group flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-sm text-foreground transition-colors duration-fast data-[selected=true]:bg-surface-secondary data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-60';
+  'group flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-sm text-foreground outline-none transition-colors duration-fast data-[selected=true]:bg-surface-secondary data-[selected=true]:ring-2 data-[selected=true]:ring-inset data-[selected=true]:ring-ring data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-60';
 
 /**
  * Global command palette (⌘K / Ctrl+K) for navigation and entity search.
@@ -125,6 +138,7 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
   const openAssistant = useAssistantStore((s) => s.setOpen);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const [query, setQuery] = useState('');
 
   const agents = agentsQuery.data ?? [];
   const policies = policiesQuery.data ?? [];
@@ -136,6 +150,37 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
     router.push(href);
   };
 
+  const actions: ActionCommand[] = [
+    {
+      id: 'assistant',
+      label: 'Ask the AI assistant',
+      description: 'Open the financial briefing assistant',
+      keywords: ['ai', 'assistant', 'chat', 'briefing'],
+      icon: <Sparkles className="h-4 w-4 text-gold" aria-hidden="true" />,
+      onSelect: () => {
+        onClose();
+        openAssistant(true);
+      },
+    },
+    {
+      id: 'theme',
+      label: mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme',
+      description: 'Toggle the app theme',
+      keywords: ['theme', 'appearance', 'dark', 'light'],
+      icon:
+        mode === 'dark' ? (
+          <Sun className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
+        ) : (
+          <Moon className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
+        ),
+      onSelect: () => {
+        onClose();
+        setMode(mode === 'dark' ? 'light' : 'dark');
+      },
+    },
+  ];
+  const visibleActions = filterCommandItems(actions, query);
+
   return (
     <Command.Dialog
       id="command-palette"
@@ -145,16 +190,23 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
       }}
       label="Search Astroid pages and entities"
       aria-label="Search Astroid pages and entities"
+      aria-describedby="command-palette-help"
       loop
       overlayClassName="fixed inset-0 z-[100] animate-fade-in bg-foreground/40 backdrop-blur-sm"
       contentClassName="fixed left-1/2 top-[12vh] z-[101] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 animate-fade-up overflow-hidden rounded-dialog border border-border bg-surface shadow-soft-3"
     >
+      <p id="command-palette-help" className="sr-only">
+        Use the up and down arrow keys to navigate, Enter to select a command, and
+        Escape to close the palette.
+      </p>
       <div className="flex items-center gap-3 border-b border-border px-4">
         <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden="true" />
         <Command.Input
           autoFocus
           aria-label="Search pages, wallets, agents, policies and proposals"
           placeholder="Search pages, wallets, agents, policies, proposals…"
+          value={query}
+          onValueChange={setQuery}
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
@@ -193,36 +245,21 @@ function CommandPaletteDialog({ onClose }: { onClose: () => void }) {
           </p>
         </Command.Empty>
 
-        <Command.Group heading="Actions" className={GROUP_CLASS}>
-          <PaletteItem
-            value="Ask the AI assistant open chat"
-            keywords={['ai', 'assistant', 'chat', 'briefing']}
-            onSelect={() => {
-              onClose();
-              openAssistant(true);
-            }}
-            icon={<Sparkles className="h-4 w-4 text-gold" aria-hidden="true" />}
-            label="Ask the AI assistant"
-            description="Open the financial briefing assistant"
-          />
-          <PaletteItem
-            value={`Switch to ${mode === 'dark' ? 'light' : 'dark'} theme`}
-            keywords={['theme', 'appearance', 'dark', 'light']}
-            onSelect={() => {
-              onClose();
-              setMode(mode === 'dark' ? 'light' : 'dark');
-            }}
-            icon={
-              mode === 'dark' ? (
-                <Sun className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
-              ) : (
-                <Moon className="h-4 w-4 text-foreground-secondary" aria-hidden="true" />
-              )
-            }
-            label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            description="Toggle the app theme"
-          />
-        </Command.Group>
+        {visibleActions.length > 0 && (
+          <Command.Group heading="Actions" className={GROUP_CLASS}>
+            {visibleActions.map((action) => (
+              <PaletteItem
+                key={action.id}
+                value={`${action.label} ${action.description ?? ''}`}
+                keywords={action.keywords}
+                onSelect={action.onSelect}
+                icon={action.icon}
+                label={action.label}
+                description={action.description}
+              />
+            ))}
+          </Command.Group>
+        )}
 
         <Command.Group heading="Navigation" className={GROUP_CLASS}>
           {navItems.map((item) => {

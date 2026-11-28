@@ -7,7 +7,7 @@ import {
   TRANSACTION_TIMELINE_STAGES,
   transactionStage,
   type TransactionTimelineInput,
-} from './transactionTimeline';
+} from './transactionTimelineUtils';
 
 const statuses = (input: TransactionTimelineInput) =>
   resolveTransactionTimeline(input).map((step) => step.status);

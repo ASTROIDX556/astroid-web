@@ -20,22 +20,22 @@ export default function GlobalError({
 
   return (
     <html lang="en" data-theme="light">
-      <body className="min-h-screen bg-[#F6F2EA] font-sans text-[#171412] flex items-center justify-center p-8">
-        <div className="flex flex-col items-center gap-6 rounded-xl border border-dashed border-red-500/40 bg-red-50 p-10 text-center max-w-md w-full">
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-red-100 text-red-600">
+      <body className="min-h-screen bg-background font-sans text-foreground flex items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-6 rounded-xl border border-dashed border-danger/40 bg-danger-soft p-10 text-center max-w-md w-full">
+          <span className="grid h-14 w-14 place-items-center rounded-full bg-danger-soft text-danger">
             <AlertTriangle className="h-7 w-7" aria-hidden />
           </span>
           <div className="space-y-2">
             <h2 className="text-xl font-semibold tracking-tight">
               Something went wrong
             </h2>
-            <p className="text-sm text-[#5A544F]">
+            <p className="text-sm text-foreground-secondary">
               {error?.message ?? 'An unexpected error occurred.'}
             </p>
           </div>
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 rounded-md bg-[#171412] px-5 py-2.5 text-sm font-medium text-[#F6F2EA] hover:opacity-80 transition-opacity"
+            className="inline-flex items-center gap-2 rounded-md bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:opacity-80 transition-opacity"
           >
             <RefreshCw className="h-4 w-4" aria-hidden />
             Try again

@@ -1,7 +1,13 @@
 'use client';
 
 import { ArrowRight, Bot, Sparkles, TrendingUp, AlertTriangle } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, Tooltip as RechartsTooltip, XAxis } from 'recharts';
+import {
+  ChartTooltipShell,
+  axisTick,
+  type TooltipPayloadItem,
+} from '@/components/charts';
+import { ChartFrame } from '@/components/charts/chart-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +25,15 @@ const severityVariant = {
   info: 'info', success: 'success', warning: 'warning', danger: 'danger',
 } as const;
 
+interface SeverityCount {
+  severity: keyof typeof severityVariant;
+  count: number;
+}
+
+/** Title-cases a severity for the axis and tooltip, e.g. `danger` → `Danger`. */
+const severityLabel = (value: string): string =>
+  value.charAt(0).toUpperCase() + value.slice(1);
+
 /** Embeddable summary of the existing Nvidia NIM assistant briefing response. */
 export function FinancialBriefingCard({
   briefing, loading = false, error = null, onOpenAssistant, className = '',
@@ -29,6 +44,10 @@ export function FinancialBriefingCard({
     count: insights.filter((item) => item.severity === severity).length,
   }));
   const hasContent = Boolean(briefing && (briefing.summary || insights.length > 0));
+  const chartLabel = `Briefing insights by severity: ${counts
+    .filter((item) => item.count > 0)
+    .map((item) => `${item.count} ${item.severity}`)
+    .join(', ')}`;
 
   return (
     <Card elevation="soft" className={`relative overflow-hidden ${className}`}>
@@ -68,15 +87,45 @@ export function FinancialBriefingCard({
             </div>
             {insights.length > 0 && (
               <>
-                <div className="h-20" role="img" aria-label={counts.filter((item) => item.count > 0).map((item) => `${item.count} ${item.severity} insights`).join(', ')}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={counts} margin={{ top: 0, right: 2, left: 2, bottom: 0 }}>
-                      <XAxis dataKey="severity" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                      <Tooltip cursor={false} />
-                      <Bar dataKey="count" fill="rgb(var(--gold))" radius={[3, 3, 0, 0]} maxBarSize={32} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <ChartFrame label={chartLabel} height={80}>
+                  <BarChart data={counts} margin={{ top: 4, right: 2, left: 2, bottom: 0 }}>
+                    <XAxis
+                      dataKey="severity"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ ...axisTick, fontSize: 10 }}
+                      tickFormatter={severityLabel}
+                    />
+                    <RechartsTooltip
+                      cursor={{ fill: 'rgb(var(--surface-secondary) / 0.5)' }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const row = (payload as TooltipPayloadItem[])[0]?.payload as
+                          | SeverityCount
+                          | undefined;
+                        if (!row) return null;
+                        const share = Math.round((row.count / insights.length) * 100);
+                        return (
+                          <ChartTooltipShell label={severityLabel(row.severity)}>
+                            <span className="tabular font-medium text-foreground">
+                              {row.count} {row.count === 1 ? 'insight' : 'insights'}
+                            </span>
+                            <span className="text-foreground-secondary">
+                              {share}% of this briefing
+                            </span>
+                          </ChartTooltipShell>
+                        );
+                      }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      fill="rgb(var(--gold))"
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={32}
+                      isAnimationActive={false}
+                    />
+                  </BarChart>
+                </ChartFrame>
                 <ul className="space-y-2.5" aria-label="Briefing insights">
                   {insights.slice(0, 3).map((insight) => (
                     <li key={insight.id} className="rounded-sm border border-border bg-surface/60 p-3">

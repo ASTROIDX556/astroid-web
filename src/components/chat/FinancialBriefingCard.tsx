@@ -41,9 +41,9 @@ interface MetricCardProps {
 
 const VARIANT_STYLES = {
   default: 'text-foreground',
-  warning: 'text-amber-400',
+  warning: 'text-warning',
   success: 'text-success',
-  danger: 'text-destructive',
+  danger: 'text-danger',
 } as const;
 
 function MetricCard({ icon: Icon, label, value, variant = 'default', className }: MetricCardProps) {

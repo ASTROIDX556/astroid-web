@@ -49,6 +49,47 @@ const NON_RETRYABLE_CLIENT_ERROR_CODES = new Set([
 ]);
 
 /**
+ * Retry ceiling for the shared query client: one initial attempt plus three
+ * retries. Kept here (rather than inline in the provider) so the policy is
+ * testable and every call site can reason about it.
+ */
+export const QUERY_RETRY_LIMIT = 3;
+
+/** First retry delay; doubles per attempt with full jitter. */
+const RETRY_BASE_DELAY_MS = 800;
+
+/** Upper bound for a single backoff wait. */
+const RETRY_MAX_DELAY_MS = 8_000;
+
+/** True when the browser reports no connectivity. */
+export function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
+/**
+ * Bounded exponential backoff with full jitter.
+ *
+ * Without this, TanStack Query retries immediately and every mounted
+ * dashboard widget hits a degraded Stellar RPC node at the same instant. The
+ * jitter spreads those retries out so a recovering node is not stampeded.
+ */
+export function queryRetryDelay(failureCount: number): number {
+  const attempt = Math.max(0, Math.trunc(failureCount) - 1);
+  const ceiling = Math.min(RETRY_BASE_DELAY_MS * 2 ** attempt, RETRY_MAX_DELAY_MS);
+  return Math.round(ceiling / 2 + Math.random() * (ceiling / 2));
+}
+
+/**
+ * Combined retry decision used by the shared query client: attempt ceiling,
+ * deterministic failures, and connectivity all in one place.
+ */
+export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
+  if (failureCount >= QUERY_RETRY_LIMIT) return false;
+  if (isOffline()) return false;
+  return isRetryableQueryError(error);
+}
+
+/**
  * Turns an unknown thrown value from a queryFn/mutationFn into a message that
  * is safe to show a user. `AstroidApiError` messages are already server-authored
  * copy; a `TypeError` is what `fetch` throws when the network itself is
