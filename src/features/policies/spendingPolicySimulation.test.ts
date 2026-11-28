@@ -582,4 +582,224 @@ describe('Spending policy simulation & helper functions (#369)', () => {
       }
     });
   });
+
+// -------------------------------------------------------------------------
+// 8. Additional Rule Types (min_amount, budget_limit, rate_limit, allowed_assets)
+// -------------------------------------------------------------------------
+const basePayload: SandboxFormValues = {
+  recipient: VALID_STELLAR_KEY_1,
+  amount: 1000,
+  asset: 'USDC',
+  agentId: 'agt_atlas',
+};
+
+describe('evaluatePolicyRules — additional rule types (#505)', () => {
+    test('min_amount rejects below-threshold transfers', () => {
+      const rule: PolicyRule = {
+        id: 'min_cap',
+        name: 'Minimum Spend',
+        type: 'min_amount',
+        description: 'Minimum 500 USD',
+        enabled: true,
+        threshold: 500,
+      };
+
+      const below = evaluatePolicyRules({ ...basePayload, amount: 100 }, [rule]);
+      assert.equal(below.steps[0]?.passed, false);
+      assert.equal(below.steps[0]?.reasonCode, 'AMOUNT_BELOW_THRESHOLD');
+      assert.equal(below.outcome, 'rejected');
+
+      const atMin = evaluatePolicyRules({ ...basePayload, amount: 500 }, [rule]);
+      assert.equal(atMin.steps[0]?.passed, true);
+      assert.equal(atMin.outcome, 'approved');
+
+      const above = evaluatePolicyRules({ ...basePayload, amount: 1000 }, [rule]);
+      assert.equal(above.steps[0]?.passed, true);
+      assert.equal(above.outcome, 'approved');
+    });
+
+    test('budget_limit rejects amounts exceeding budget cap', () => {
+      const rule: PolicyRule = {
+        id: 'budget_cap',
+        name: 'Budget Cap',
+        type: 'budget_limit',
+        description: 'Budget 2000 USD',
+        enabled: true,
+        budgetLimitUsd: 2000,
+      };
+
+      const within = evaluatePolicyRules({ ...basePayload, amount: 1500 }, [rule]);
+      assert.equal(within.steps[0]?.passed, true);
+      assert.equal(within.steps[0]?.reasonCode, 'BUDGET_WITHIN_CAP');
+      assert.equal(within.outcome, 'approved');
+
+      const exceeded = evaluatePolicyRules({ ...basePayload, amount: 2500 }, [rule]);
+      assert.equal(exceeded.steps[0]?.passed, false);
+      assert.equal(exceeded.steps[0]?.reasonCode, 'BUDGET_EXCEEDED');
+      assert.equal(exceeded.outcome, 'rejected');
+    });
+
+    test('rate_limit always passes with informational note', () => {
+      const rule: PolicyRule = {
+        id: 'rate_cap',
+        name: 'Rate Limit',
+        type: 'rate_limit',
+        description: 'Max 10 txns/hr',
+        enabled: true,
+        rateLimitPerHour: 10,
+      };
+
+      const result = evaluatePolicyRules(basePayload, [rule]);
+      assert.equal(result.steps[0]?.passed, true);
+      assert.equal(result.steps[0]?.reasonCode, 'RATE_LIMIT_NOTE');
+      assert.equal(result.outcome, 'approved');
+      assert.match(result.steps[0]?.message ?? /./, /rate limit/i);
+    });
+
+    test('allowed_assets rejects unauthorized assets', () => {
+      const rule: PolicyRule = {
+        id: 'asset_gate',
+        name: 'Allowed Assets',
+        type: 'allowed_assets',
+        description: 'Only XLM and USDC',
+        enabled: true,
+        allowedAssets: ['XLM', 'USDC'],
+      };
+
+      const allowed = evaluatePolicyRules({ ...basePayload, asset: 'USDC' }, [rule]);
+      assert.equal(allowed.steps[0]?.passed, true);
+      assert.equal(allowed.steps[0]?.reasonCode, 'ASSET_ALLOWED');
+      assert.equal(allowed.outcome, 'approved');
+
+      const blocked = evaluatePolicyRules({ ...basePayload, asset: 'BTC' }, [rule]);
+      assert.equal(blocked.steps[0]?.passed, false);
+      assert.equal(blocked.steps[0]?.reasonCode, 'ASSET_BLOCKED');
+      assert.equal(blocked.outcome, 'rejected');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 9. Multiple Overlapping Policies
+  // -------------------------------------------------------------------------
+  describe('evaluatePolicyRules — multiple overlapping policies (#505)', () => {
+    test('combines max_amount, allowed_assets, and blocked_recipients', () => {
+      const rules: PolicyRule[] = [
+        {
+          id: 'max_cap',
+          name: 'Max Amount',
+          type: 'max_amount',
+          description: 'Cap at 5000',
+          enabled: true,
+          threshold: 5000,
+        },
+        {
+          id: 'asset_gate',
+          name: 'Asset Gate',
+          type: 'allowed_assets',
+          description: 'Only USDC',
+          enabled: true,
+          allowedAssets: ['USDC'],
+        },
+        {
+          id: 'blocklist',
+          name: 'Blocked Recipients',
+          type: 'blocked_recipients',
+          description: 'Block sanctioned',
+          enabled: true,
+          blockedRecipients: [BLOCKED_STELLAR_KEY],
+        },
+      ];
+
+      // All pass
+      const allPass = evaluatePolicyRules(
+        { ...basePayload, amount: 3000, asset: 'USDC', recipient: VALID_STELLAR_KEY_1 },
+        rules,
+      );
+      assert.equal(allPass.outcome, 'approved');
+      assert.equal(allPass.steps.filter((s) => !s.passed).length, 0);
+
+      // Amount exceeds cap -> rejected (blocking)
+      const amountFail = evaluatePolicyRules(
+        { ...basePayload, amount: 6000, asset: 'USDC', recipient: VALID_STELLAR_KEY_1 },
+        rules,
+      );
+      assert.equal(amountFail.outcome, 'rejected');
+      assert.equal(amountFail.steps[0]?.passed, false);
+
+      // Asset not allowed -> rejected (blocking)
+      const assetFail = evaluatePolicyRules(
+        { ...basePayload, amount: 3000, asset: 'BTC', recipient: VALID_STELLAR_KEY_1 },
+        rules,
+      );
+      assert.equal(assetFail.outcome, 'rejected');
+      assert.equal(assetFail.steps[1]?.passed, false);
+
+      // Recipient blocked -> rejected (blocking)
+      const recipientFail = evaluatePolicyRules(
+        { ...basePayload, amount: 3000, asset: 'USDC', recipient: BLOCKED_STELLAR_KEY },
+        rules,
+      );
+      assert.equal(recipientFail.outcome, 'rejected');
+      assert.equal(recipientFail.steps[2]?.passed, false);
+    });
+
+    test('mixed blocking and flagging produces rejected outcome', () => {
+      const rules: PolicyRule[] = [
+        {
+          id: 'max_cap',
+          name: 'Max Amount',
+          type: 'max_amount',
+          description: 'Cap at 5000',
+          enabled: true,
+          threshold: 5000,
+        },
+        {
+          id: 'multi_sig',
+          name: 'Multi-sig',
+          type: 'multi_sig',
+          description: 'Require 2 signers',
+          enabled: true,
+          requiredCoSigners: 2,
+        },
+      ];
+
+      // Amount exceeds cap (blocking) + insufficient signers (flagging) -> rejected
+      const result = evaluatePolicyRules(
+        { ...basePayload, amount: 6000 },
+        rules,
+        { mockSimulatedSignerCount: 1 },
+      );
+      assert.equal(result.outcome, 'rejected');
+      assert.equal(result.steps.filter((s) => !s.passed).length, 2);
+    });
+
+    test('disabled rules are skipped in multi-rule evaluation', () => {
+      const rules: PolicyRule[] = [
+        {
+          id: 'active_cap',
+          name: 'Active Cap',
+          type: 'max_amount',
+          description: 'Cap at 100',
+          enabled: true,
+          threshold: 100,
+        },
+        {
+          id: 'disabled_cap',
+          name: 'Disabled Cap',
+          type: 'max_amount',
+          description: 'Disabled cap at 1000',
+          enabled: false,
+          threshold: 1000,
+        },
+      ];
+
+      const result = evaluatePolicyRules(
+        { ...basePayload, amount: 500 },
+        rules,
+      );
+      assert.equal(result.outcome, 'rejected');
+      assert.equal(result.steps.length, 1); // Only active rule evaluated
+      assert.equal(result.steps[0]?.ruleId, 'active_cap');
+    });
+  });
 });

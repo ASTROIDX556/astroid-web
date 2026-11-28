@@ -165,6 +165,37 @@ test('leaves the range unbounded when either date is empty', () => {
   );
 });
 
+test('accepts full ISO timestamps as export boundaries', () => {
+  const records = [
+    transaction({ id: 'before', createdAt: '2026-07-10T23:59:59.999Z' }),
+    transaction({ id: 'inside', createdAt: '2026-07-11T12:00:00.000Z' }),
+    transaction({ id: 'after', createdAt: '2026-07-12T00:00:00.000Z' }),
+  ];
+
+  assert.deepEqual(
+    filterTransactionsByDateRange(records, {
+      from: '2026-07-11T00:00:00.000Z',
+      to: '2026-07-11T23:59:59.999Z',
+    }).map((record) => record.id),
+    ['inside'],
+  );
+});
+
+test('ignores impossible calendar dates instead of normalising them', () => {
+  const records = [
+    transaction({ id: 'old', createdAt: '2026-02-01T12:00:00' }),
+    transaction({ id: 'recent', createdAt: '2026-07-10T12:00:00' }),
+  ];
+
+  assert.deepEqual(
+    filterTransactionsByDateRange(records, {
+      from: '2026-02-31',
+      to: '',
+    }).map((record) => record.id),
+    ['old', 'recent'],
+  );
+});
+
 interface DownloadCapture {
   type: string;
   text: string;

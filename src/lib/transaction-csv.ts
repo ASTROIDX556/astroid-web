@@ -15,9 +15,34 @@ export interface TransactionDateRange {
   to: string;
 }
 
+const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Resolve an inclusive boundary using the same rules as the table filters:
+ * date-only values snap to local day edges, full timestamps are used as-is and
+ * impossible calendar dates are ignored rather than silently normalised by
+ * `Date` (for example `2026-02-31` must not become March 3).
+ */
 function boundary(value: string, endOfDay: boolean): number | null {
-  if (!value) return null;
-  const time = new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00'}`).getTime();
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const dateOnly = DATE_ONLY_PATTERN.exec(trimmed);
+  if (dateOnly) {
+    const year = Number(dateOnly[1]);
+    const month = Number(dateOnly[2]);
+    const day = Number(dateOnly[3]);
+    const date = endOfDay
+      ? new Date(year, month - 1, day, 23, 59, 59, 999)
+      : new Date(year, month - 1, day, 0, 0, 0, 0);
+    const isRealDate =
+      date.getFullYear() === year &&
+      date.getMonth() === month - 1 &&
+      date.getDate() === day;
+    return isRealDate ? date.getTime() : null;
+  }
+
+  const time = Date.parse(trimmed);
   return Number.isFinite(time) ? time : null;
 }
 

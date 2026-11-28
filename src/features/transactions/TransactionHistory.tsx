@@ -111,7 +111,7 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
   return (
     <div className="space-y-5">
       <TransactionExportToolbar
-        transactions={transactions}
+        transactions={filteredTransactions}
         dateFrom={filters.dateFrom}
         dateTo={filters.dateTo}
         onDateRangeChange={({ dateFrom, dateTo }) =>

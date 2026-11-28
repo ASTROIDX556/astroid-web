@@ -1,15 +1,16 @@
 'use client';
 
-import { Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   downloadTransactionCsv,
   filterTransactionsByDateRange,
 } from '@/lib/transaction-csv';
 import type { Transaction } from '@/types/domain';
+import { downloadTransactionExport } from './exportUtils';
+import { TransactionExportActions } from './TransactionExportActions';
 
 interface TransactionExportToolbarProps {
+  /** Transactions that already match the active table filters. */
   transactions: readonly Transaction[];
   dateFrom: string;
   dateTo: string;
@@ -17,9 +18,11 @@ interface TransactionExportToolbarProps {
 }
 
 /**
- * Header toolbar for the transaction history: the date range filters both the
- * table below and the rows written to the downloaded CSV. Surface, border,
- * gold and shadow utilities all resolve to tokens in `src/styles/tokens.css`.
+ * Header toolbar for the transaction history: the date range narrows both the
+ * table below and the rows written to the downloaded files. CSV uses the
+ * shared serializer in `@/lib/csv`; JSON reuses the upstream export pipeline.
+ * Surface, border, gold and shadow utilities all resolve to tokens in
+ * `src/styles/tokens.css`.
  */
 export function TransactionExportToolbar({
   transactions,
@@ -42,8 +45,8 @@ export function TransactionExportToolbar({
         <div>
           <h2 className="text-sm font-semibold text-foreground">Export transactions</h2>
           <p className="mt-1 text-xs text-foreground-secondary">
-            Choose a date range to filter the table and download an auditable CSV of
-            those records.
+            Choose a date range to filter the table and download an auditable
+            CSV or JSON file of those records.
           </p>
         </div>
 
@@ -86,16 +89,13 @@ export function TransactionExportToolbar({
         </p>
       </div>
 
-      <Button
-        type="button"
-        variant="gold"
-        size="sm"
-        leftIcon={<Download className="h-4 w-4" aria-hidden />}
-        disabled={exportable.length === 0}
-        onClick={() => downloadTransactionCsv(exportable)}
-      >
-        Export CSV
-      </Button>
+      <TransactionExportActions
+        rows={exportable}
+        onExportCSV={(rows) => downloadTransactionCsv(rows)}
+        onExportJSON={(rows) =>
+          downloadTransactionExport(rows, { format: 'json' })
+        }
+      />
     </section>
   );
 }

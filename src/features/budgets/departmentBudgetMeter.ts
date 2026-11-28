@@ -10,6 +10,12 @@ export interface DepartmentBudgetSummary {
   allocated: number;
   spent: number;
   remaining: number;
+  /**
+   * How far past the limit the department has spent, or 0 when inside it.
+   * `remaining` is floored at 0, so this is the only figure that can say a
+   * department is over budget.
+   */
+  overBudget: number;
   utilization: number;
   currency: string;
   period: string;
@@ -36,26 +42,30 @@ export interface DepartmentBudgetAggregation {
 }
 
 /**
- * Derives threshold status from utilization percentage:
- * - normal: < 70%
- * - warning: 70% to 89.99%
- * - critical: >= 90%
+ * Derives threshold status from utilization percentage (#238):
+ * - normal: < 80%
+ * - warning: 80% to 99.99%
+ * - critical: >= 100%, i.e. the department has spent past its limit
+ *
+ * A non-finite utilization (a malformed budget from the indexer) is treated
+ * as normal rather than critical: an unknown figure should not raise an
+ * alarm that sends someone to a department that is fine.
  */
 export function getBudgetThresholdStatus(utilization: number): BudgetThresholdStatus {
-  if (!Number.isFinite(utilization) || utilization < 70) return 'normal';
-  if (utilization < 90) return 'warning';
+  if (!Number.isFinite(utilization) || utilization < 80) return 'normal';
+  if (utilization < 100) return 'warning';
   return 'critical';
 }
 
 export function getStatusLabel(status: BudgetThresholdStatus): string {
   switch (status) {
     case 'critical':
-      return 'Critical (≥90%)';
+      return 'Over budget (≥100%)';
     case 'warning':
-      return 'Elevated (70-89%)';
+      return 'Watch (80-99%)';
     case 'normal':
     default:
-      return 'Healthy (<70%)';
+      return 'Healthy (<80%)';
   }
 }
 
@@ -90,6 +100,7 @@ export function aggregateDepartmentBudgets(
       allocated,
       spent,
       remaining,
+      overBudget: Math.max(0, spent - allocated),
       utilization,
       currency: dept.asset ?? 'USDC',
       period: dept.period,
