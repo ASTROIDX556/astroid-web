@@ -9,13 +9,9 @@ import { cn } from '@/lib/cn';
 import { env, isMockMode } from '@/lib/env';
 import type { ChatMessage } from '@/types/domain';
 import { FinancialBriefingPanel } from '@/features/ai/FinancialBriefingPanel';
-import {
-  chunkForSimulatedStream,
-  createSseDecoder,
-  extractReply,
-  isStreamingContentType,
-  type AssistantGenerationState,
-} from '@/features/ai/assistantStream';
+import type { AssistantGenerationState } from '@/features/ai/assistantStream';
+import { chunkForSimulatedStream, isStreamingContentType, createSseDecoder, extractReply } from '@/features/ai/assistantStream';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const defaultSuggestions = [
   {
@@ -99,7 +95,7 @@ export function AssistantDrawer() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [generationState, setGenerationState] = useState<AssistantGenerationState>('idle');
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const streamingMessageIdRef = useRef<string | null>(null);
   const [seeded, setSeeded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -227,7 +223,7 @@ export function AssistantDrawer() {
             ...prev,
             { id: replyId, role: 'assistant', content: delta, createdAt: new Date().toISOString() },
           ]);
-          setStreamingMessageId(replyId);
+          streamingMessageIdRef.current = replyId;
           setGenerationState('streaming');
           return;
         }
@@ -296,7 +292,7 @@ export function AssistantDrawer() {
         if (abortRef.current === controller) {
           abortRef.current = null;
           setGenerationState('idle');
-          setStreamingMessageId(null);
+          streamingMessageIdRef.current = null;
         }
       }
     },
@@ -365,15 +361,19 @@ export function AssistantDrawer() {
               </div>
             )}
 
-            <FinancialBriefingPanel
-              messages={messages}
-              draft={draft}
-              suggestions={suggestions}
-              onDraftChange={setDraft}
-              onSend={send}
-              generationState={generationState}
-              streamingMessageId={streamingMessageId}
-            />
+            <ErrorBoundary
+              section="AI assistant chat"
+              compact
+              onReset={() => void briefingQuery.refetch()}
+            >
+              <FinancialBriefingPanel
+                messages={messages}
+                draft={draft}
+                suggestions={suggestions}
+                onDraftChange={setDraft}
+                onSend={send}
+              />
+            </ErrorBoundary>
           </div>
         </div>
       </div>
