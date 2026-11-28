@@ -302,6 +302,28 @@ export const createAgentSchema = agentConfigFields.superRefine((values, ctx) => 
       message: 'Transaction limit cannot exceed the monthly budget',
     });
   }
+
+  if (typeof values.dailyBudget === 'number' && values.dailyBudget > values.monthlyBudget) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['dailyBudget'],
+      message: 'Daily budget cannot exceed the monthly budget',
+    });
+  }
+
+  if (typeof values.maxSpendPerTransaction === 'number') {
+    const exceedsDaily =
+      typeof values.dailyBudget === 'number' && values.maxSpendPerTransaction > values.dailyBudget;
+    if (exceedsDaily || values.maxSpendPerTransaction > values.monthlyBudget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maxSpendPerTransaction'],
+        message: exceedsDaily
+          ? 'Max spend per transaction cannot exceed the daily budget'
+          : 'Max spend per transaction cannot exceed the monthly budget',
+      });
+    }
+  }
 });
 
 export type CreateAgentInput = z.infer<typeof createAgentSchema>;
@@ -405,15 +427,34 @@ export const templateWizardSchema = z
     singleTransactionCap: spendingLimit('Transaction cap', MAX_TRANSACTION_CAP, 'XLM'),
     maxHourlyBudgetUsd: z.coerce
       .number({ invalid_type_error: 'Hourly budget must be a number' })
+      .finite('Hourly budget must be a number')
       .min(1, 'Hourly budget must be at least $1.')
       .max(10000, 'Hourly budget cannot exceed $10,000.'),
-    requireApprovalAbove: z.coerce
-      .number({ invalid_type_error: 'Approval threshold must be a number' })
-      .min(0, 'Value must be zero or greater.')
-      .max(1_000_000, 'Value cannot exceed 1M XLM.'),
+    requireApprovalAbove: z.preprocess(
+      (val) => (val === '' || val === null || val === undefined ? undefined : val),
+      z.coerce
+        .number({ invalid_type_error: 'Approval threshold must be a number' })
+        .finite('Approval threshold must be a number')
+        .min(0, 'Value must be zero or greater.')
+        .max(1_000_000, 'Value cannot exceed 1M XLM.')
+        .optional(),
+    ),
     allowedNetworks: z.array(z.string()).min(1, 'Select at least one network.'),
   })
-  .superRefine((values, ctx) => requireCapWithinBudget(values, ctx));
+  .superRefine((values, ctx) => {
+    requireCapWithinBudget(values, ctx);
+    if (
+      typeof values.requireApprovalAbove === 'number' &&
+      typeof values.budget === 'number' &&
+      values.requireApprovalAbove > values.budget
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['requireApprovalAbove'],
+        message: 'Approval threshold cannot exceed the budget.',
+      });
+    }
+  });
 
 export type TemplateWizardValues = z.infer<typeof templateWizardSchema>;
 
@@ -710,6 +751,19 @@ export type AgentUpdateValues = z.infer<typeof agentUpdateSchema>;
 export const agentProviderConfigSchema = agentUpdateSchema;
 export type AgentProviderConfigValues = AgentUpdateValues;
 export const agentProviderTypes = AGENT_PROVIDER_TYPES;
+
+export function getFirstValidationMessage(errors: Record<string, unknown>, visited: Set<object> = new Set()): string | undefined {
+  if (visited.has(errors)) return undefined;
+  visited.add(errors);
+  for (const [key, value] of Object.entries(errors)) {
+    if (key === 'ref' || !value || typeof value !== 'object') continue;
+    const msg = (value as { message?: unknown }).message;
+    if (typeof msg === 'string' && msg.trim()) return msg.trim();
+    const nested = getFirstValidationMessage(value as Record<string, unknown>, visited);
+    if (nested) return nested;
+  }
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Schema for components/agents/AgentCreationForm

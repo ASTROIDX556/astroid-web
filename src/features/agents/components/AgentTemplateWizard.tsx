@@ -14,13 +14,14 @@ import {
   Sparkles,
   AlertTriangle,
 } from 'lucide-react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, type FieldErrors, type UseFormReturn } from 'react-hook-form';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField, Input, Select, Textarea } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/cn';
-import { templateWizardSchema, type TemplateWizardValues } from '@/lib/validations/agent';
+import { getFirstValidationMessage, templateWizardSchema, type TemplateWizardValues } from '@/lib/validations/agent';
 import { WIZARD_STEPS, STEP_FIELDS } from '../templateWizardSchema';
 import { AGENT_TEMPLATES, getTemplateById, type AgentTemplate } from '../templates';
 
@@ -54,9 +55,11 @@ const STEP_ICONS = [Layers, Settings, Shield, ClipboardCheck];
 function TemplateSelectionStep({
   selectedId,
   onSelect,
+  error,
 }: {
   selectedId: string;
   onSelect: (id: string) => void;
+  error?: string;
 }) {
   return (
     <div className="space-y-4" role="radiogroup" aria-label="Select an agent template">
@@ -74,6 +77,12 @@ function TemplateSelectionStep({
           />
         ))}
       </div>
+
+      {error ? (
+        <p role="alert" className="text-2xs text-danger">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -138,7 +147,9 @@ function TemplateCard({
 /*  Step 2 — Policies                                                 */
 /* ------------------------------------------------------------------ */
 
-function PoliciesStep() {
+function PoliciesStep({ form }: { form: UseFormReturn<TemplateWizardValues> }) {
+  const { errors } = form.formState;
+
   return (
     <div className="space-y-4">
       <p className="text-xs text-foreground-secondary">
@@ -149,44 +160,46 @@ function PoliciesStep() {
         <FormField
           label="Initial budget (XLM)"
           htmlFor="tpl-budget"
-          error={undefined}
+          error={errors.budget?.message}
           required
         >
-          <Input id="tpl-budget" type="number" step="0.01" placeholder="10000" />
+          <Input id="tpl-budget" type="number" step="0.01" placeholder="10000" invalid={Boolean(errors.budget)} {...form.register('budget', { valueAsNumber: true })} />
         </FormField>
 
         <FormField
           label="Single transaction cap (XLM)"
           htmlFor="tpl-singleTransactionCap"
-          error={undefined}
+          error={errors.singleTransactionCap?.message}
           required
         >
-          <Input id="tpl-singleTransactionCap" type="number" step="0.01" placeholder="2000" />
+          <Input id="tpl-singleTransactionCap" type="number" step="0.01" placeholder="2000" invalid={Boolean(errors.singleTransactionCap)} {...form.register('singleTransactionCap', { valueAsNumber: true })} />
         </FormField>
 
         <FormField
           label="Max hourly spend (USD)"
           htmlFor="tpl-maxHourlyBudgetUsd"
-          error={undefined}
+          error={errors.maxHourlyBudgetUsd?.message}
           required
         >
-          <Input id="tpl-maxHourlyBudgetUsd" type="number" step="0.01" placeholder="50" />
+          <Input id="tpl-maxHourlyBudgetUsd" type="number" step="0.01" placeholder="50" invalid={Boolean(errors.maxHourlyBudgetUsd)} {...form.register('maxHourlyBudgetUsd', { valueAsNumber: true })} />
         </FormField>
 
         <FormField
           label="Require approval above (XLM)"
           htmlFor="tpl-requireApprovalAbove"
-          error={undefined}
+          error={errors.requireApprovalAbove?.message}
+          hint="Leave blank to disable automatic approval thresholds"
         >
-          <Input id="tpl-requireApprovalAbove" type="number" step="0.01" placeholder="5000" />
+          <Input id="tpl-requireApprovalAbove" type="number" step="0.01" placeholder="5000" invalid={Boolean(errors.requireApprovalAbove)} {...form.register('requireApprovalAbove', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })} />
         </FormField>
       </div>
 
-      <FormField label="Allowed networks" htmlFor="tpl-networks" required>
+      <FormField label="Allowed networks" htmlFor="tpl-networks" error={errors.allowedNetworks?.message} required>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Select allowed networks">
           {NETWORK_OPTIONS.map((net) => (
             <Controller
               key={net}
+              control={form.control}
               name="allowedNetworks"
               render={({ field }) => {
                 const checked = field.value?.includes(net) ?? false;
@@ -241,7 +254,11 @@ function ConfirmationStep({ values }: { values: TemplateWizardValues }) {
         <ReviewField label="Hourly cap" value={`$${values.maxHourlyBudgetUsd}/hr`} />
         <ReviewField
           label="Approval threshold"
-          value={`${values.requireApprovalAbove.toLocaleString()} XLM`}
+          value={
+            typeof values.requireApprovalAbove === 'number'
+              ? `${values.requireApprovalAbove.toLocaleString()} XLM`
+              : 'Disabled'
+          }
         />
         <ReviewField
           label="Networks"
@@ -329,13 +346,12 @@ export function AgentTemplateWizard() {
   /** Validate current step fields and advance. */
   const handleNext = useCallback(async () => {
     const fields = STEP_FIELDS[step] ?? [];
-    if (fields.length === 0) {
-      setDirection(1);
-      setStep((s) => Math.min(s + 1, WIZARD_STEPS.length - 1));
+    if (fields.length > 0 && !(await form.trigger(fields))) {
+      toast.error('Please resolve the validation errors before proceeding.', {
+        description: getFirstValidationMessage(form.formState.errors) ?? 'Check the highlighted fields in this step.',
+      });
       return;
     }
-    const valid = await form.trigger(fields);
-    if (!valid) return;
     setDirection(1);
     setStep((s) => Math.min(s + 1, WIZARD_STEPS.length - 1));
   }, [step, form]);
@@ -345,14 +361,20 @@ export function AgentTemplateWizard() {
     setStep((s) => Math.max(s - 1, 0));
   }, []);
 
-  const onSubmit = useCallback(
-    (values: TemplateWizardValues) => {
-      console.info('Agent template wizard payload:', values);
-      setDirection(1);
-      setStep(WIZARD_STEPS.length - 1);
-    },
-    [],
-  );
+  const onSubmit = useCallback((values: TemplateWizardValues) => {
+    const tpl = getTemplateById(values.templateId);
+    toast.success(`Agent "${values.name}" launched from ${tpl?.name ?? 'template'}.`, {
+      description: `${values.provider} · ${values.model} · ${values.budget.toLocaleString()} XLM budget`,
+    });
+    setDirection(1);
+    setStep(WIZARD_STEPS.length - 1);
+  }, []);
+
+  const onInvalid = useCallback((fieldErrors: FieldErrors<TemplateWizardValues>) => {
+    toast.error('Template configuration validation failed.', {
+      description: getFirstValidationMessage(fieldErrors) ?? 'Please resolve the highlighted validation errors before launching.',
+    });
+  }, []);
 
   /** Focus the step container on transition for screen readers. */
   useEffect(() => {
@@ -434,13 +456,15 @@ export function AgentTemplateWizard() {
             >
               <form
                 id="template-wizard-form"
-                onSubmit={form.handleSubmit(onSubmit)}
+                onSubmit={form.handleSubmit(onSubmit, onInvalid)}
+                noValidate
                 className="space-y-5"
               >
                 {step === 0 && (
                   <TemplateSelectionStep
                     selectedId={selectedTemplateId}
                     onSelect={handleTemplateSelect}
+                    error={form.formState.errors.templateId?.message}
                   />
                 )}
 
@@ -549,7 +573,7 @@ export function AgentTemplateWizard() {
                   </div>
                 )}
 
-                {step === 2 && <PoliciesStep />}
+                {step === 2 && <PoliciesStep form={form} />}
 
                 {step === 3 && <ConfirmationStep values={form.getValues()} />}
               </form>
