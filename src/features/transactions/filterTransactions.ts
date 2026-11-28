@@ -48,12 +48,55 @@ export interface TransactionFilterValues {
   dateFrom: string;
   /** Inclusive upper bound — `YYYY-MM-DD` (end of day, local time) or full ISO timestamp. */
   dateTo: string;
+  /** Optional multi-select asset filter; takes precedence over `asset` when non-empty. */
+  assets?: readonly string[];
+  /** Inclusive lower bound on `usdValue`. */
+  minUsdValue?: number;
+  /** Inclusive upper bound on `usdValue`. */
+  maxUsdValue?: number;
   /**
    * Preset tags to apply alongside the explicit filters. Every active preset must
    * match, so selecting "last 24h" and "high value" narrows to high-value
    * transactions from the last day. Omitted or empty means no preset constraint.
    */
   presets?: readonly TransactionPresetId[];
+}
+
+export type TransactionSortKey = 'createdAt' | 'amount' | 'usdValue' | 'riskScore' | 'status';
+export type SortDirection = 'asc' | 'desc';
+
+export interface TransactionSort {
+  key: TransactionSortKey;
+  direction: SortDirection;
+}
+
+function isFiniteNumber(value: number | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function activeAssets(filters: TransactionFilterValues): ReadonlySet<string> | null {
+  if (filters.assets && filters.assets.length > 0) return new Set(filters.assets);
+  if (filters.asset !== 'all') return new Set([filters.asset]);
+  return null;
+}
+
+function searchableText(transaction: Transaction): string {
+  return [
+    transaction.id,
+    transaction.stellarHash,
+    transaction.counterparty,
+    transaction.counterpartyAddress,
+    transaction.agentId,
+    transaction.agentName,
+    transaction.asset,
+    transaction.amount,
+    transaction.usdValue,
+    transaction.purpose,
+    transaction.memo,
+    transaction.status,
+  ]
+    .map((value) => String(value ?? '').toLowerCase())
+    .join('\u0000');
 }
 
 export interface DateRangeBounds {
@@ -137,12 +180,13 @@ export function filterTransactions(
 ): Transaction[] {
   if (transactions.length === 0) return [];
 
-  const query = filters.query.trim().toLowerCase();
+  const terms = filters.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const statusSet =
     filters.statuses && filters.statuses.length > 0 ? new Set(filters.statuses) : null;
   const assets = activeAssets(filters);
   const { from: dateFrom, to: dateTo } = resolveDateRange(filters.dateFrom, filters.dateTo);
   const hasDateRange = dateFrom !== null || dateTo !== null;
+  const { minUsdValue, maxUsdValue } = filters;
   const presets = filters.presets ?? [];
 
   return transactions.filter((transaction) => {
@@ -162,25 +206,12 @@ export function filterTransactions(
       if (!matchesTransactionPreset(transaction, preset, now)) return false;
     }
 
-    if (!query) return true;
-    const searchableValues = [
-      transaction.id,
-      transaction.stellarHash,
-      transaction.counterparty,
-      transaction.counterpartyAddress,
-      transaction.agentId,
-      transaction.agentName,
-      transaction.asset,
-      transaction.amount,
-      transaction.purpose,
-      transaction.memo,
-      transaction.status,
-    ];
-    return searchableValues.some((value) =>
-      String(value ?? '')
-        .toLowerCase()
-        .includes(query),
-    );
+    if (isFiniteNumber(minUsdValue) && transaction.usdValue < minUsdValue) return false;
+    if (isFiniteNumber(maxUsdValue) && transaction.usdValue > maxUsdValue) return false;
+
+    if (terms.length === 0) return true;
+    const haystack = searchableText(transaction);
+    return terms.every((term) => haystack.includes(term));
   });
 }
 
