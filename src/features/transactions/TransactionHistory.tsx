@@ -58,7 +58,7 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<TransactionFilterValues>(() =>
+  const [filters, setFilters] = usePersistedTransactionFilters(
     initialFilters(searchParams),
   );
 
