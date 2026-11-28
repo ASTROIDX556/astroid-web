@@ -69,7 +69,7 @@ export function PermissionScopeMatrix({
                       <input
                         type="checkbox"
                         aria-label={`Allow ${asset}`}
-                        className="h-4 w-4 accent-[rgb(var(--gold))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="h-4 w-4 accent-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         {...register(`assetPermissions.${asset}.allowed`)}
                       />
                       Allow

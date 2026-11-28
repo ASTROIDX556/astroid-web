@@ -20,6 +20,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { BudgetAlertSettings } from '@/features/budgets/BudgetAlertSettings';
 import { BudgetAllocationChart } from '@/features/budgets/BudgetAllocationChart';
 import { DepartmentComparisonChart } from '@/features/budgets/DepartmentComparisonChart';
+import { DepartmentBudgetChart } from '@/features/budgets/DepartmentBudgetChart';
 import { DepartmentBudgetBreakdown } from '@/features/budgets/DepartmentBudgetBreakdown';
 import { DepartmentBudgetAllocationTable } from '@/features/budgets/DepartmentBudgetAllocationTable';
 import { BudgetBreakdownChart } from '@/features/budgets/BudgetBreakdownChart';

@@ -17,14 +17,11 @@ import {
   PROVIDER_MODELS,
   createAgentSchema,
   DEFAULT_AGENT_ASSET_PERMISSIONS,
-  requiresEndpoint,
-  type CreateAgentInput,
-} from './schema';
-import { PermissionScopeMatrix } from './PermissionScopeMatrix';
   getFirstValidationMessage,
   requiresEndpoint,
   type CreateAgentInput,
 } from './schema';
+import { PermissionScopeMatrix } from './PermissionScopeMatrix';
 import { useAgentMutation } from './hooks/useAgentMutation';
 
 /**

@@ -191,6 +191,9 @@ test('agent configuration requires a spending cap for each enabled asset', () =>
           issue.message === 'Set a spending limit for enabled USDC assets.',
       ),
     );
+  }
+});
+
 test('editor schema accepts a valid configuration and trims the model name', () => {
   const result = agentConfigurationEditorSchema.safeParse({
     ...validEditorConfig,
