@@ -7,6 +7,7 @@ import {
   matchesTransactionPreset,
   parseDateBoundary,
   resolveDateRange,
+  sortTransactions,
   type TransactionFilterValues,
 } from './filterTransactions';
 

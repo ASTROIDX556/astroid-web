@@ -135,22 +135,21 @@ export function filterTransactions(
   filters: TransactionFilterValues,
   now: number = Date.now(),
 ): Transaction[] {
-  const query = filters.query.trim().toLowerCase();
+  if (transactions.length === 0) return [];
+
+  const terms = filters.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const statusSet =
     filters.statuses && filters.statuses.length > 0 ? new Set(filters.statuses) : null;
-  const { from: dateFrom, to: dateTo } = resolveDateRange(
-    filters.dateFrom,
-    filters.dateTo,
-  );
+  const assets = activeAssets(filters);
+  const { from: dateFrom, to: dateTo } = resolveDateRange(filters.dateFrom, filters.dateTo);
   const hasDateRange = dateFrom !== null || dateTo !== null;
   const presets = filters.presets ?? [];
 
   return transactions.filter((transaction) => {
     if (filters.status !== 'all' && transaction.status !== filters.status) return false;
     if (statusSet && !statusSet.has(transaction.status)) return false;
-    if (filters.asset !== 'all' && transaction.asset !== filters.asset) return false;
-    if (filters.agentId !== 'all' && transaction.agentId !== filters.agentId)
-      return false;
+    if (assets && !assets.has(transaction.asset)) return false;
+    if (filters.agentId !== 'all' && transaction.agentId !== filters.agentId) return false;
 
     if (hasDateRange) {
       const createdAt = Date.parse(transaction.createdAt);
@@ -183,4 +182,44 @@ export function filterTransactions(
         .includes(query),
     );
   });
+}
+
+function compareValues(a: Transaction, b: Transaction, key: TransactionSortKey): number {
+  switch (key) {
+    case 'createdAt': {
+      // Unparseable timestamps sort as the oldest records.
+      const left = Number.isFinite(Date.parse(a.createdAt)) ? Date.parse(a.createdAt) : -Infinity;
+      const right = Number.isFinite(Date.parse(b.createdAt)) ? Date.parse(b.createdAt) : -Infinity;
+      if (left === right) return 0;
+      return left < right ? -1 : 1;
+    }
+    case 'status':
+      return a.status.localeCompare(b.status);
+    default:
+      return a[key] - b[key];
+  }
+}
+
+/**
+ * Returns a sorted copy. Ties fall back to id so the order is deterministic
+ * (Array.prototype.sort is stable, but ids make cross-run output predictable).
+ */
+export function sortTransactions(
+  transactions: readonly Transaction[],
+  sort: TransactionSort,
+): Transaction[] {
+  const factor = sort.direction === 'asc' ? 1 : -1;
+  return [...transactions].sort((a, b) => {
+    const result = compareValues(a, b, sort.key) * factor;
+    return result !== 0 ? result : a.id.localeCompare(b.id);
+  });
+}
+
+/** Convenience: filter then sort in one pass over a fresh array. */
+export function filterAndSortTransactions(
+  transactions: readonly Transaction[],
+  filters: TransactionFilterValues,
+  sort: TransactionSort,
+): Transaction[] {
+  return sortTransactions(filterTransactions(transactions, filters), sort);
 }
