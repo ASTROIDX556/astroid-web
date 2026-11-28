@@ -120,11 +120,9 @@ export function validateEnvironment(input: EnvironmentInput): ValidatedEnvironme
 
   /*
    * Supabase is optional everywhere: without it the realtime client falls back
-   * to the mock stream. Supplying only half of the pair is still a mistake.
+   * to the mock stream. A lone URL or key is treated as incomplete config and
+   * simply leaves realtime disabled, so it can never fail a build.
    */
-  if (supabaseUrl && !supabaseAnonKey) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  if (!supabaseUrl && supabaseAnonKey) missing.push('NEXT_PUBLIC_SUPABASE_URL');
-
   if (isProductionServerRuntime(input) && !apiUrl) {
     missing.push('NEXT_PUBLIC_API_URL');
   }

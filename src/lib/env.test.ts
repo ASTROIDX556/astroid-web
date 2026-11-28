@@ -77,23 +77,30 @@ test('rejects malformed public URLs', () => {
   );
 });
 
-test('a partial Supabase configuration is rejected in either direction', () => {
-  assert.throws(
-    () =>
-      validateEnvironment({
-        NODE_ENV: 'development',
-        NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-      }),
-    /NEXT_PUBLIC_SUPABASE_ANON_KEY/,
-  );
+test('a partial Supabase configuration is tolerated and disables realtime', () => {
+  const urlOnly = validateEnvironment({
+    NODE_ENV: 'development',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+  });
+  assert.equal(urlOnly.supabaseUrl, 'https://project.supabase.co');
+  assert.equal(urlOnly.supabaseAnonKey, '');
 
+  const keyOnly = validateEnvironment({
+    NODE_ENV: 'development',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'public-anon-key',
+  });
+  assert.equal(keyOnly.supabaseUrl, '');
+  assert.equal(keyOnly.supabaseAnonKey, 'public-anon-key');
+});
+
+test('production server runtime still requires the API URL', () => {
   assert.throws(
     () =>
       validateEnvironment({
-        NODE_ENV: 'development',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'public-anon-key',
+        NODE_ENV: 'production',
+        NEXT_PHASE: 'phase-production-server',
       }),
-    /NEXT_PUBLIC_SUPABASE_URL/,
+    /NEXT_PUBLIC_API_URL/,
   );
 });
 
