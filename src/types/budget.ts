@@ -1,5 +1,7 @@
 /** Department-level budget allocation types for breakdown charts and tables. */
 
+import { budgetUtilizationPercent } from '@/lib/budget';
+
 export type DepartmentKey = 'engineering' | 'marketing' | 'operations';
 
 export type DepartmentName = 'Engineering' | 'Marketing' | 'Operations';
@@ -28,13 +30,10 @@ export interface DepartmentBudgetChartSlice {
   fill: string;
 }
 
-export function remainingBudget(allocated: number, spent: number): number {
-  return allocated - spent;
-}
+export { remainingBudget } from '@/lib/budget';
 
 export function departmentUtilizationPercent(row: Pick<DepartmentBudgetBreakdown, 'allocated' | 'spent'>): number {
-  if (row.allocated <= 0) return 0;
-  return (row.spent / row.allocated) * 100;
+  return budgetUtilizationPercent(row.allocated, row.spent);
 }
 
 export const MOCK_DEPARTMENT_BUDGET_BREAKDOWN: DepartmentBudgetBreakdown[] = [

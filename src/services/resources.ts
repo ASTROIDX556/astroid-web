@@ -72,6 +72,15 @@ function notFound(entity: string): never {
   throw new Error(`${entity} not found`);
 }
 
+/** Editable agent configuration fields accepted by the agent update endpoint. */
+export interface AgentConfigPatch {
+  name?: string;
+  description?: string;
+  model?: string;
+  mode?: Agent['mode'];
+  monthlyBudget?: number;
+}
+
 /** Fetch a collection in live mode. */
 function list<T>(path: string): Promise<T> {
   return apiClient.request<T>(path).then((r) => r.data);
@@ -153,6 +162,21 @@ export const resources = {
     resolve(mock.agents.find((a) => a.id === id) ?? notFound('Agent'), () =>
       one<Agent>(`/agents/${id}`),
     ),
+  updateAgent: (id: string, patch: AgentConfigPatch): Promise<Agent> =>
+    resolve(
+      (() => {
+        const agent = mock.agents.find((a) => a.id === id);
+        if (!agent) notFound('Agent');
+        return { ...agent, ...patch };
+      })(),
+      () =>
+        apiClient
+          .request<Agent>(`/agents/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(patch),
+          })
+          .then((r) => r.data),
+    ),
 
   // -- policies -----------------------------------------------------------
   getPolicies: (): Promise<Policy[]> =>
@@ -212,6 +236,21 @@ export const resources = {
   getTransaction: (id: string): Promise<Transaction> =>
     resolve(mock.transactions.find((t) => t.id === id) ?? notFound('Transaction'), () =>
       one<Transaction>(`/transactions/${id}`),
+    ),
+  submitTransaction: (xdr: string): Promise<Transaction> =>
+    resolve(
+      (() => {
+        const template = mock.transactions[0];
+        if (!template) notFound('Transaction');
+        return {
+          ...template,
+          id: `txn_${Date.now()}`,
+          status: 'pending' as const,
+          stellarHash: undefined,
+          createdAt: new Date().toISOString(),
+        };
+      })(),
+      () => action<Transaction>('/transactions/submit', { xdr }),
     ),
 
   // -- proposals / approvals ---------------------------------------------

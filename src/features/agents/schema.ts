@@ -39,6 +39,24 @@ export {
   type CreateAgentInput as AgentConfigFormValues,
 } from '../../lib/validations/agent';
 
+/**
+ * Endpoint URLs are called directly with inference requests, so only absolute
+ * HTTP(S) URLs are accepted. `z.string().url()` alone lets values such as
+ * `localhost:11434` through because they parse as an opaque scheme.
+ */
+export function httpEndpointUrlSchema(
+  message = 'Enter a valid URL, e.g. https://api.example.com/v1',
+) {
+  return z
+    .string()
+    .trim()
+    .url(message)
+    .refine(
+      (value) => /^https?:\/\//i.test(value),
+      'Endpoint must be an http:// or https:// URL.',
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Agent configuration panel (components/AgentConfigPanel)
 // ---------------------------------------------------------------------------
