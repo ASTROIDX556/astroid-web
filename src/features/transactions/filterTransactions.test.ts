@@ -28,7 +28,7 @@ const records: Transaction[] = [
     status: 'completed',
     riskScore: 5,
     stellarHash: 'stellar-hash-alpha',
-    createdAt: '2026-07-10T12:00:00.000Z',
+    createdAt: new Date(2026, 6, 10, 12).toISOString(),
   },
   {
     id: 'txn-beta',
@@ -45,7 +45,7 @@ const records: Transaction[] = [
     purpose: 'Treasury deposit',
     status: 'pending',
     riskScore: 10,
-    createdAt: '2026-07-11T12:00:00.000Z',
+    createdAt: new Date(2026, 6, 11, 12).toISOString(),
   },
 ];
 
@@ -72,7 +72,7 @@ const edgeRecords: Transaction[] = [
     status: 'approved',
     riskScore: 3,
     stellarHash: 'STELLAR-HASH-GAMMA',
-    createdAt: '2026-07-10T23:59:59.999Z',
+    createdAt: new Date(2026, 6, 10, 23, 59, 59, 999).toISOString(),
   },
   {
     id: 'txn-delta',
@@ -107,7 +107,7 @@ const edgeRecords: Transaction[] = [
     purpose: 'Ops',
     status: 'completed',
     riskScore: 1,
-    createdAt: '2026-08-01T00:00:00.000Z',
+    createdAt: new Date(2026, 7, 1, 12).toISOString(),
   },
 ];
 
@@ -342,7 +342,8 @@ test('date boundaries include the first and last millisecond of the range', () =
     dateTo: '2026-07-10',
   });
 
-  // `txn-gamma` is timestamped at 23:59:59.999Z and must stay inside the day.
+  // `txn-gamma` is timestamped at the last millisecond of the local day and
+  // must stay inside the range whatever timezone the CI runner uses.
   assert.deepEqual(ids(filtered), ['txn-alpha', 'txn-gamma']);
 });
 
