@@ -60,6 +60,7 @@ export function ProposalActionBar({ proposal }: { proposal: Proposal }) {
         action={action}
         open={action !== null}
         onClose={() => setAction(null)}
+        xdr={proposal.xdr}
       />
     </>
   );

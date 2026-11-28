@@ -15,6 +15,7 @@ import type { LocalApprovalDecision } from '@/stores/proposal-approval-store';
 import { cn } from '@/lib/cn';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import type { Proposal } from '@/types/domain';
+import { fetchProposalApprovalState } from '@/features/approvals/approvalApi';
 
 import { ApprovalStatusLiveRegion } from './ApprovalStatusLiveRegion';
 

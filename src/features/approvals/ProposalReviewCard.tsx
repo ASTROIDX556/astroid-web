@@ -32,6 +32,7 @@ import {
   fetchProposalApprovalState,
   submitProposalDecision,
 } from './approvalApi';
+import { queryKeys } from '@/services/query-keys';
 import {
   approvalProgress,
   canReviewProposal,
@@ -148,6 +149,8 @@ export function ProposalReviewCard({
       }),
     onSuccess: (next) => {
       queryClient.setQueryData(approvalQueryKeys.proposal(proposal.id), next);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.proposals });
+      void queryClient.invalidateQueries({ queryKey: approvalQueryKeys.all });
       onDecisionRecorded?.(next);
     },
   });

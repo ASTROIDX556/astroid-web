@@ -110,6 +110,7 @@ function ApprovalDecisionActions({ proposal }: { proposal: Proposal }) {
         action={pendingAction}
         open={confirmOpen}
         onClose={closeConfirmation}
+        xdr={proposal.xdr}
       />
     </div>
   );

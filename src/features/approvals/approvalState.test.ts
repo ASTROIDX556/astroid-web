@@ -92,3 +92,30 @@ test('rejecting does not close a proposal that still has other reviewers', () =>
   assert.equal(next.status, 'pending');
   assert.equal(approvalProgress(next).remaining, 1);
 });
+
+test('zero and over-threshold snapshots cannot display negative or over-counted progress', () => {
+  const zero = snapshotFromProposal({ ...proposal, requiredApprovals: 0 });
+  const zeroProgress = approvalProgress(zero);
+  assert.equal(zeroProgress.required, 0);
+  assert.equal(zeroProgress.remaining, 0);
+  assert.equal(zeroProgress.percent, 100);
+  assert.equal(zeroProgress.quorumMet, true);
+
+  const over = snapshotFromProposal({
+    ...proposal,
+    requiredApprovals: 1,
+    approvals: [
+      ...proposal.approvals,
+      {
+        id: 'apr_extra',
+        userId: 'usr_extra',
+        userName: 'Extra',
+        decision: 'approved',
+      },
+    ],
+  });
+  const overProgress = approvalProgress(over);
+  assert.equal(overProgress.approved, 1);
+  assert.equal(overProgress.remaining, 0);
+  assert.equal(overProgress.percent, 100);
+});
