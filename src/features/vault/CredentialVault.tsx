@@ -193,7 +193,7 @@ export function CredentialVault() {
                 <label className="text-2xs font-bold uppercase tracking-wider text-foreground-muted">
                   Secret Key Payload
                 </label>
-                <div className="flex items-center justify-between gap-2 rounded-button border border-border bg-surface-dark px-3 py-2 text-xs font-mono text-emerald-400">
+                <div className="flex items-center justify-between gap-2 rounded-button border border-border bg-surface-dark px-3 py-2 text-xs font-mono text-success">
                   <span className="truncate">
                     {isVisible && cred.rawSecret ? cred.rawSecret : cred.maskedValue}
                   </span>
@@ -236,7 +236,7 @@ export function CredentialVault() {
                   <button
                     type="button"
                     onClick={() => setRevokeTarget(cred)}
-                    className="flex items-center gap-1 text-2xs font-semibold text-rose-400 hover:underline"
+                    className="flex items-center gap-1 text-2xs font-semibold text-danger hover:underline"
                   >
                     <Trash2 className="h-3 w-3" />
                     <span>Revoke</span>
@@ -266,7 +266,7 @@ export function CredentialVault() {
                 className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs text-foreground focus:border-gold focus:outline-none"
               />
               {addForm.formState.errors.name && (
-                <p className="text-2xs text-rose-400">{addForm.formState.errors.name.message}</p>
+                <p className="text-2xs text-danger">{addForm.formState.errors.name.message}</p>
               )}
             </div>
 
@@ -293,7 +293,7 @@ export function CredentialVault() {
                   className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs text-foreground focus:border-gold focus:outline-none"
                 />
                 {addForm.formState.errors.service && (
-                  <p className="text-2xs text-rose-400">{addForm.formState.errors.service.message}</p>
+                  <p className="text-2xs text-danger">{addForm.formState.errors.service.message}</p>
                 )}
               </div>
             </div>
@@ -319,7 +319,7 @@ export function CredentialVault() {
                 className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs font-mono text-foreground focus:border-gold focus:outline-none"
               />
               {addForm.formState.errors.secretValue && (
-                <p className="text-2xs text-rose-400">{addForm.formState.errors.secretValue.message}</p>
+                <p className="text-2xs text-danger">{addForm.formState.errors.secretValue.message}</p>
               )}
             </div>
 
@@ -365,7 +365,7 @@ export function CredentialVault() {
                 className="w-full rounded-button border border-border bg-surface px-3 py-2 text-xs font-mono text-foreground focus:border-gold focus:outline-none"
               />
               {rotateForm.formState.errors.newSecretValue && (
-                <p className="text-2xs text-rose-400">{rotateForm.formState.errors.newSecretValue.message}</p>
+                <p className="text-2xs text-danger">{rotateForm.formState.errors.newSecretValue.message}</p>
               )}
             </div>
 
@@ -381,7 +381,7 @@ export function CredentialVault() {
               </label>
             </div>
             {rotateForm.formState.errors.confirmRotation && (
-              <p className="text-2xs text-rose-400">{rotateForm.formState.errors.confirmRotation.message}</p>
+              <p className="text-2xs text-danger">{rotateForm.formState.errors.confirmRotation.message}</p>
             )}
 
             <div className="flex justify-end gap-2 pt-3 border-t border-border">
@@ -428,7 +428,7 @@ export function CredentialVault() {
               <button
                 type="button"
                 onClick={handleConfirmRevoke}
-                className="rounded-button bg-rose-500 px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-rose-600"
+                className="rounded-button bg-danger px-4 py-1.5 text-xs font-bold text-foreground-primary shadow-sm hover:brightness-105"
               >
                 Revoke Immediately
               </button>

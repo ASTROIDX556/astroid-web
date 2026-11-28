@@ -337,6 +337,7 @@ function AssetBreakdownRow({
             style={{ backgroundColor: color }}
             aria-hidden
           >
+            {/* eslint-disable-next-line no-restricted-syntax -- icon sits on the asset's own brand color (inline style), not a themed surface */}
             <meta.Icon className="h-4 w-4 text-white" />
           </span>
           <div className="min-w-0">

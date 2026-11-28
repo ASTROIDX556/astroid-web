@@ -23,9 +23,9 @@ export function BudgetAlertSettings({
 
   const settings = useMemo(
     () => [
-      { value: 70, label: 'Monitor', tone: 'text-amber-300', accent: 'bg-amber-500/10 border-amber-500/30' },
-      { value: 90, label: 'Escalate', tone: 'text-orange-300', accent: 'bg-orange-500/10 border-orange-500/30' },
-      { value: 100, label: 'Critical', tone: 'text-rose-300', accent: 'bg-rose-500/10 border-rose-500/30' },
+      { value: 70, label: 'Monitor', tone: 'text-warning', accent: 'bg-warning/10 border-warning/30' },
+      { value: 90, label: 'Escalate', tone: 'text-warning', accent: 'bg-warning/10 border-warning/30' },
+      { value: 100, label: 'Critical', tone: 'text-danger', accent: 'bg-danger/10 border-danger/30' },
     ],
     [],
   );
