@@ -21,7 +21,7 @@ export interface BudgetAgentOption {
   agentName: string;
 }
 
-export interface BudgetLedgerFiltersProps {
+export interface BudgetLedgerFilterBarProps {
   filters: BudgetLedgerFilterState;
   agentOptions: BudgetAgentOption[];
   hasActiveFilters: boolean;
@@ -35,7 +35,7 @@ export interface BudgetLedgerFiltersProps {
 const selectClass =
   'rounded-button border border-border bg-surface px-3 py-1.5 text-xs text-foreground font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-export function BudgetLedgerFilters({
+export function BudgetLedgerFilterBar({
   filters,
   agentOptions,
   hasActiveFilters,
@@ -44,7 +44,7 @@ export function BudgetLedgerFilters({
   onChange,
   onClear,
   onExportCSV,
-}: BudgetLedgerFiltersProps) {
+}: BudgetLedgerFilterBarProps) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2.5 border-b border-border pb-4">
@@ -151,4 +151,4 @@ export function BudgetLedgerFilters({
   );
 }
 
-export default BudgetLedgerFilters;
+export default BudgetLedgerFilterBar;

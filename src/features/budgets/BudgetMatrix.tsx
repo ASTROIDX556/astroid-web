@@ -44,7 +44,7 @@ import {
   type BudgetLedgerFilterState,
 } from './budgetLedgerFiltering';
 import { exportBudgetLedgerCsv } from './budgetLedgerCsv';
-import { BudgetLedgerFilters, type BudgetAgentOption } from './BudgetLedgerFilters';
+import { BudgetLedgerFilterBar, type BudgetAgentOption } from './BudgetLedgerFilterBar';
 import type { DepartmentBudget, AgentAllocation } from './types';
 /** One categorical chart token per asset, so the colors follow the active theme. */
 const ASSET_COLORS: Record<string, string> = {
@@ -369,7 +369,7 @@ export function BudgetMatrix() {
       </Card>
 
       {/* Advanced ledger filters + CSV export, directly above the budget table */}
-      <BudgetLedgerFilters
+      <BudgetLedgerFilterBar
         filters={ledgerFilters}
         agentOptions={agentOptions}
         hasActiveFilters={hasLedgerFilters}
