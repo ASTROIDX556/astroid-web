@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { AlertTriangle, RefreshCw, WifiOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { getQueryErrorMessage } from '@/lib/query-error-handling';
+import { AlertTriangle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { isMockMode } from '@/lib/env';
+import {
+  QueryErrorFallback,
+  useOfflineStatus,
+} from '@/components/dashboard/query-error-fallback';
 
 export interface QueryBoundaryProps<T> {
   query: UseQueryResult<T>;
@@ -36,39 +39,13 @@ const Fade = ({ children, keyName }: { children: React.ReactNode; keyName: strin
   </motion.div>
 );
 
-/** SSR-safe browser connectivity read used to explain failures honestly. */
-function useOfflineStatus(): boolean {
-  const [offline, setOffline] = useState(false);
-
-  useEffect(() => {
-    const update = () => {
-      setOffline(typeof navigator !== 'undefined' && navigator.onLine === false);
-    };
-
-    update();
-    window.addEventListener('online', update);
-    window.addEventListener('offline', update);
-
-    return () => {
-      window.removeEventListener('online', update);
-      window.removeEventListener('offline', update);
-    };
-  }, []);
-
-  return offline;
-}
-
 /**
- * Standardizes the loading / error / empty / ready states for a query so every
- * page handles them consistently.
- *
- * Resilience rules (issue #521):
- * - A failed **first** fetch renders a recoverable error card with retry.
- * - A failed **background** refetch keeps the last good payload on screen and
- *   adds a non-blocking "could not refresh" banner, so a transient Stellar RPC
- *   blip never replaces a working dashboard with an error page.
- * - Offline and deterministic failures are explained instead of showing a raw
- *   exception message.
+ * Standardizes the loading / error / offline / empty / ready states for a query so
+ * every page handles them consistently:
+ * - Skeletons while loading
+ * - Recoverable fallback card with retry on first-load failure or offline pause
+ * - Non-blocking stale banner when a background refetch fails with cached data
+ * - Optional illustrated empty state, then the content
  */
 export function QueryBoundary<T>({
   query,
@@ -76,62 +53,19 @@ export function QueryBoundary<T>({
   children,
   isEmpty,
   empty,
-  errorTitle = 'Something went wrong',
   onRetry,
   compact = false,
 }: QueryBoundaryProps<T>) {
-  const offline = useOfflineStatus();
+  const isOffline = useOfflineStatus();
   const data = query.data;
   const hasData = data !== undefined && data !== null;
-  const message = query.error
-    ? getQueryErrorMessage(query.error)
-    : 'The data could not be loaded.';
+  const isPausedOffline =
+    !isMockMode && query.isPending && (query.fetchStatus === 'paused' || isOffline);
 
   const retry = () => {
     onRetry?.();
     void query.refetch();
   };
-
-  const errorCard = (
-    <div
-      role="alert"
-      aria-live="polite"
-      className={
-        compact
-          ? 'flex flex-col items-center gap-3 rounded-card border border-dashed border-danger/40 bg-danger-soft/30 p-5 text-center'
-          : 'flex flex-col items-center gap-4 rounded-card border border-dashed border-danger/40 bg-danger-soft/30 p-10 text-center'
-      }
-    >
-      <span className="grid h-10 w-10 place-items-center rounded-full bg-danger-soft text-danger">
-        {offline ? (
-          <WifiOff className="h-5 w-5" aria-hidden />
-        ) : (
-          <AlertTriangle className="h-5 w-5" aria-hidden />
-        )}
-      </span>
-      <div className="flex flex-col gap-1">
-        <h3 className={compact ? 'font-display text-sm font-semibold tracking-tight' : 'font-display text-lg font-semibold tracking-tight'}>
-          {offline ? 'You are offline' : errorTitle}
-        </h3>
-        <p className="max-w-sm text-xs text-foreground-secondary">
-          {offline
-            ? 'This widget will refresh automatically once your connection is back.'
-            : message}
-        </p>
-      </div>
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        onClick={retry}
-        loading={query.isFetching}
-        leftIcon={<RefreshCw className="h-3.5 w-3.5" aria-hidden />}
-        aria-label="Retry loading this data"
-      >
-        Try again
-      </Button>
-    </div>
-  );
 
   const staleBanner = (
     <div
@@ -158,10 +92,27 @@ export function QueryBoundary<T>({
     <div className={query.isError && hasData ? 'space-y-2' : undefined}>
       {query.isError && hasData && staleBanner}
       <AnimatePresence mode="wait">
-        {query.isPending ? (
+        {isPausedOffline ? (
+          <Fade keyName="offline">
+            <QueryErrorFallback
+              isOffline
+              compact={compact}
+              isRetrying={query.isFetching}
+              onRetry={retry}
+            />
+          </Fade>
+        ) : query.isPending ? (
           <Fade keyName="loading">{loading}</Fade>
         ) : !hasData ? (
-          <Fade keyName="error">{errorCard}</Fade>
+          <Fade keyName="error">
+            <QueryErrorFallback
+              error={query.error}
+              isOffline={isOffline}
+              compact={compact}
+              isRetrying={query.isFetching}
+              onRetry={retry}
+            />
+          </Fade>
         ) : isEmpty && empty && isEmpty(data) ? (
           <Fade keyName="empty">{empty}</Fade>
         ) : (
