@@ -22,7 +22,7 @@ export default function LandingPage() {
       <CursorZone label="Navigate" color="#5B50D6" textColor="#FFFFFF">
         <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-12 lg:px-24 bg-background/80 backdrop-blur-md border-b border-border/50">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent-gradient text-white shadow-gold">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent-gradient text-background-secondary shadow-gold">
               <Sparkles className="h-5 w-5" aria-hidden />
             </span>
             <span className="font-display text-2xl font-bold tracking-tight">Astroid</span>
@@ -63,7 +63,7 @@ export default function LandingPage() {
 
           {/* Ambient glows */}
           <motion.div 
-            className="absolute top-[20%] left-[20%] w-[40%] h-[40%] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none z-[1]"
+            className="absolute top-[20%] left-[20%] w-[40%] h-[40%] rounded-full bg-gold/10 blur-[120px] pointer-events-none z-[1]"
             animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           />
@@ -90,7 +90,7 @@ export default function LandingPage() {
             className="relative z-10 max-w-5xl font-display text-5xl md:text-7xl lg:text-8xl font-semibold tracking-tight leading-[1.05]"
           >
             The Financial OS for <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5B50D6] to-[#8B7FFF]">Autonomous AI.</span>
+            <span className="text-transparent bg-clip-text bg-accent-gradient">Autonomous AI.</span>
           </motion.h1>
 
           <motion.p 
@@ -193,7 +193,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div className="flex-1 w-full relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#5B50D6]/20 to-transparent rounded-2xl blur-2xl" />
+              <div className="absolute inset-0 bg-gradient-to-br from-gold/20 to-transparent rounded-2xl blur-2xl" />
               <div className="relative rounded-2xl border border-border bg-surface p-8 shadow-2xl">
                 <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
                   <span className="font-mono text-xs text-foreground-muted uppercase">Policy Evaluation</span>
@@ -224,7 +224,7 @@ export default function LandingPage() {
         <section id="security" className="relative z-10 py-32 px-6 md:px-12 lg:px-24 bg-surface-secondary/40 border-y border-border/50">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row-reverse items-center gap-16">
             <div className="flex-1 space-y-8">
-              <div className="inline-flex items-center justify-center rounded-md bg-surface p-3 text-indigo-400">
+              <div className="inline-flex items-center justify-center rounded-md bg-surface p-3 text-gold">
                 <Lock className="h-8 w-8" />
               </div>
               <h2 className="font-display text-4xl md:text-5xl font-semibold leading-tight">
@@ -235,22 +235,22 @@ export default function LandingPage() {
               </p>
               <div className="grid grid-cols-2 gap-6 pt-4">
                 <div className="space-y-2">
-                  <Fingerprint className="h-5 w-5 text-indigo-400" />
+                  <Fingerprint className="h-5 w-5 text-gold" />
                   <h4 className="font-medium text-foreground">Non-Custodial</h4>
                   <p className="text-sm text-foreground-secondary">Keys stay on your device.</p>
                 </div>
                 <div className="space-y-2">
-                  <Database className="h-5 w-5 text-indigo-400" />
+                  <Database className="h-5 w-5 text-gold" />
                   <h4 className="font-medium text-foreground">Immutable Ledger</h4>
                   <p className="text-sm text-foreground-secondary">Audit trails powered by Stellar.</p>
                 </div>
                 <div className="space-y-2">
-                  <Network className="h-5 w-5 text-indigo-400" />
+                  <Network className="h-5 w-5 text-gold" />
                   <h4 className="font-medium text-foreground">Decentralized</h4>
                   <p className="text-sm text-foreground-secondary">No single point of failure.</p>
                 </div>
                 <div className="space-y-2">
-                  <Zap className="h-5 w-5 text-indigo-400" />
+                  <Zap className="h-5 w-5 text-gold" />
                   <h4 className="font-medium text-foreground">Sub-Second Finality</h4>
                   <p className="text-sm text-foreground-secondary">Instant global settlements.</p>
                 </div>
@@ -265,7 +265,7 @@ export default function LandingPage() {
                   <div className="h-3 w-3 rounded-full bg-success/80" />
                 </div>
                 <div className="p-6 font-mono text-sm text-foreground-secondary space-y-2">
-                  <p><span className="text-indigo-400">fn</span> <span className="text-gold">execute_transfer</span>(env: Env, agent: Address) {'{'}</p>
+                  <p><span className="text-gold">fn</span> <span className="text-gold">execute_transfer</span>(env: Env, agent: Address) {'{'}</p>
                   <p className="pl-4">agent.require_auth();</p>
                   <p className="pl-4">policy::validate(&env, agent, amount)?;</p>
                   <p className="pl-4">token.transfer(&contract, &recipient, &amount);</p>
@@ -299,7 +299,10 @@ export default function LandingPage() {
           </div>
 
           <div className="relative z-10 flex flex-col items-center justify-center" style={{ minHeight: '60vh' }}>
+            {/* Copy sits on the always-dark animated canvas above, so it stays white in every theme. */}
+            {/* eslint-disable-next-line no-restricted-syntax -- fixed dark media background */}
             <h2 className="font-display text-4xl md:text-6xl font-semibold mb-6 text-white drop-shadow-2xl">Ready to Build the Future?</h2>
+            {/* eslint-disable-next-line no-restricted-syntax -- fixed dark media background */}
             <p className="text-white/70 text-xl max-w-2xl mx-auto mb-12 drop-shadow-lg">
               Connect your Freighter wallet today and deploy your first autonomous financial agent in minutes.
             </p>
@@ -338,11 +341,11 @@ function FeatureCard({ icon: Icon, title, desc, delay }: { icon: any, title: str
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative flex flex-col p-8 rounded-md bg-surface border border-border overflow-hidden hover:border-indigo-500/30 transition-colors"
+      className="group relative flex flex-col p-8 rounded-md bg-surface border border-border overflow-hidden hover:border-gold/30 transition-colors"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-br from-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       <div className="relative z-10">
-        <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-md bg-surface-secondary text-indigo-400">
+        <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-md bg-surface-secondary text-gold">
           <Icon className="h-6 w-6" />
         </div>
         <h3 className="mb-3 text-xl font-semibold">{title}</h3>

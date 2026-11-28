@@ -82,6 +82,30 @@ export type AgentConfigPanelValues = z.infer<typeof agentConfigPanelSchema>;
 // Agent configuration editor (create / edit submission payload)
 // ---------------------------------------------------------------------------
 
+/** Pattern for allowed model version and identifier strings. */
+export const MODEL_VERSION_PATTERN = /^[a-zA-Z0-9_.\-/:@]+$/;
+
+/** Validates model version strings for agent configurations. */
+export const agentModelVersionSchema = z
+  .string({ required_error: 'Model version string is required' })
+  .trim()
+  .min(1, 'Model version string is required')
+  .max(120, 'Model version string cannot exceed 120 characters')
+  .regex(
+    MODEL_VERSION_PATTERN,
+    'Model version string contains invalid characters. Use alphanumeric characters, dots, dashes, slashes, or colons.',
+  );
+
+/** Reusable strictly positive spending limit schema. */
+export const spendingLimitSchema = z
+  .number({
+    required_error: 'Spending limit is required',
+    invalid_type_error: 'Spending limit must be a number',
+  })
+  .finite('Spending limit must be a finite number')
+  .positive('Spending limit must be greater than 0')
+  .max(MAX_BUDGET, `Spending limit cannot exceed ${MAX_BUDGET.toLocaleString('en-US')}`);
+
 /**
  * Validates the payload produced by the agent configuration editor before it
  * reaches the API or a state store. Budget and token rules are shared with the
@@ -96,13 +120,15 @@ export const agentConfigurationEditorSchema = z
   .object({
     provider: agentProviderSchema,
     model: agentModelSchema,
-    maxBudget: z
+    maxBudget: spendingLimitSchema,
+    dailySpendingLimit: z
       .number({
-        required_error: 'Max budget is required',
-        invalid_type_error: 'Max budget must be a number',
+        invalid_type_error: 'Daily spending limit must be a number',
       })
-      .positive('Max budget must be greater than 0')
-      .max(MAX_BUDGET, `Max budget cannot exceed ${MAX_BUDGET.toLocaleString('en-US')}`),
+      .finite('Daily spending limit must be a finite number')
+      .positive('Daily spending limit must be greater than 0')
+      .max(MAX_BUDGET, `Daily spending limit cannot exceed ${MAX_BUDGET.toLocaleString('en-US')}`)
+      .optional(),
     allowedScopes: z
       .array(
         z.enum(AGENT_PERMISSION_SCOPES, {
@@ -132,6 +158,26 @@ export const agentConfigurationEditorSchema = z
         code: z.ZodIssueCode.custom,
         path: ['model'],
         message: `Select a model offered by ${values.provider}.`,
+      });
+    }
+
+    if (values.model && !MODEL_VERSION_PATTERN.test(values.model.trim())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['model'],
+        message: 'Model version string contains invalid characters.',
+      });
+    }
+
+    if (
+      typeof values.dailySpendingLimit === 'number' &&
+      typeof values.maxBudget === 'number' &&
+      values.dailySpendingLimit > values.maxBudget
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['dailySpendingLimit'],
+        message: 'Daily spending limit cannot exceed the max budget.',
       });
     }
   });

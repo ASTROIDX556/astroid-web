@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronDown, CircleOff, PlugZap, WalletCards } from 'lucide-react';
 
@@ -39,9 +39,9 @@ export function AccountSwitcher() {
   const connectedPublicKey = activePublicKey;
   const connectionStatus = useFreighterStore((state) => state.status);
   const hydrate = useFreighterStore((state) => state.hydrate);
-  const startWatching = async () => () => undefined;
+  const startWatching = useCallback(async () => () => undefined, []);
   const connect = useFreighterStore((state) => state.connect);
-  const selectManagedAccount = (_wallet: Wallet) => undefined;
+  const selectManagedAccount = useCallback((_wallet: Wallet) => undefined, []);
   const selectFreighterAccount = () => undefined;
 
   useEffect(() => {
