@@ -17,7 +17,17 @@ export function NetworkHealthWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
+
+  // The panel is role="dialog", so move focus into it when it opens; otherwise
+  // keyboard and screen-reader users stay on the trigger with no cue that
+  // anything appeared. The panel itself takes focus (not a control inside it)
+  // so the dialog name is announced and a disabled refresh button cannot
+  // swallow it.
+  useEffect(() => {
+    if (isOpen) panelRef.current?.focus();
+  }, [isOpen]);
 
   // Non-modal popover: Escape closes it and returns focus to the trigger;
   // clicking outside closes it without moving focus.
@@ -94,9 +104,11 @@ export function NetworkHealthWidget() {
       {isOpen && (
         <div
           id={panelId}
+          ref={panelRef}
           role="dialog"
           aria-label="Stellar network health details"
-          className="absolute right-0 top-full mt-2 z-50 w-72 rounded-card border border-border bg-surface p-4 shadow-xl space-y-3"
+          tabIndex={-1}
+          className="focus-visible:outline-none absolute right-0 top-full mt-2 z-50 w-72 rounded-card border border-border bg-surface p-4 shadow-xl space-y-3"
         >
           <div className="flex items-center justify-between border-b border-border pb-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
