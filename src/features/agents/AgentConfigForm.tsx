@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FormField, Input, Select } from '@/components/ui/input';
-import { toast } from 'sonner';
 import {
   AGENT_PROVIDER_IDS,
   PROVIDER_LABELS,
