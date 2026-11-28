@@ -165,7 +165,7 @@ export function FeeOptimizationPanel() {
       <div className="space-y-4">
         {failedTxs.length === 0 ? (
           <Card className="p-8 text-center text-foreground-muted text-xs">
-            <CheckCircle2 className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
+            <CheckCircle2 className="h-8 w-8 text-success mx-auto mb-2" />
             All agent transactions are confirmed! Zero failed or fee-stuck transactions.
           </Card>
         ) : (
@@ -185,7 +185,7 @@ export function FeeOptimizationPanel() {
                       </span>
                     </div>
 
-                    <p className="text-xs text-rose-400 font-medium">{tx.failureMessage}</p>
+                    <p className="text-xs text-danger font-medium">{tx.failureMessage}</p>
 
                     <div className="flex flex-wrap items-center gap-4 text-2xs text-foreground-secondary pt-1">
                       <span>Amount: <strong className="text-foreground">{formatCurrency(tx.amount, tx.asset)}</strong></span>
