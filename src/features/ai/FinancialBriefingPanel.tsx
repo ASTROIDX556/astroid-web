@@ -7,6 +7,7 @@ import { MarkdownMessage } from '@/components/chat/MarkdownMessage';
 import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/cn';
 import type { ChatMessage } from '@/types/domain';
+import { MessageContent } from '@/features/chat/MessageContent';
 import type { AssistantGenerationState } from './assistantStream';
 
 export interface FinancialBriefingPrompt {
@@ -116,6 +117,11 @@ export function FinancialBriefingPanel({
                   message.role === 'user' && 'flex-row-reverse',
                 )}
               >
+                {message.role === 'assistant' ? (
+                  <MessageContent content={message.content} />
+                ) : (
+                  message.content
+                )}
                 {message.role === 'assistant' ? <AssistantAvatar /> : <Avatar name="You" size="xs" />}
                 <div
                   className={cn(
