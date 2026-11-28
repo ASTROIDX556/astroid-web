@@ -1,8 +1,11 @@
 import { create } from 'zustand';
-import type { AppNotification, NotificationType } from '@/types/domain';
+import type { AppNotification } from '@/types/domain';
+import { notificationSeverity, type NotificationSeverity } from '@/lib/notifications';
+
+export type NotificationSeverityFilter = NotificationSeverity | 'all';
 
 interface NotificationFilters {
-  type: NotificationType | 'all';
+  severity: NotificationSeverityFilter;
 }
 
 interface NotificationState {
@@ -10,17 +13,20 @@ interface NotificationState {
   notifications: AppNotification[];
   /** IDs of notifications dismissed in this session (never re-added). */
   dismissedIds: Set<string>;
-  /** Active category filter. */
+  /** Active severity filter. */
   filter: NotificationFilters;
-  /** Whether the popover is currently open. */
+  /** Whether the drawer is currently open. */
   open: boolean;
 
   // -- actions --
+  addNotification: (notification: AppNotification) => void;
   setNotifications: (items: AppNotification[]) => void;
   markRead: (id: string) => void;
   markAllRead: () => void;
   dismiss: (id: string) => void;
-  setFilter: (filter: NotificationFilters['type']) => void;
+  /** Dismisses every notification currently in the centre. */
+  clearAll: () => void;
+  setFilter: (severity: NotificationSeverityFilter) => void;
   setOpen: (value: boolean) => void;
   toggle: () => void;
 
@@ -32,8 +38,14 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   dismissedIds: new Set<string>(),
-  filter: { type: 'all' },
+  filter: { severity: 'all' },
   open: false,
+
+  addNotification: (notification) =>
+    set((s) => {
+      if (s.notifications.some((n) => n.id === notification.id)) return s;
+      return { notifications: [notification, ...s.notifications] };
+    }),
 
   setNotifications: (items) => set({ notifications: items }),
 
@@ -54,7 +66,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       return { dismissedIds: next };
     }),
 
-  setFilter: (type) => set({ filter: { type } }),
+  clearAll: () =>
+    set((s) => ({
+      dismissedIds: new Set([...s.dismissedIds, ...s.notifications.map((n) => n.id)]),
+    })),
+
+  setFilter: (severity) => set({ filter: { severity } }),
 
   setOpen: (value) => set({ open: value }),
   toggle: () => set((s) => ({ open: !s.open })),
@@ -63,9 +80,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     get().notifications.filter((n) => !n.read && !get().dismissedIds.has(n.id)).length,
 
   visibleNotifications: () =>
-    get().notifications.filter((n) => {
-      if (get().dismissedIds.has(n.id)) return false;
-      if (get().filter.type === 'all') return true;
-      return n.type === get().filter.type;
-    }),
+    get()
+      .notifications.filter((n) => {
+        if (get().dismissedIds.has(n.id)) return false;
+        const { severity } = get().filter;
+        if (severity === 'all') return true;
+        return notificationSeverity(n.type) === severity;
+      }),
 }));

@@ -1,11 +1,14 @@
-export { PolicySimulationModal } from './PolicySimulationModal';
-export { TransactionSimulator } from './TransactionSimulator';
-export { PolicyRulesBuilder } from './PolicyRulesBuilder';
+export { PolicyWizard } from './PolicyWizard';
 export { SpendingPolicyBuilder } from './SpendingPolicyBuilder';
-export { PolicySandboxWidget } from './PolicySandboxWidget';
+export { PolicyRulesBuilder } from './PolicyRulesBuilder';
+export { PolicySimulationModal } from './PolicySimulationModal';
+export { PolicySimulationPanel } from './PolicySimulationPanel';
+export { PolicySimulationView } from './PolicySimulationView';
 export { PolicySimulationDiff } from './PolicySimulationDiff';
 export { BudgetSimulator } from './BudgetSimulator';
 export { PolicyTemplateModal } from './PolicyTemplateModal';
+export { PolicySandboxWidget } from './PolicySandboxWidget';
+export { TransactionSimulator } from './TransactionSimulator';
 export {
   spendingPolicySchema,
   validAddressList,
