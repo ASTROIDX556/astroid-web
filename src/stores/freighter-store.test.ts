@@ -963,3 +963,54 @@ test('store works without window (SSR) and with a throwing localStorage', async 
 
   assert.equal(useFreighterStore.getState().status, 'disconnected');
 });
+
+// ---------------------------------------------------------------------------
+// Error state recovery & reconnection transitions (#499, #492)
+// ---------------------------------------------------------------------------
+
+test('reconnection recovers from an earlier TIMEOUT state to connected', async () => {
+  resetStore(healthyApi({ setAllowed: async () => Promise.reject(new Error('Request timed out')) }));
+
+  const failed = await useFreighterStore.getState().connect();
+  assert.equal(failed, null);
+  assert.equal(useFreighterStore.getState().status, 'disconnected');
+  assert.equal(useFreighterStore.getState().errorCode, 'TIMEOUT');
+
+  // Retry with healthy responsive extension
+  resetStore(healthyApi());
+  const recovered = await useFreighterStore.getState().connect();
+
+  assert.equal(recovered, validPublicKey);
+  const state = useFreighterStore.getState();
+  assert.equal(state.status, 'connected');
+  assert.equal(state.publicKey, validPublicKey);
+  assert.equal(state.error, null);
+  assert.equal(state.errorCode, null);
+});
+
+test('reconnection recovers from locked state to connected when unlocked', async () => {
+  resetStore(healthyApi({ getAddress: async () => ({ address: '', error: { message: 'Wallet is locked' } }) }));
+
+  await useFreighterStore.getState().connect();
+  assert.equal(useFreighterStore.getState().status, 'locked');
+  assert.equal(useFreighterStore.getState().errorCode, 'LOCKED');
+
+  // User unlocks wallet and reconnects
+  resetStore(healthyApi());
+  const recovered = await useFreighterStore.getState().connect();
+
+  assert.equal(recovered, validPublicKey);
+  assert.equal(useFreighterStore.getState().status, 'connected');
+  assert.equal(useFreighterStore.getState().errorCode, null);
+});
+
+test('state transitions cleanly through connecting and does not get stuck on failure', async () => {
+  resetStore(healthyApi({ setAllowed: async () => Promise.reject(new Error('Unexpected crash')) }));
+
+  const pending = useFreighterStore.getState().connect();
+  assert.equal(useFreighterStore.getState().status, 'connecting');
+
+  await pending;
+  assert.equal(useFreighterStore.getState().status, 'disconnected');
+  assert.equal(useFreighterStore.getState().errorCode, 'INVALID_RESPONSE');
+});

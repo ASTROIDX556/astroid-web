@@ -137,7 +137,7 @@ export function filterTransactions(
 ): Transaction[] {
   if (transactions.length === 0) return [];
 
-  const terms = filters.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const query = filters.query.trim().toLowerCase();
   const statusSet =
     filters.statuses && filters.statuses.length > 0 ? new Set(filters.statuses) : null;
   const assets = activeAssets(filters);
