@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { env, isMockMode } from '@/lib/env';
 import { storeToken } from '@/services/client';
 import { useFreighterStore } from '@/stores/freighter-store';
+import { FreighterErrorBanner } from '@/features/wallet/components/FreighterErrorBanner';
 
 /** Safely call a Freighter API function with a timeout to prevent infinite hangs. */
 async function withTimeout<T>(promise: Promise<T>, ms = 15000): Promise<T> {
@@ -33,58 +34,11 @@ export default function AuthPage() {
 
       const publicKey = await connectFreighter();
 
-      if (!publicKey) {
-        const stateError = useFreighterStore.getState().error;
-        throw new Error(stateError ?? 'Could not retrieve public key from Freighter.');
-      }
+      // Wallet failures are classified in the store and rendered by
+      // <FreighterErrorBanner /> with a recovery action for each error code.
+      if (!publicKey) return;
 
-      if (!isMockMode) {
-        const base = `${env.apiUrl}${env.apiVersion}`;
-        const demoEmail = 'owner@astroid.dev';
-        const demoPassword = 'Astroid!Demo123';
-
-        try {
-          // Attempt login first; if the account doesn't exist yet, register it.
-          let res = await withTimeout(fetch(`${base}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: demoEmail, password: demoPassword }),
-          }), 10000);
-
-          if (!res.ok) {
-            // Fallback: register then login (first-time setup)
-            await fetch(`${base}/auth/register`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                organizationName: 'Astroid Labs',
-                name: 'Ava Owner',
-                email: demoEmail,
-                password: demoPassword,
-              }),
-            });
-            res = await withTimeout(fetch(`${base}/auth/login`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: demoEmail, password: demoPassword }),
-            }), 10000);
-          }
-
-          const body = await res.json();
-          const token: string | undefined =
-            body?.data?.tokens?.accessToken ?? body?.tokens?.accessToken;
-
-          if (token) {
-            storeToken(token);
-          }
-          // If no token returned, continue anyway — dashboard uses mock data fallback
-        } catch (backendErr) {
-          // Backend is unreachable (cold start, etc.) — proceed to dashboard with mock data
-          console.warn('Backend auth skipped, continuing with mock mode:', backendErr);
-        }
-      }
-
-      router.push('/overview');
+      await completeLogin();
     } catch (err: unknown) {
       console.error('Freighter login failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect to Freighter wallet.');
@@ -93,27 +47,78 @@ export default function AuthPage() {
     }
   };
 
+  /** Backend session + redirect once Freighter has returned a public key. */
+  const completeLogin = async () => {
+    if (!isMockMode) {
+      const base = `${env.apiUrl}${env.apiVersion}`;
+      const demoEmail = 'owner@astroid.dev';
+      const demoPassword = 'Astroid!Demo123';
+
+      try {
+        // Attempt login first; if the account doesn't exist yet, register it.
+        let res = await withTimeout(fetch(`${base}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: demoEmail, password: demoPassword }),
+        }), 10000);
+
+        if (!res.ok) {
+          // Fallback: register then login (first-time setup)
+          await fetch(`${base}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              organizationName: 'Astroid Labs',
+              name: 'Ava Owner',
+              email: demoEmail,
+              password: demoPassword,
+            }),
+          });
+          res = await withTimeout(fetch(`${base}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: demoEmail, password: demoPassword }),
+          }), 10000);
+        }
+
+        const body = await res.json();
+        const token: string | undefined =
+          body?.data?.tokens?.accessToken ?? body?.tokens?.accessToken;
+
+        if (token) {
+          storeToken(token);
+        }
+        // If no token returned, continue anyway — dashboard uses mock data fallback
+      } catch (backendErr) {
+        // Backend is unreachable (cold start, etc.) — proceed to dashboard with mock data
+        console.warn('Backend auth skipped, continuing with mock mode:', backendErr);
+      }
+    }
+
+    router.push('/overview');
+  };
+
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background overflow-hidden p-6 selection:bg-gold/30">
       {/* Background Gradients */}
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:radial-gradient(ellipse_at_center,white,transparent_80%)] opacity-5" />
-        <motion.div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-indigo-500/10 blur-[120px]"
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-gold/10 blur-[120px]"
           animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.4, 0.3] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface/80 p-8 shadow-soft-2 backdrop-blur-xl"
       >
         <div className="flex flex-col items-center text-center">
-          <Link href="/" className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-accent-gradient text-white shadow-gold hover:opacity-90 transition-opacity">
+          <Link href="/" className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-accent-gradient text-background-secondary shadow-gold hover:opacity-90 transition-opacity">
             <Sparkles className="h-7 w-7" aria-hidden />
           </Link>
           <h1 className="font-display text-2xl font-bold tracking-tight">Authenticate</h1>
@@ -143,8 +148,19 @@ export default function AuthPage() {
             )}
           </button>
 
+          <FreighterErrorBanner
+            className="mt-4"
+            onRecovered={() => {
+              setError(null);
+              void completeLogin().catch((err: unknown) => {
+                setError(err instanceof Error ? err.message : 'Failed to complete sign-in.');
+              });
+            }}
+          />
+
           {error && (
-            <motion.p 
+            <motion.p
+              role="alert"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               className="mt-4 text-center text-sm text-danger"

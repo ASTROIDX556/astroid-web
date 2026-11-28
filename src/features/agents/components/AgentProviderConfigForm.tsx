@@ -2,15 +2,17 @@
 
 import { useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Cpu, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
 import {
+  PROVIDER_API_KEY_RULES,
   agentProviderConfigSchema,
   agentProviderTypes,
+  getFirstValidationMessage,
   isHostedProvider,
   providerModelOptions,
   type AgentProviderConfigValues,
@@ -105,6 +107,14 @@ export function AgentProviderConfigForm({
     }
   };
 
+  const handleInvalid = (fieldErrors: FieldErrors<AgentProviderConfigValues>) => {
+    toast.error('Invalid provider configuration.', {
+      description:
+        getFirstValidationMessage(fieldErrors) ??
+        'Please resolve the highlighted validation errors before saving.',
+    });
+  };
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -115,7 +125,7 @@ export function AgentProviderConfigForm({
       </CardHeader>
       <CardContent>
         <form
-          onSubmit={form.handleSubmit(handleSubmit)}
+          onSubmit={form.handleSubmit(handleSubmit, handleInvalid)}
           className="space-y-5"
           noValidate
         >
@@ -193,7 +203,9 @@ export function AgentProviderConfigForm({
               hint={
                 isCustom
                   ? 'Optional — only if your custom endpoint requires bearer auth.'
-                  : undefined
+                  : PROVIDER_API_KEY_RULES[provider]
+                    ? `Expected format: ${PROVIDER_API_KEY_RULES[provider]?.example}`
+                    : undefined
               }
             >
               <Input
@@ -206,7 +218,7 @@ export function AgentProviderConfigForm({
                   isCustom ? 'Optional bearer token' : 'Paste provider API key'
                 }
                 invalid={Boolean(form.formState.errors.apiKey)}
-                aria-describedby={describedBy('provider-config-api-key', 'apiKey')}
+                aria-describedby={describedBy('provider-config-api-key', 'apiKey', true)}
               />
             </FormRow>
           ) : null}

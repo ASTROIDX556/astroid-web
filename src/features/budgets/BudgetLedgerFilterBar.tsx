@@ -21,7 +21,7 @@ export interface BudgetAgentOption {
   agentName: string;
 }
 
-export interface BudgetLedgerFiltersProps {
+export interface BudgetLedgerFilterBarProps {
   filters: BudgetLedgerFilterState;
   agentOptions: BudgetAgentOption[];
   hasActiveFilters: boolean;
@@ -35,7 +35,7 @@ export interface BudgetLedgerFiltersProps {
 const selectClass =
   'rounded-button border border-border bg-surface px-3 py-1.5 text-xs text-foreground font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-export function BudgetLedgerFilters({
+export function BudgetLedgerFilterBar({
   filters,
   agentOptions,
   hasActiveFilters,
@@ -44,7 +44,7 @@ export function BudgetLedgerFilters({
   onChange,
   onClear,
   onExportCSV,
-}: BudgetLedgerFiltersProps) {
+}: BudgetLedgerFilterBarProps) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2.5 border-b border-border pb-4">
@@ -139,7 +139,7 @@ export function BudgetLedgerFilters({
           className="ml-auto flex items-center gap-1.5 rounded-button border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground-secondary transition-colors hover:border-gold hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Export filtered budget ledger as CSV"
         >
-          <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+          <FileSpreadsheet className="h-3.5 w-3.5 text-success" aria-hidden />
           <span>Export CSV</span>
         </button>
       </div>
@@ -151,4 +151,4 @@ export function BudgetLedgerFilters({
   );
 }
 
-export default BudgetLedgerFilters;
+export default BudgetLedgerFilterBar;

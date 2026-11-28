@@ -50,6 +50,8 @@ export interface EnvironmentInput {
   NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
   NEXT_PUBLIC_HORIZON_URL?: string;
   NODE_ENV?: string;
+  /** Next.js lifecycle phase, e.g. `phase-production-build`. */
+  NEXT_PHASE?: string;
 }
 
 export interface ValidatedEnvironment {
@@ -69,6 +71,30 @@ function validateOptionalUrl(
   if (!value?.trim()) return;
   const result = httpUrlSchema.safeParse(value);
   if (!result.success) malformed.push(name);
+}
+
+const PRODUCTION_BUILD_PHASE = 'phase-production-build';
+
+/**
+ * `next build` sets NODE_ENV=production while collecting page data, but the
+ * runtime configuration is not final yet. Requiring deployment credentials in
+ * that phase breaks CI and mock-mode builds for no benefit.
+ */
+function isProductionBuild(input: EnvironmentInput): boolean {
+  return input.NEXT_PHASE === PRODUCTION_BUILD_PHASE;
+}
+
+/**
+ * Production requirements are enforced when a production server starts, where
+ * failing fast is useful. The browser bundle and build workers only warn via
+ * mock-mode fallbacks, because a missing variable there is not actionable.
+ */
+function isProductionServerRuntime(input: EnvironmentInput): boolean {
+  return (
+    input.NODE_ENV === 'production' &&
+    !isProductionBuild(input) &&
+    typeof window === 'undefined'
+  );
 }
 
 export function validateEnvironment(input: EnvironmentInput): ValidatedEnvironment {
@@ -92,10 +118,15 @@ export function validateEnvironment(input: EnvironmentInput): ValidatedEnvironme
   validateOptionalUrl('NEXT_PUBLIC_SUPABASE_URL', supabaseUrl || undefined, malformed);
   validateOptionalUrl('NEXT_PUBLIC_HORIZON_URL', horizonUrl, malformed);
 
-  if (input.NODE_ENV === 'production') {
-    if (!apiUrl) missing.push('NEXT_PUBLIC_API_URL');
-    if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
-    if (!supabaseAnonKey) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  /*
+   * Supabase is optional everywhere: without it the realtime client falls back
+   * to the mock stream. Supplying only half of the pair is still a mistake.
+   */
+  if (supabaseUrl && !supabaseAnonKey) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  if (!supabaseUrl && supabaseAnonKey) missing.push('NEXT_PUBLIC_SUPABASE_URL');
+
+  if (isProductionServerRuntime(input) && !apiUrl) {
+    missing.push('NEXT_PUBLIC_API_URL');
   }
 
   const problems: string[] = [];
@@ -126,6 +157,7 @@ export const validatedEnvironment = validateEnvironment({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   NEXT_PUBLIC_HORIZON_URL: process.env.NEXT_PUBLIC_HORIZON_URL,
   NODE_ENV: process.env.NODE_ENV,
+  NEXT_PHASE: process.env.NEXT_PHASE,
 });
 
 export const env = {
@@ -134,7 +166,7 @@ export const env = {
   supabaseUrl: validatedEnvironment.supabaseUrl,
   supabaseAnonKey: validatedEnvironment.supabaseAnonKey,
   /** Stellar Horizon node used for live account balance polling. */
-  horizonUrl: process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon.stellar.org',
+  horizonUrl: validatedEnvironment.horizonUrl,
   /**
    * Same-network Horizon fallbacks tried when the primary is unreachable.
    * Comma-separated in `NEXT_PUBLIC_HORIZON_FALLBACK_URLS`.

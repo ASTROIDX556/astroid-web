@@ -166,6 +166,21 @@ describe('ErrorBoundary', () => {
 
     assert.equal(resets, 0);
   });
+
+  test('handles wallet connection errors with accessible fallback UI (#492)', () => {
+    const walletErr = new Error('Freighter extension connection timed out');
+    const Boundary = caught(walletErr);
+    const html = render(
+      createElement(Boundary, { section: 'Wallet connection' }, createElement('p', null, 'wallet'))
+    );
+
+    assert.match(html, /role="alert"/);
+    assert.match(html, /aria-live="polite"/);
+    assert.match(html, /This section failed to render/);
+    assert.match(html, /Freighter extension connection timed out/);
+    assert.match(html, /Try again/);
+    assert.doesNotMatch(html, />wallet</);
+  });
 });
 
 describe('redactSensitive', () => {

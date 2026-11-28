@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Activity, Server, Cpu, RefreshCw, XCircle, ChevronDown } from 'lucide-react';
+import { Activity, Server, Cpu, RefreshCw, ShieldAlert, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useNetworkHealth } from './useNetworkHealth';
+import { useStellarHealth } from '@/hooks/useStellarHealth';
+import { NetworkHealthBadge } from '@/components/NetworkHealthBadge';
 import { focusTrapStack } from '@/hooks/focusTrapStack';
 import { cn } from '@/lib/cn';
 
@@ -12,7 +13,7 @@ const WIDGET_FOCUS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 export function NetworkHealthWidget() {
-  const { data, isLoading, isError, refetch, isFetching } = useNetworkHealth(5000);
+  const { data, isPending, isError, refetch, isFetching } = useStellarHealth({ pollIntervalMs: 5000 });
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -38,7 +39,7 @@ export function NetworkHealthWidget() {
     };
   }, [isOpen]);
 
-  if (isLoading && !data) {
+  if (isPending && !data) {
     return (
       <div className="flex items-center gap-2 rounded-button border border-border bg-surface px-2.5 py-1 text-2xs text-foreground-muted animate-pulse">
         <Activity className="h-3.5 w-3.5 text-gold animate-spin" />
@@ -52,15 +53,15 @@ export function NetworkHealthWidget() {
       <div
         role="status"
         aria-label="Stellar RPC network health: offline"
-        className="flex items-center gap-1.5 rounded-button border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-2xs font-semibold text-rose-400"
+        className="flex items-center gap-1.5 rounded-button border border-danger/30 bg-danger/10 px-2.5 py-1 text-2xs font-semibold text-danger"
       >
-        <XCircle className="h-3.5 w-3.5" aria-hidden />
+        <ShieldAlert className="h-3.5 w-3.5" aria-hidden />
         <span>RPC Offline</span>
         <button
           type="button"
-          onClick={() => refetch()}
+          onClick={() => void refetch()}
           className={cn(
-            'ml-1 rounded-xs text-2xs underline hover:text-white',
+            'ml-1 rounded-xs text-2xs underline hover:text-foreground',
             WIDGET_FOCUS,
           )}
         >
@@ -69,11 +70,6 @@ export function NetworkHealthWidget() {
       </div>
     );
   }
-
-  const isHealthy = data.status === 'healthy';
-  const isDegraded = data.status === 'degraded';
-
-  const badgeVariant = isHealthy ? 'success' : isDegraded ? 'warning' : 'danger';
 
   return (
     <div ref={containerRef} className="relative">
@@ -90,31 +86,7 @@ export function NetworkHealthWidget() {
         aria-expanded={isOpen}
         aria-haspopup="dialog"
       >
-        <span className="relative flex h-2 w-2">
-          <span
-            className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
-              isHealthy ? 'bg-emerald-400' : isDegraded ? 'bg-amber-400' : 'bg-rose-400'
-            }`}
-          />
-          <span
-            className={`relative inline-flex h-2 w-2 rounded-full ${
-              isHealthy ? 'bg-emerald-500' : isDegraded ? 'bg-amber-500' : 'bg-rose-500'
-            }`}
-          />
-        </span>
-
-        <span className="hidden sm:inline-block font-mono text-foreground font-semibold">
-          #{data.ledgerSequence}
-        </span>
-
-        <span className="font-mono text-foreground-secondary tabular">
-          {data.rpcLatencyMs}ms
-        </span>
-
-        <Badge variant={badgeVariant} size="sm" className="capitalize text-3xs py-0 px-1.5">
-          {data.status}
-        </Badge>
-
+        <NetworkHealthBadge />
         <ChevronDown className="h-3 w-3 text-foreground-muted" aria-hidden />
       </button>
 
@@ -133,7 +105,7 @@ export function NetworkHealthWidget() {
             </div>
             <button
               type="button"
-              onClick={() => refetch()}
+              onClick={() => void refetch()}
               disabled={isFetching}
               className={cn(
                 'grid h-6 w-6 place-items-center rounded-xs text-foreground-muted hover:text-foreground transition-colors',
@@ -159,7 +131,7 @@ export function NetworkHealthWidget() {
 
             <div className="flex justify-between items-center bg-surface-secondary/60 p-2 rounded-button">
               <span className="flex items-center gap-1.5 text-foreground-secondary text-2xs">
-                <Server className="h-3.5 w-3.5 text-blue-400" />
+                <Server className="h-3.5 w-3.5 text-info" />
                 <span>Horizon API Node</span>
               </span>
               <Badge variant="success" size="sm" className="text-3xs uppercase">

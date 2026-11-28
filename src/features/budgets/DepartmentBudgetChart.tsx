@@ -13,6 +13,15 @@ import {
 } from 'recharts';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  chartMarginsFor,
+  chartTickFontSize,
+  chartYAxisWidth,
+  isCompactChartWidth,
+  responsiveContainerProps,
+  shortenAxisLabel,
+} from '@/components/charts/responsive';
+import { useChartWidth } from '@/components/charts/use-chart-width';
 import { formatCurrency } from '@/lib/format';
 import type { DepartmentBudget } from './types';
 import {
@@ -47,6 +56,8 @@ export function DepartmentBudgetChart({
   warningThreshold = 80,
   criticalThreshold = 95,
 }: DepartmentBudgetChartProps) {
+  const { ref: chartRef, width: chartWidth } = useChartWidth<HTMLDivElement>();
+  const compact = isCompactChartWidth(chartWidth);
   const safeWarning = normalizeThreshold(warningThreshold, 80);
   const safeCritical = normalizeThreshold(criticalThreshold, 95);
   const warning = Math.min(safeWarning, safeCritical);
@@ -88,15 +99,21 @@ export function DepartmentBudgetChart({
           </div>
         ) : (
           <div
-            className="h-72 w-full min-w-0"
+            ref={chartRef}
+            className="h-64 w-full min-w-0 sm:h-72"
             role="img"
             aria-label="Department budget consumption chart showing percentage of each allocated limit spent"
           >
-            <ResponsiveContainer width="100%" height="100%" debounce={80}>
+            <ResponsiveContainer {...responsiveContainerProps()}>
               <BarChart
                 data={rows}
                 layout="vertical"
-                margin={{ top: 8, right: 24, bottom: 8, left: 8 }}
+                margin={chartMarginsFor(chartWidth, {
+                  top: 8,
+                  right: 24,
+                  bottom: 8,
+                  left: 8,
+                })}
               >
                 <CartesianGrid
                   stroke="rgb(var(--chart-grid))"
@@ -108,15 +125,18 @@ export function DepartmentBudgetChart({
                   domain={[0, axisMaximum]}
                   tickFormatter={(value: number) => `${value}%`}
                   stroke="rgb(var(--chart-axis))"
-                  tick={{ fill: 'rgb(var(--text-muted))', fontSize: 11 }}
+                  tick={{ fill: 'rgb(var(--text-muted))', fontSize: chartTickFontSize(chartWidth) }}
                 />
                 <YAxis
                   type="category"
                   dataKey="department"
-                  width={150}
+                  width={chartYAxisWidth(chartWidth, 150)}
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fill: 'rgb(var(--text-secondary))', fontSize: 11 }}
+                  tick={{ fill: 'rgb(var(--text-secondary))', fontSize: chartTickFontSize(chartWidth) }}
+                  tickFormatter={(value: string) =>
+                    shortenAxisLabel(value, compact ? 10 : 18)
+                  }
                 />
                 <ReferenceLine
                   x={warning}

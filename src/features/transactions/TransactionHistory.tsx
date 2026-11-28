@@ -17,9 +17,9 @@ import { transactionStatus } from '@/lib/status';
 import { formatCurrency, formatRelativeTime, truncateHash } from '@/lib/format';
 import type { Transaction } from '@/types/domain';
 import { TransactionDetailDrawer } from './TransactionDetailDrawer';
-import { TransactionFilters } from './TransactionFilters';
+import { TransactionExportToolbar } from './TransactionExportToolbar';
+import { TransactionFilterBar } from './TransactionFilterBar';
 import { filterTransactions, type TransactionFilterValues } from './filterTransactions';
-import { downloadTransactionExport } from './exportUtils';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
@@ -97,15 +97,6 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
     [selectedId, transactions],
   );
 
-  const exportTransactions = (
-    rows: readonly Transaction[],
-    format: 'csv' | 'json',
-  ) => {
-    // The active filters are passed to the utility so the file contents match
-    // the table even if a caller hands us the unfiltered collection.
-    downloadTransactionExport(rows, { format, filters });
-  };
-
   const summary = useMemo(
     () => ({
       totalValue: filteredTransactions.reduce((sum, tx) => sum + tx.usdValue, 0),
@@ -119,6 +110,15 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
 
   return (
     <div className="space-y-5">
+      <TransactionExportToolbar
+        transactions={filteredTransactions}
+        dateFrom={filters.dateFrom}
+        dateTo={filters.dateTo}
+        onDateRangeChange={({ dateFrom, dateTo }) =>
+          setFilters((current) => ({ ...current, dateFrom, dateTo }))
+        }
+      />
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
           <div className="flex items-center justify-between">
@@ -155,14 +155,11 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
         </Card>
       </div>
 
-      <TransactionFilters
+      <TransactionFilterBar
         transactions={transactions}
-        visibleTransactions={filteredTransactions}
         value={filters}
         filteredCount={filteredTransactions.length}
         onChange={setFilters}
-        onExportCSV={(rows) => exportTransactions(rows, 'csv')}
-        onExportJSON={(rows) => exportTransactions(rows, 'json')}
       />
 
       <DataTable

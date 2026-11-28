@@ -25,6 +25,21 @@ backend.
 
 - **Strict TypeScript.** `strict` is on and `any` is banned. Prefer generics and precise types.
 - **Design tokens.** Use the tokens defined in `src/styles/tokens.css` — never hard-code colors, radii, or spacing.
+  This is enforced by `npm run lint`: a `no-restricted-syntax` rule in `.eslintrc.json` rejects raw Tailwind
+  palette colors (`bg-blue-500`, `dark:text-gray-100`), `white`/`black`, and arbitrary color values
+  (`bg-[#F6F2EA]`) in class strings. Reach for the semantic utilities instead:
+
+  | Instead of | Use |
+  | --- | --- |
+  | `bg-white`, `bg-gray-50` | `bg-surface`, `bg-surface-secondary`, `bg-background` |
+  | `text-gray-900` / `-500` / `-400` | `text-foreground`, `text-foreground-secondary`, `text-foreground-muted` |
+  | `border-gray-200` | `border-border`, `border-border-strong` |
+  | `text-red-500`, `bg-red-50` | `text-danger`, `bg-danger-soft` (likewise `success`, `warning`, `info`) |
+  | `bg-indigo-500`, `ring-indigo-500` | `bg-gold`, `ring-ring` (the brand accent) |
+
+  Tokens are theme-aware, so `dark:` color overrides are unnecessary. If a raw color is genuinely required
+  (e.g. text over a fixed-color image or canvas), add
+  `// eslint-disable-next-line no-restricted-syntax -- <reason>` on the line above it.
 - **Component conventions.** Reusable primitives live in `components/`, feature-specific widgets in `features/`. Keep components focused and composable.
 - **Conventional Commits.** `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`, etc.
 - **Accessibility.** WCAG AA minimum. Keyboard navigation, focus indicators, and screen reader labels are required.

@@ -157,6 +157,21 @@ export const monthlyBudgetSchema = z
   .positive('Monthly budget must be greater than 0')
   .max(1_000_000, 'Monthly budget cannot exceed 1,000,000 USDC');
 
+/** Largest per-response token cap an agent form accepts. */
+export const MAX_AGENT_TOKENS = 1_000_000;
+
+export const maxTokensSchema = z
+  .number({
+    required_error: 'Max tokens is required',
+    invalid_type_error: 'Max tokens must be a number',
+  })
+  .int('Max tokens must be a whole number')
+  .min(1, 'Max tokens must be at least 1')
+  .max(
+    MAX_AGENT_TOKENS,
+    `Max tokens cannot exceed ${MAX_AGENT_TOKENS.toLocaleString('en-US')}`,
+  );
+
 // ---------------------------------------------------------------------------
 // Cross-field rules shared by the schemas below
 // ---------------------------------------------------------------------------
@@ -224,6 +239,7 @@ const agentConfigFields = z.object({
   endpointUrl: agentEndpointUrlSchema,
   mode: agentModeSchema,
   temperature: temperatureSchema,
+  maxTokens: maxTokensSchema.optional(),
   monthlyBudget: monthlyBudgetSchema,
   singleTransactionCap: z
     .number({ invalid_type_error: 'Transaction limit must be a number' })
@@ -263,6 +279,7 @@ const agentConfigFields = z.object({
 /** Validates a full agent configuration before the agent is created. */
 export const createAgentSchema = agentConfigFields.superRefine((values, ctx) => {
   requireProviderEndpoint(values, ctx);
+  refineProviderFormats(values, ctx);
 
   const catalog = PROVIDER_MODELS[values.provider];
   if (catalog.length > 0 && !catalog.includes(values.model)) {
@@ -285,6 +302,28 @@ export const createAgentSchema = agentConfigFields.superRefine((values, ctx) => 
       message: 'Transaction limit cannot exceed the monthly budget',
     });
   }
+
+  if (typeof values.dailyBudget === 'number' && values.dailyBudget > values.monthlyBudget) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['dailyBudget'],
+      message: 'Daily budget cannot exceed the monthly budget',
+    });
+  }
+
+  if (typeof values.maxSpendPerTransaction === 'number') {
+    const exceedsDaily =
+      typeof values.dailyBudget === 'number' && values.maxSpendPerTransaction > values.dailyBudget;
+    if (exceedsDaily || values.maxSpendPerTransaction > values.monthlyBudget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maxSpendPerTransaction'],
+        message: exceedsDaily
+          ? 'Max spend per transaction cannot exceed the daily budget'
+          : 'Max spend per transaction cannot exceed the monthly budget',
+      });
+    }
+  }
 });
 
 export type CreateAgentInput = z.infer<typeof createAgentSchema>;
@@ -304,6 +343,7 @@ export const updateAgentSchema = agentConfigFields.partial().superRefine((values
     return;
   }
   requireProviderEndpoint(values, ctx);
+  refineProviderFormats(values, ctx);
 });
 
 export type UpdateAgentInput = z.infer<typeof updateAgentSchema>;
@@ -342,6 +382,11 @@ export const agentWizardSchema = z
     // A custom provider has no sensible default to fall back on: the wizard
     // only proceeds once the operator supplies a properly formatted endpoint.
     requireProviderEndpoint(values, ctx);
+    refineProviderFormats(values, ctx);
+    const apiKeyError = validateProviderApiKey(values.provider, values.apiKey);
+    if (apiKeyError) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['apiKey'], message: apiKeyError });
+    }
     requireCapWithinBudget(values, ctx);
   });
 
@@ -382,15 +427,34 @@ export const templateWizardSchema = z
     singleTransactionCap: spendingLimit('Transaction cap', MAX_TRANSACTION_CAP, 'XLM'),
     maxHourlyBudgetUsd: z.coerce
       .number({ invalid_type_error: 'Hourly budget must be a number' })
+      .finite('Hourly budget must be a number')
       .min(1, 'Hourly budget must be at least $1.')
       .max(10000, 'Hourly budget cannot exceed $10,000.'),
-    requireApprovalAbove: z.coerce
-      .number({ invalid_type_error: 'Approval threshold must be a number' })
-      .min(0, 'Value must be zero or greater.')
-      .max(1_000_000, 'Value cannot exceed 1M XLM.'),
+    requireApprovalAbove: z.preprocess(
+      (val) => (val === '' || val === null || val === undefined ? undefined : val),
+      z.coerce
+        .number({ invalid_type_error: 'Approval threshold must be a number' })
+        .finite('Approval threshold must be a number')
+        .min(0, 'Value must be zero or greater.')
+        .max(1_000_000, 'Value cannot exceed 1M XLM.')
+        .optional(),
+    ),
     allowedNetworks: z.array(z.string()).min(1, 'Select at least one network.'),
   })
-  .superRefine((values, ctx) => requireCapWithinBudget(values, ctx));
+  .superRefine((values, ctx) => {
+    requireCapWithinBudget(values, ctx);
+    if (
+      typeof values.requireApprovalAbove === 'number' &&
+      typeof values.budget === 'number' &&
+      values.requireApprovalAbove > values.budget
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['requireApprovalAbove'],
+        message: 'Approval threshold cannot exceed the budget.',
+      });
+    }
+  });
 
 export type TemplateWizardValues = z.infer<typeof templateWizardSchema>;
 
@@ -433,6 +497,203 @@ const providerApiKeyPatterns: Partial<Record<AgentProviderType, RegExp>> = {
   gemini: /^AIza[A-Za-z0-9_-]{20,}$/,
 };
 
+// ---------------------------------------------------------------------------
+// Provider-specific rules: API key shape, endpoint format, model identifiers
+// ---------------------------------------------------------------------------
+
+/** Accepts either provider id spelling (`OpenAI` on create forms, `openai` on settings). */
+export function toProviderType(provider: AgentProviderId | AgentProviderType | string): AgentProviderType | null {
+  const normalized = provider.toLowerCase();
+  return (AGENT_PROVIDER_TYPES as readonly string[]).includes(normalized)
+    ? (normalized as AgentProviderType)
+    : null;
+}
+
+export interface ProviderApiKeyRule {
+  /** Prefix every key issued by the provider starts with, e.g. `sk-ant-`. */
+  prefix?: string;
+  /** Allowed characters after the prefix. */
+  charset: RegExp;
+  minLength: number;
+  maxLength: number;
+  /** Placeholder-style example used in error messages. */
+  example: string;
+}
+
+/**
+ * Key formats per provider. Lengths are deliberately loose bounds around the
+ * formats each provider issues today, so a pasted key that is truncated, has
+ * a stray character, or belongs to another provider is caught client-side
+ * before it reaches the backend. `ollama` runs unauthenticated; `custom` keys
+ * are opaque bearer tokens.
+ */
+export const PROVIDER_API_KEY_RULES: Record<AgentProviderType, ProviderApiKeyRule | null> = {
+  nvidia: {
+    prefix: 'nvapi-',
+    charset: /^[A-Za-z0-9_-]+$/,
+    minLength: 40,
+    maxLength: 128,
+    example: 'nvapi-…',
+  },
+  openai: {
+    prefix: 'sk-',
+    charset: /^[A-Za-z0-9_-]+$/,
+    minLength: 40,
+    maxLength: AGENT_API_KEY_MAX_LENGTH,
+    example: 'sk-… or sk-proj-…',
+  },
+  anthropic: {
+    prefix: 'sk-ant-',
+    charset: /^[A-Za-z0-9_-]+$/,
+    minLength: 40,
+    maxLength: AGENT_API_KEY_MAX_LENGTH,
+    example: 'sk-ant-…',
+  },
+  gemini: {
+    prefix: 'AIza',
+    charset: /^[A-Za-z0-9_-]+$/,
+    minLength: 39,
+    maxLength: 39,
+    example: 'AIza… (39 characters)',
+  },
+  ollama: null,
+  custom: {
+    charset: /^[\x21-\x7E]+$/,
+    minLength: 16,
+    maxLength: AGENT_API_KEY_MAX_LENGTH,
+    example: 'a bearer token of at least 16 characters',
+  },
+};
+
+const PROVIDER_DISPLAY: Record<AgentProviderType, string> = {
+  nvidia: 'Nvidia',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  gemini: 'Gemini',
+  ollama: 'Ollama',
+  custom: 'custom endpoint',
+};
+
+/** Returns an error message for an API key that does not fit the provider's format, or null. */
+export function validateProviderApiKey(
+  provider: AgentProviderId | AgentProviderType,
+  apiKey: string | undefined,
+): string | null {
+  const type = toProviderType(provider);
+  // Whitespace is reported by `agentApiKeySchema`; don't stack a second message.
+  if (!type || !apiKey || /\s/.test(apiKey)) return null;
+  const rule = PROVIDER_API_KEY_RULES[type];
+  if (!rule) return null;
+
+  const label = PROVIDER_DISPLAY[type];
+  // Anthropic keys also start with `sk-`; call out the mix-up explicitly.
+  if (type === 'openai' && apiKey.startsWith('sk-ant-')) {
+    return 'This looks like an Anthropic key. Paste an OpenAI key (sk-… or sk-proj-…).';
+  }
+  if (rule.prefix && !apiKey.startsWith(rule.prefix)) {
+    return `${label} API keys start with "${rule.prefix}".`;
+  }
+  if (!rule.charset.test(rule.prefix ? apiKey.slice(rule.prefix.length) : apiKey)) {
+    return `${label} API key contains unsupported characters.`;
+  }
+  if (rule.minLength === rule.maxLength && apiKey.length !== rule.minLength) {
+    return `${label} API keys are exactly ${rule.minLength} characters long.`;
+  }
+  if (apiKey.length < rule.minLength) {
+    return `${label} API key is too short (minimum ${rule.minLength} characters).`;
+  }
+  if (apiKey.length > rule.maxLength) {
+    return `${label} API key is too long (maximum ${rule.maxLength} characters).`;
+  }
+  return null;
+}
+
+/** Loopback, link-local, private-range and `.local` hosts: reachable only from the operator's network. */
+export function isPrivateNetworkHost(hostname: string): boolean {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+  if (host === '::1') return true;
+  const octets = host.split('.').map(Number);
+  if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return false;
+  }
+  const [a, b] = octets as [number, number, number, number];
+  return (
+    a === 127 ||
+    a === 10 ||
+    (a === 192 && b === 168) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 169 && b === 254)
+  );
+}
+
+/**
+ * Provider-specific endpoint format check. Returns an error message, or null
+ * when the endpoint is acceptable (or empty — presence is checked separately).
+ *
+ * - every provider: http(s) only, no embedded `user:pass@` credentials (they
+ *   would be stored and logged in plain text) and no `#fragment`;
+ * - hosted providers (Nvidia, OpenAI, Anthropic, Gemini): HTTPS only, since the
+ *   API key travels with every request;
+ * - custom endpoints: HTTPS unless the host is on a private/loopback network;
+ * - Ollama: plain HTTP is allowed, as local servers rarely terminate TLS.
+ */
+export function validateProviderEndpoint(
+  provider: AgentProviderId | AgentProviderType,
+  endpointUrl: string | undefined,
+): string | null {
+  if (!endpointUrl) return null;
+  let url: URL;
+  try {
+    url = new URL(endpointUrl);
+  } catch {
+    return 'Enter a valid http(s) URL, e.g. https://api.example.com/v1';
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return 'Enter a valid http(s) URL, e.g. https://api.example.com/v1';
+  }
+  if (url.username || url.password) {
+    return 'Endpoint URL must not contain credentials. Use the API key field instead.';
+  }
+  if (url.hash) {
+    return 'Endpoint URL must not contain a #fragment.';
+  }
+
+  const type = toProviderType(provider);
+  if (!type) return null;
+  if (isHostedProvider(type) && url.protocol !== 'https:') {
+    return `${PROVIDER_DISPLAY[type]} endpoints must use HTTPS.`;
+  }
+  if (type === 'custom' && url.protocol !== 'https:' && !isPrivateNetworkHost(url.hostname)) {
+    return 'Custom endpoints must use HTTPS unless they run on a local or private network.';
+  }
+  return null;
+}
+
+/** Model identifiers: provider/model paths, tags and versions, no spaces or URL syntax. */
+export const MODEL_IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$/;
+
+/** Shared superRefine step: endpoint format + model identifier shape. */
+export function refineProviderFormats(
+  values: { provider?: AgentProviderId | AgentProviderType; endpointUrl?: string; model?: string },
+  ctx: z.RefinementCtx,
+): void {
+  // Malformed and non-http(s) URLs are already reported by the field schema.
+  if (values.provider && values.endpointUrl && isHttpUrl(values.endpointUrl)) {
+    const endpointError = validateProviderEndpoint(values.provider, values.endpointUrl);
+    if (endpointError) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endpointUrl'], message: endpointError });
+    }
+  }
+  if (values.model && !MODEL_IDENTIFIER_RE.test(values.model)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['model'],
+      message: 'Model identifiers may only contain letters, numbers and . _ : / @ + -',
+    });
+  }
+}
+
 /** Validates the provider settings form on an agent's page. */
 export const agentUpdateSchema = z
   .object({
@@ -474,6 +735,13 @@ export const agentUpdateSchema = z
       }
     }
 
+    const apiKeyError = validateProviderApiKey(values.provider, values.apiKey);
+    if (apiKeyError) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['apiKey'], message: apiKeyError });
+    }
+
+    refineProviderFormats(values, ctx);
+
     if (!hosted && !values.endpointUrl) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -500,6 +768,19 @@ export type AgentUpdateValues = z.infer<typeof agentUpdateSchema>;
 export const agentProviderConfigSchema = agentUpdateSchema;
 export type AgentProviderConfigValues = AgentUpdateValues;
 export const agentProviderTypes = AGENT_PROVIDER_TYPES;
+
+export function getFirstValidationMessage(errors: Record<string, unknown>, visited: Set<object> = new Set()): string | undefined {
+  if (visited.has(errors)) return undefined;
+  visited.add(errors);
+  for (const [key, value] of Object.entries(errors)) {
+    if (key === 'ref' || !value || typeof value !== 'object') continue;
+    const msg = (value as { message?: unknown }).message;
+    if (typeof msg === 'string' && msg.trim()) return msg.trim();
+    const nested = getFirstValidationMessage(value as Record<string, unknown>, visited);
+    if (nested) return nested;
+  }
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Schema for components/agents/AgentCreationForm
@@ -597,6 +878,7 @@ const agentConfigurationFields = agentConfigFields.extend({
 
 export const agentConfigurationSchema = agentConfigurationFields.superRefine((values, ctx) => {
   requireProviderEndpoint(values, ctx);
+  refineProviderFormats(values, ctx);
 
   const catalog = PROVIDER_MODELS[values.provider];
   if (values.provider !== 'Custom' && catalog.length > 0 && !catalog.includes(values.model)) {
