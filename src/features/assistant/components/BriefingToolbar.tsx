@@ -55,7 +55,7 @@ export function BriefingToolbar({
         size="sm"
         leftIcon={
           copiedMode === 'markdown' ? (
-            <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+            <Check className="h-3.5 w-3.5 text-success" aria-hidden />
           ) : (
             <Copy className="h-3.5 w-3.5" aria-hidden />
           )
@@ -73,7 +73,7 @@ export function BriefingToolbar({
         size="sm"
         leftIcon={
           copiedMode === 'plaintext' ? (
-            <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+            <Check className="h-3.5 w-3.5 text-success" aria-hidden />
           ) : (
             <FileText className="h-3.5 w-3.5" aria-hidden />
           )
