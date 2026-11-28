@@ -5,4 +5,6 @@ export * from './transactionFiltering';
 export * from './exportUtils';
 export * from './TransactionExportActions';
 export * from './transactionTimeline';
-export * from './TransactionTimeline';
+// TransactionTimeline component is exported separately to avoid case-collision
+// on forceConsistentCasingInFileNames — import directly from the file instead:
+// import { TransactionTimeline } from '@/features/transactions/TransactionTimeline'

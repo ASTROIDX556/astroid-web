@@ -95,7 +95,7 @@ export function AssistantDrawer() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [generationState, setGenerationState] = useState<AssistantGenerationState>('idle');
-  const [_streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const streamingMessageIdRef = useRef<string | null>(null);
   const [seeded, setSeeded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -223,7 +223,7 @@ export function AssistantDrawer() {
             ...prev,
             { id: replyId, role: 'assistant', content: delta, createdAt: new Date().toISOString() },
           ]);
-          setStreamingMessageId(replyId);
+          streamingMessageIdRef.current = replyId;
           setGenerationState('streaming');
           return;
         }
@@ -292,7 +292,7 @@ export function AssistantDrawer() {
         if (abortRef.current === controller) {
           abortRef.current = null;
           setGenerationState('idle');
-          setStreamingMessageId(null);
+          streamingMessageIdRef.current = null;
         }
       }
     },
