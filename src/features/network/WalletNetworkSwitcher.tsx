@@ -113,13 +113,13 @@ export function WalletNetworkSwitcher() {
             <span
               className={cn(
                 'absolute inline-flex h-full w-full rounded-full opacity-75',
-                wallet.networkMismatch ? 'animate-ping bg-rose-400' : 'bg-emerald-400',
+                wallet.networkMismatch ? 'animate-ping bg-danger' : 'bg-success',
               )}
             />
             <span
               className={cn(
                 'relative inline-flex h-2 w-2 rounded-full',
-                wallet.networkMismatch ? 'bg-rose-500' : 'bg-emerald-500',
+                wallet.networkMismatch ? 'bg-danger' : 'bg-success',
               )}
             />
           </span>
